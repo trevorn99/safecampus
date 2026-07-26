@@ -32,6 +32,17 @@ supabase db push
 
 Apply migrations to the dev project first, verify, then promote the same files to prod.
 
+### Automated migrations (GitHub Actions)
+
+`.github/workflows/supabase-migrate.yml` runs `supabase db push` on every push to `dev` or `main`, targeting a different Supabase project per branch via GitHub Environments. To activate it:
+
+1. In the repo's Settings → Environments, create two environments: `dev` and `production`.
+2. In each, add secrets `SUPABASE_PROJECT_ID` (Settings → General → Reference ID in that Supabase project) and `SUPABASE_DB_PASSWORD` (the database password set when the project was created).
+3. Add a repository-level secret `SUPABASE_ACCESS_TOKEN` (Supabase account → Access Tokens) — this one's account-scoped, not project-scoped, so it's shared across both environments.
+4. Optional but recommended before this touches real data: add a required-reviewer protection rule to the `production` environment, so a push to `main` pauses for approval before the migration actually runs.
+
+Until these secrets exist, the workflow will run and fail harmlessly on push — it doesn't block anything else in CI.
+
 ## Branches
 
 - `main` — tracks the production Supabase project and Vercel production deploy.
