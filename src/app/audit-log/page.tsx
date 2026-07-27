@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { requireMembership } from "@/lib/session";
 import { AppHeader } from "@/components/AppHeader";
+import { getAuditLogDetails } from "@/lib/auditLogDetails";
 import styles from "@/styles/ui.module.css";
 
 const TABLE_LABEL: Record<string, string> = {
@@ -35,12 +36,14 @@ export default async function AuditLogPage() {
   const [{ data: logs }, { data: orgMembers }] = await Promise.all([
     supabase
       .from("audit_logs")
-      .select("id, actor_id, actor_type, action, table_name, occurred_at")
+      .select("id, actor_id, actor_type, action, table_name, record_id, occurred_at")
       .eq("organization_id", member.organization_id)
       .order("occurred_at", { ascending: false })
       .limit(LOG_LIMIT),
     supabase.from("members").select("user_id, name").eq("organization_id", member.organization_id),
   ]);
+
+  const details = await getAuditLogDetails(supabase, member.organization_id, logs ?? []);
 
   const nameByUserId = new Map(
     (orgMembers ?? []).filter((m) => m.user_id).map((m) => [m.user_id as string, m.name]),
@@ -65,18 +68,25 @@ export default async function AuditLogPage() {
         <div className={styles.card}>
           {(logs ?? []).length === 0 && <p className={styles.helperText}>No changes recorded yet.</p>}
           <ul className={styles.list}>
-            {(logs ?? []).map((log) => (
-              <li key={log.id} className={styles.listRow}>
-                <div>
-                  <p className={styles.itemName}>
-                    {ACTION_LABEL[log.action] ?? log.action} {TABLE_LABEL[log.table_name] ?? log.table_name}
-                  </p>
-                  <p className={styles.itemMeta}>
-                    {describeActor(log)} · {new Date(log.occurred_at).toLocaleString()}
-                  </p>
-                </div>
-              </li>
-            ))}
+            {(logs ?? []).map((log) => {
+              const detail =
+                log.action !== "DELETE" && log.record_id
+                  ? details.get(`${log.table_name}:${log.record_id}`)
+                  : null;
+              return (
+                <li key={log.id} className={styles.listRow}>
+                  <div>
+                    <p className={styles.itemName}>
+                      {ACTION_LABEL[log.action] ?? log.action} {TABLE_LABEL[log.table_name] ?? log.table_name}
+                    </p>
+                    <p className={styles.itemMeta}>{detail ?? (log.action === "DELETE" ? "(record deleted)" : "Details unavailable")}</p>
+                    <p className={styles.itemMeta}>
+                      {describeActor(log)} · {new Date(log.occurred_at).toLocaleString()}
+                    </p>
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         </div>
       </main>
