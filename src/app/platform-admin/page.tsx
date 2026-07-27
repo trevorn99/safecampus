@@ -103,12 +103,18 @@ export default async function PlatformAdminPage() {
                     )}
                   </div>
                   <div className={styles.tagRow}>
-                    <ExemptionToggle organizationId={org.id} exempt={org.paywall_exempt} />
-                    <SupportAccessControls
-                      organizationId={org.id}
-                      currentUserId={user.id}
-                      activeGrant={activeGrant}
-                    />
+                    <div className={styles.controlGroup}>
+                      <span className={styles.controlLabel}>Billing</span>
+                      <ExemptionToggle organizationId={org.id} exempt={org.paywall_exempt} />
+                    </div>
+                    <div className={styles.controlGroup}>
+                      <span className={styles.controlLabel}>Support access</span>
+                      <SupportAccessControls
+                        organizationId={org.id}
+                        currentUserId={user.id}
+                        activeGrant={activeGrant}
+                      />
+                    </div>
                   </div>
                 </li>
               );

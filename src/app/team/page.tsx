@@ -1,5 +1,6 @@
 import { requireMembership } from "@/lib/session";
 import { AppHeader } from "@/components/AppHeader";
+import { CancelInviteButton } from "./CancelInviteButton";
 import styles from "@/styles/ui.module.css";
 
 const ROLE_LABEL: Record<string, string> = {
@@ -67,6 +68,9 @@ export default async function TeamPage() {
                     </span>
                   ))}
                   {teamMember.status === "pending" && <span className={styles.pillMuted}>Pending</span>}
+                  {isAdmin && teamMember.status === "pending" && (
+                    <CancelInviteButton memberId={teamMember.id} name={teamMember.name} />
+                  )}
                 </div>
               </li>
             ))}

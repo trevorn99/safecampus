@@ -286,6 +286,22 @@
   gap: 0.4rem;
 }
 
+/* Groups a labeled control cluster (e.g. platform-admin's billing vs
+   support-access controls) so unrelated actions don't blend together. */
+.controlGroup {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.4rem;
+}
+.controlLabel {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
 .pill {
   display: inline-flex;
   align-items: center;
