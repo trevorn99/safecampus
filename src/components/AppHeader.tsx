@@ -5,6 +5,7 @@ const NAV_ITEMS = [
   { href: "/team", label: "Team" },
   { href: "/certifications", label: "Certifications" },
   { href: "/account/mfa", label: "Security" },
+  { href: "/support", label: "Support" },
 ];
 
 const ADMIN_NAV_ITEMS = [

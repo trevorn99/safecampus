@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { AppHeader } from "@/components/AppHeader";
@@ -81,6 +82,12 @@ export default async function PlatformAdminPage() {
         <div className={styles.pageHeading}>
           <h1 className={styles.pageTitle}>Platform admin</h1>
           <p className={styles.subtitle}>Every organization on SafeCampus</p>
+        </div>
+
+        <div className={styles.actions}>
+          <Link href="/platform-admin/support-tickets" className={`${styles.button} ${styles.buttonSecondary}`}>
+            View support tickets
+          </Link>
         </div>
 
         <div className={styles.card}>
