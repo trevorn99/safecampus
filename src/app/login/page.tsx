@@ -1,8 +1,20 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import styles from "@/styles/ui.module.css";
+
+function Brand() {
+  return (
+    <div className={styles.authBrand}>
+      <Image src="/images/logo.jpg" alt="" width={28} height={28} className={styles.logo} />
+      <span className={styles.wordmark}>
+        Safe<span className={styles.wordmarkAccent}>Campus</span>
+      </span>
+    </div>
+  );
+}
 
 function GoogleIcon() {
   return (
@@ -66,9 +78,7 @@ export default function LoginPage() {
     return (
       <main className={styles.authShell}>
         <div className={styles.authCard}>
-          <p className={styles.wordmark}>
-            Safe<span className={styles.wordmarkAccent}>Campus</span>
-          </p>
+          <Brand />
           <div>
             <h1 className={styles.title}>Check your email</h1>
             <p className={styles.subtitle}>We sent a sign-in link to {email}.</p>
@@ -81,9 +91,7 @@ export default function LoginPage() {
   return (
     <main className={styles.authShell}>
       <div className={styles.authCard}>
-        <p className={styles.wordmark}>
-          Safe<span className={styles.wordmarkAccent}>Campus</span>
-        </p>
+        <Brand />
         <div>
           <h1 className={styles.title}>Sign in</h1>
           <p className={styles.subtitle}>

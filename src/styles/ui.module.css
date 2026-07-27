@@ -7,6 +7,12 @@
 .wordmarkAccent {
   color: var(--accent-strong);
 }
+.authBrand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+}
 
 /* Centered single-column shell for login/onboarding/invite pages */
 .authShell {
@@ -319,4 +325,101 @@
   background: var(--success-bg);
   color: var(--success);
   width: fit-content;
+}
+
+/* Public site header (home, features) and logo */
+.logo {
+  border-radius: 8px;
+  display: block;
+}
+.siteHeader {
+  border-bottom: 1px solid var(--border);
+}
+.siteHeaderInner {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 1.1rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.siteHeaderBrand {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+.siteNav {
+  display: flex;
+  align-items: center;
+  gap: 1.75rem;
+}
+
+/* Hero (homepage) */
+.hero {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 5rem 1.5rem 6rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 1.75rem;
+}
+.heroTitle {
+  font-size: 2.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+  max-width: 30ch;
+}
+.heroDescription {
+  font-size: 1.1rem;
+  color: var(--muted);
+  max-width: 56ch;
+  text-wrap: balance;
+  line-height: 1.6;
+}
+.heroActions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* Feature grid (features page) */
+.featureGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1.25rem;
+}
+.featureCard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.featureTitle {
+  font-size: 1.02rem;
+  font-weight: 700;
+}
+.featureDescription {
+  font-size: 0.9rem;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.featuresSection {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 0 1.5rem 5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rem;
+}
+.featuresSection .featureGrid {
+  width: 100%;
 }
