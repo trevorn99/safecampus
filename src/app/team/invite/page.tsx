@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { centeredStyle, formStyle, errorStyle } from "@/lib/ui";
+import styles from "@/styles/ui.module.css";
 
 type Option = { id: string; name: string };
 type Role = "org_admin" | "location_manager" | "team_lead" | "member";
@@ -80,62 +80,146 @@ export default function InviteTeamMemberPage() {
 
   if (status === "sent") {
     return (
-      <main style={centeredStyle}>
-        <h1>Invite sent</h1>
-        <p>{email} will receive an email with a sign-in link.</p>
-        <a href="/dashboard">Back to dashboard</a>
-      </main>
+      <>
+        <header className={styles.appHeader}>
+          <div className={styles.appHeaderInner}>
+            <p className={styles.wordmark}>
+              Safe<span className={styles.wordmarkAccent}>Campus</span>
+            </p>
+          </div>
+        </header>
+        <main className={styles.appMain}>
+          <div className={styles.card}>
+            <div className={styles.cardHeader}>
+              <span className={styles.badge}>Invite sent</span>
+              <h1 className={styles.cardTitle}>You&apos;re done</h1>
+              <p className={styles.subtitle}>{email} will receive an email with a sign-in link.</p>
+            </div>
+            <a href="/dashboard" className={styles.link}>
+              ← Back to dashboard
+            </a>
+          </div>
+        </main>
+      </>
     );
   }
 
   return (
-    <main style={centeredStyle}>
-      <h1>Invite a team member</h1>
-      <form onSubmit={handleSubmit} style={formStyle}>
-        <label>
-          Name
-          <input required value={name} onChange={(event) => setName(event.target.value)} />
-        </label>
-        <label>
-          Email
-          <input required type="email" value={email} onChange={(event) => setEmail(event.target.value)} />
-        </label>
-        <label>
-          Role
-          <select value={role} onChange={(event) => { setRole(event.target.value as Role); setScopeId(""); }}>
-            <option value="member">Member</option>
-            <option value="team_lead">Team lead</option>
-            <option value="location_manager">Location manager</option>
-            <option value="org_admin">Org admin</option>
-          </select>
-        </label>
-        {role === "location_manager" && (
-          <label>
-            Location
-            <select required value={scopeId} onChange={(event) => setScopeId(event.target.value)}>
-              <option value="">Select a location</option>
-              {locations.map((location) => (
-                <option key={location.id} value={location.id}>{location.name}</option>
-              ))}
-            </select>
-          </label>
-        )}
-        {(role === "team_lead" || role === "member") && (
-          <label>
-            Team {role === "member" ? "(optional)" : ""}
-            <select required={role === "team_lead"} value={scopeId} onChange={(event) => setScopeId(event.target.value)}>
-              <option value="">{role === "member" ? "No specific team" : "Select a team"}</option>
-              {teams.map((team) => (
-                <option key={team.id} value={team.id}>{team.name}</option>
-              ))}
-            </select>
-          </label>
-        )}
-        <button type="submit" disabled={status === "sending" || !organizationId}>
-          {status === "sending" ? "Sending…" : "Send invite"}
-        </button>
-        {status === "error" && <p style={errorStyle}>{error}</p>}
-      </form>
-    </main>
+    <>
+      <header className={styles.appHeader}>
+        <div className={styles.appHeaderInner}>
+          <p className={styles.wordmark}>
+            Safe<span className={styles.wordmarkAccent}>Campus</span>
+          </p>
+          <a href="/dashboard" className={styles.link}>
+            ← Dashboard
+          </a>
+        </div>
+      </header>
+      <main className={styles.appMain}>
+        <div className={styles.card}>
+          <div className={styles.cardHeader}>
+            <h1 className={styles.cardTitle}>Invite a team member</h1>
+            <p className={styles.subtitle}>They&apos;ll get an email with a sign-in link.</p>
+          </div>
+          <form onSubmit={handleSubmit} className={styles.form}>
+            <div className={styles.field}>
+              <label className={styles.label} htmlFor="name">
+                Name
+              </label>
+              <input
+                id="name"
+                className={styles.input}
+                required
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+              />
+            </div>
+            <div className={styles.field}>
+              <label className={styles.label} htmlFor="email">
+                Email
+              </label>
+              <input
+                id="email"
+                className={styles.input}
+                required
+                type="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+              />
+            </div>
+            <div className={styles.field}>
+              <label className={styles.label} htmlFor="role">
+                Role
+              </label>
+              <select
+                id="role"
+                className={styles.select}
+                value={role}
+                onChange={(event) => {
+                  setRole(event.target.value as Role);
+                  setScopeId("");
+                }}
+              >
+                <option value="member">Member</option>
+                <option value="team_lead">Team lead</option>
+                <option value="location_manager">Location manager</option>
+                <option value="org_admin">Org admin</option>
+              </select>
+            </div>
+            {role === "location_manager" && (
+              <div className={styles.field}>
+                <label className={styles.label} htmlFor="scope">
+                  Location
+                </label>
+                <select
+                  id="scope"
+                  className={styles.select}
+                  required
+                  value={scopeId}
+                  onChange={(event) => setScopeId(event.target.value)}
+                >
+                  <option value="">Select a location</option>
+                  {locations.map((location) => (
+                    <option key={location.id} value={location.id}>
+                      {location.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+            {(role === "team_lead" || role === "member") && (
+              <div className={styles.field}>
+                <label className={styles.label} htmlFor="scope">
+                  Team {role === "member" && <span className={styles.hint}>(optional)</span>}
+                </label>
+                <select
+                  id="scope"
+                  className={styles.select}
+                  required={role === "team_lead"}
+                  value={scopeId}
+                  onChange={(event) => setScopeId(event.target.value)}
+                >
+                  <option value="">{role === "member" ? "No specific team" : "Select a team"}</option>
+                  {teams.map((team) => (
+                    <option key={team.id} value={team.id}>
+                      {team.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+            <button
+              type="submit"
+              className={`${styles.button} ${styles.buttonPrimary}`}
+              disabled={status === "sending" || !organizationId}
+            >
+              {status === "sending" ? "Sending…" : "Send invite"}
+            </button>
+            {status === "error" && <p className={styles.errorText}>{error}</p>}
+          </form>
+        </div>
+      </main>
+    </>
   );
 }

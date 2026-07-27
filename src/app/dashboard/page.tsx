@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { centeredStyle } from "@/lib/ui";
+import styles from "@/styles/ui.module.css";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -30,13 +30,34 @@ export default async function DashboardPage() {
   const orgName = organization?.name ?? "Your organization";
 
   return (
-    <main style={centeredStyle}>
-      <h1>{orgName}</h1>
-      <p>Welcome, {member.name}.</p>
-      {isAdmin && <a href="/team/invite">Invite a team member</a>}
-      <form action="/auth/signout" method="post">
-        <button type="submit">Sign out</button>
-      </form>
-    </main>
+    <>
+      <header className={styles.appHeader}>
+        <div className={styles.appHeaderInner}>
+          <p className={styles.wordmark}>
+            Safe<span className={styles.wordmarkAccent}>Campus</span>
+          </p>
+          <span className={styles.appHeaderMeta}>{member.name}</span>
+        </div>
+      </header>
+      <main className={styles.appMain}>
+        <div className={styles.card}>
+          <div className={styles.cardHeader}>
+            {isAdmin && <span className={styles.badge}>Org admin</span>}
+            <h1 className={styles.cardTitle}>{orgName}</h1>
+            <p className={styles.subtitle}>Welcome, {member.name}.</p>
+          </div>
+          {isAdmin && (
+            <a href="/team/invite" className={`${styles.button} ${styles.buttonPrimary}`}>
+              Invite a team member
+            </a>
+          )}
+          <form action="/auth/signout" method="post">
+            <button type="submit" className={`${styles.button} ${styles.buttonSecondary}`}>
+              Sign out
+            </button>
+          </form>
+        </div>
+      </main>
+    </>
   );
 }

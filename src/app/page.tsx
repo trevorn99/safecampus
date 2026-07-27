@@ -1,20 +1,22 @@
+import styles from "@/styles/ui.module.css";
+
 export default function Home() {
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: "0.5rem",
-        textAlign: "center",
-        padding: "2rem",
-      }}
-    >
-      <h1>SafeCampus</h1>
-      <p>Team management and scheduling for church safety teams.</p>
-      <a href="/login">Sign in</a>
+    <main className={styles.authShell}>
+      <div className={styles.authCard}>
+        <p className={styles.wordmark}>
+          Safe<span className={styles.wordmarkAccent}>Campus</span>
+        </p>
+        <div>
+          <h1 className={styles.title}>Team management for church safety teams</h1>
+          <p className={styles.subtitle}>
+            Rosters, scheduling, certifications, and notifications — all in one place.
+          </p>
+        </div>
+        <a href="/login" className={`${styles.button} ${styles.buttonPrimary}`}>
+          Sign in
+        </a>
+      </div>
     </main>
   );
 }

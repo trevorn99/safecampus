@@ -1,0 +1,213 @@
+/* Wordmark, used in both the auth shell and the app header */
+.wordmark {
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.wordmarkAccent {
+  color: var(--accent-strong);
+}
+
+/* Centered single-column shell for login/onboarding/invite pages */
+.authShell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.75rem;
+  padding: 2rem 1.5rem;
+}
+.authCard {
+  width: 100%;
+  max-width: 400px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  padding: 2.25rem 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  text-align: center;
+}
+
+.eyebrow {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+.subtitle {
+  color: var(--muted);
+  font-size: 0.92rem;
+  text-wrap: balance;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  text-align: left;
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+.hint {
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.input,
+.select {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 0.92rem;
+  transition: border-color 0.15s ease;
+}
+.input:hover,
+.select:hover {
+  border-color: var(--muted);
+}
+.input:focus,
+.select:focus {
+  border-color: var(--accent);
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1.1rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s ease, background-color 0.15s ease;
+}
+.button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.buttonPrimary {
+  background: var(--accent);
+  color: var(--accent-contrast);
+}
+.buttonPrimary:hover:not(:disabled) {
+  background: var(--accent-strong);
+}
+.buttonSecondary {
+  background: transparent;
+  border-color: var(--border);
+  color: var(--ink);
+}
+.buttonSecondary:hover:not(:disabled) {
+  border-color: var(--muted);
+}
+
+.helperText {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.errorText {
+  font-size: 0.85rem;
+  color: var(--danger);
+  background: var(--danger-bg);
+  border-radius: var(--radius-sm);
+  padding: 0.55rem 0.75rem;
+  text-align: left;
+}
+
+.link {
+  color: var(--accent-strong);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+.link:hover {
+  text-decoration: underline;
+}
+
+/* Authenticated app shell (dashboard, team pages) */
+.appHeader {
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+.appHeaderInner {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 1rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.appHeaderMeta {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.appMain {
+  flex: 1;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: 1.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+.cardHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.cardTitle {
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  background: var(--success-bg);
+  color: var(--success);
+  width: fit-content;
+}

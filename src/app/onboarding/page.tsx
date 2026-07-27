@@ -3,7 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { centeredStyle, formStyle, errorStyle } from "@/lib/ui";
+import styles from "@/styles/ui.module.css";
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -36,32 +36,66 @@ export default function OnboardingPage() {
   }
 
   return (
-    <main style={centeredStyle}>
-      <h1>Set up your organization</h1>
-      <p>You&apos;ll be the first admin — you can invite the rest of your team next.</p>
-      <form onSubmit={handleSubmit} style={formStyle}>
-        <label>
-          Organization name
-          <input
-            required
-            placeholder="Grace Community Church"
-            value={orgName}
-            onChange={(event) => setOrgName(event.target.value)}
-          />
-        </label>
-        <label>
-          Your name
-          <input required value={adminName} onChange={(event) => setAdminName(event.target.value)} />
-        </label>
-        <label>
-          Timezone
-          <input required value={timezone} onChange={(event) => setTimezone(event.target.value)} />
-        </label>
-        <button type="submit" disabled={loading}>
-          {loading ? "Creating…" : "Create organization"}
-        </button>
-        {error && <p style={errorStyle}>{error}</p>}
-      </form>
+    <main className={styles.authShell}>
+      <div className={styles.authCard}>
+        <p className={styles.wordmark}>
+          Safe<span className={styles.wordmarkAccent}>Campus</span>
+        </p>
+        <div>
+          <h1 className={styles.title}>Set up your organization</h1>
+          <p className={styles.subtitle}>
+            You&apos;ll be the first admin — you can invite the rest of your team next.
+          </p>
+        </div>
+        <form onSubmit={handleSubmit} className={styles.form}>
+          <div className={styles.field}>
+            <label className={styles.label} htmlFor="orgName">
+              Organization name
+            </label>
+            <input
+              id="orgName"
+              className={styles.input}
+              required
+              placeholder="Grace Community Church"
+              value={orgName}
+              onChange={(event) => setOrgName(event.target.value)}
+            />
+          </div>
+          <div className={styles.field}>
+            <label className={styles.label} htmlFor="adminName">
+              Your name
+            </label>
+            <input
+              id="adminName"
+              className={styles.input}
+              required
+              value={adminName}
+              onChange={(event) => setAdminName(event.target.value)}
+            />
+          </div>
+          <div className={styles.field}>
+            <label className={styles.label} htmlFor="timezone">
+              Timezone
+              <span className={styles.hint}> — IANA format</span>
+            </label>
+            <input
+              id="timezone"
+              className={styles.input}
+              required
+              value={timezone}
+              onChange={(event) => setTimezone(event.target.value)}
+            />
+          </div>
+          <button
+            type="submit"
+            className={`${styles.button} ${styles.buttonPrimary}`}
+            disabled={loading}
+          >
+            {loading ? "Creating…" : "Create organization"}
+          </button>
+          {error && <p className={styles.errorText}>{error}</p>}
+        </form>
+      </div>
     </main>
   );
 }
