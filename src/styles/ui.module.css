@@ -316,6 +316,11 @@
   width: 72px;
   height: 72px;
 }
+.avatarXl {
+  composes: avatar;
+  width: 104px;
+  height: 104px;
+}
 .avatarFallback {
   border-radius: 50%;
   display: flex;
@@ -337,6 +342,12 @@
   width: 72px;
   height: 72px;
   font-size: 1.4rem;
+}
+.avatarFallbackXl {
+  composes: avatarFallback;
+  width: 104px;
+  height: 104px;
+  font-size: 2rem;
 }
 
 /* Avatar cropper — pan/zoom needs continuous, computed values (drag

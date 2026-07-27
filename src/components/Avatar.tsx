@@ -9,6 +9,18 @@ function initials(name: string) {
     .join("");
 }
 
+const AVATAR_CLASS = {
+  sm: "avatarSmall",
+  lg: "avatarLarge",
+  xl: "avatarXl",
+} as const;
+
+const FALLBACK_CLASS = {
+  sm: "avatarFallbackSmall",
+  lg: "avatarFallbackLarge",
+  xl: "avatarFallbackXl",
+} as const;
+
 export function Avatar({
   name,
   url,
@@ -16,17 +28,13 @@ export function Avatar({
 }: {
   name: string;
   url?: string | null;
-  size?: "sm" | "lg";
+  size?: "sm" | "lg" | "xl";
 }) {
   if (url) {
     return (
       // eslint-disable-next-line @next/next/no-img-element -- signed Storage URL, not a static/next-image-compatible asset
-      <img src={url} alt="" className={size === "lg" ? styles.avatarLarge : styles.avatarSmall} />
+      <img src={url} alt="" className={styles[AVATAR_CLASS[size]]} />
     );
   }
-  return (
-    <div className={size === "lg" ? styles.avatarFallbackLarge : styles.avatarFallbackSmall}>
-      {initials(name) || "?"}
-    </div>
-  );
+  return <div className={styles[FALLBACK_CLASS[size]]}>{initials(name) || "?"}</div>;
 }

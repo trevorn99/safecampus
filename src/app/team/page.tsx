@@ -72,7 +72,7 @@ export default async function TeamPage() {
                         ? (avatarUrls.get(teamMember.profile_picture_url) ?? null)
                         : null
                     }
-                    size="lg"
+                    size="xl"
                   />
                   <div>
                     <p className={styles.itemName}>{teamMember.name}</p>
