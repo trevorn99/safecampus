@@ -14,6 +14,7 @@ export default function Home() {
     >
       <h1>SafeCampus</h1>
       <p>Team management and scheduling for church safety teams.</p>
+      <a href="/login">Sign in</a>
     </main>
   );
 }
