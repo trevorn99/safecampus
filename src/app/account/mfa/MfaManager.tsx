@@ -116,9 +116,9 @@ export function MfaManager() {
             Scan this with an authenticator app (Google Authenticator, 1Password, Authy), then
             enter the 6-digit code it shows.
           </p>
-          {/* eslint-disable-next-line @next/next/no-img-element -- inline SVG data URI from Supabase's enroll response, not a next/image-compatible asset */}
+          {/* eslint-disable-next-line @next/next/no-img-element -- qrCode is already a data: URL from Supabase's enroll response, not a next/image-compatible asset */}
           <img
-            src={`data:image/svg+xml;utf-8,${encodeURIComponent(qrCode)}`}
+            src={qrCode}
             alt="Scan with your authenticator app"
             width={200}
             height={200}
