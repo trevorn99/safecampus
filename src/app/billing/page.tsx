@@ -1,7 +1,7 @@
 import { requireMembership } from "@/lib/session";
 import { AppHeader } from "@/components/AppHeader";
 import { BillingActions } from "./BillingActions";
-import { SEAT_CAPS, TIER_LABEL, tierForSeatCount, type PlanTier } from "@/lib/stripe";
+import { SEAT_CAPS, TIER_LABEL, tierForSeatCount, createStripeClient, type PlanTier } from "@/lib/stripe";
 import styles from "@/styles/ui.module.css";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -47,6 +47,11 @@ export default async function BillingPage() {
   const currentTier = (org?.plan_tier as PlanTier | null) ?? tierForSeatCount(seatCount ?? 1);
   const overCap = !tierForSeatCount(seatCount ?? 1);
 
+  const invoices =
+    isAdmin && org?.stripe_customer_id
+      ? (await createStripeClient().invoices.list({ customer: org.stripe_customer_id, limit: 12 })).data
+      : [];
+
   return (
     <>
       <AppHeader isAdmin={isAdmin} isPlatformAdmin={isPlatformAdmin} />
@@ -89,6 +94,43 @@ export default async function BillingPage() {
             <BillingActions hasStripeCustomer={Boolean(org?.stripe_customer_id)} />
           )}
         </div>
+
+        {isAdmin && invoices.length > 0 && (
+          <div className={styles.card}>
+            <div className={styles.cardHeader}>
+              <h2 className={styles.cardTitle}>Billing history</h2>
+            </div>
+            <ul className={styles.list}>
+              {invoices.map((invoice) => (
+                <li key={invoice.id} className={styles.listRow}>
+                  <div>
+                    <p className={styles.itemName}>
+                      {invoice.created ? new Date(invoice.created * 1000).toLocaleDateString() : "—"}
+                    </p>
+                    <p className={styles.itemMeta}>
+                      {((invoice.amount_paid ?? 0) / 100).toLocaleString(undefined, {
+                        style: "currency",
+                        currency: (invoice.currency ?? "usd").toUpperCase(),
+                      })}
+                      {" · "}
+                      {invoice.status}
+                    </p>
+                  </div>
+                  {invoice.invoice_pdf && (
+                    <a
+                      href={invoice.invoice_pdf}
+                      target="_blank"
+                      rel="noreferrer"
+                      className={`${styles.button} ${styles.buttonSecondary}`}
+                    >
+                      Download
+                    </a>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </main>
     </>
   );
