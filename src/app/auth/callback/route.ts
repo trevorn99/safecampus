@@ -10,6 +10,11 @@ export async function GET(request: Request) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error) {
+      const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+      if (aal && aal.nextLevel === "aal2" && aal.currentLevel !== "aal2") {
+        return NextResponse.redirect(`${origin}/auth/mfa-challenge`);
+      }
+
       const {
         data: { user },
       } = await supabase.auth.getUser();

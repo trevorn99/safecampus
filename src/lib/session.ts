@@ -12,6 +12,13 @@ export async function requireMembership() {
     redirect("/login");
   }
 
+  // Safety net for any session that reached a protected page without going
+  // through /auth/callback's own check (e.g. a long-lived cookie).
+  const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+  if (aal && aal.nextLevel === "aal2" && aal.currentLevel !== "aal2") {
+    redirect("/auth/mfa-challenge");
+  }
+
   const { data: member } = await supabase
     .from("members")
     .select("id, name, organization_id")
@@ -22,10 +29,28 @@ export async function requireMembership() {
     redirect("/onboarding");
   }
 
-  const [{ data: isAdmin }, { data: organization }] = await Promise.all([
+  const [{ data: isAdmin }, { data: organization }, { data: privilegedRole }] = await Promise.all([
     supabase.rpc("is_org_admin", { target_org: member.organization_id }),
     supabase.from("organizations").select("name").eq("id", member.organization_id).single(),
+    supabase
+      .from("role_assignments")
+      .select("id")
+      .eq("member_id", member.id)
+      .in("role", ["org_admin", "location_manager"])
+      .limit(1)
+      .maybeSingle(),
   ]);
+
+  // MFA is required for admin/location_manager accounts — enforced here
+  // (app-level) and, for the watchlist specifically, again at the RLS
+  // layer via is_aal2() so it holds even against direct API calls.
+  if (privilegedRole) {
+    const { data: factors } = await supabase.auth.mfa.listFactors();
+    // data.totp is already filtered to verified factors by the API.
+    if (!factors?.totp?.length) {
+      redirect("/account/mfa");
+    }
+  }
 
   return {
     supabase,
