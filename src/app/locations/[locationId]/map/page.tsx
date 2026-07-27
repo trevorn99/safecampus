@@ -11,7 +11,7 @@ export default async function LocationMapPage({
   params: Promise<{ locationId: string }>;
 }) {
   const { locationId } = await params;
-  const { supabase, member, organizationName, isAdmin } = await requireMembership();
+  const { supabase, member, organizationName, isAdmin, isPlatformAdmin } = await requireMembership();
 
   const { data: location } = await supabase
     .from("locations")
@@ -58,7 +58,7 @@ export default async function LocationMapPage({
 
   return (
     <>
-      <AppHeader isAdmin={isAdmin} />
+      <AppHeader isAdmin={isAdmin} isPlatformAdmin={isPlatformAdmin} />
       <main className={styles.appMain}>
         <div className={styles.pageHeading}>
           <h1 className={styles.pageTitle}>{location.name} — Map</h1>

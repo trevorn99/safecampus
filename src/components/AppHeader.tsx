@@ -13,8 +13,20 @@ const ADMIN_NAV_ITEMS = [
   { href: "/billing", label: "Billing" },
 ];
 
-export function AppHeader({ isAdmin }: { isAdmin: boolean }) {
-  const items = isAdmin ? [...NAV_ITEMS, ...ADMIN_NAV_ITEMS] : NAV_ITEMS;
+const PLATFORM_ADMIN_NAV_ITEMS = [{ href: "/platform-admin", label: "Platform" }];
+
+export function AppHeader({
+  isAdmin,
+  isPlatformAdmin = false,
+}: {
+  isAdmin: boolean;
+  isPlatformAdmin?: boolean;
+}) {
+  const items = [
+    ...NAV_ITEMS,
+    ...(isAdmin ? ADMIN_NAV_ITEMS : []),
+    ...(isPlatformAdmin ? PLATFORM_ADMIN_NAV_ITEMS : []),
+  ];
 
   return (
     <header className={styles.appHeader}>

@@ -12,7 +12,7 @@ const ROLE_LABEL: Record<string, string> = {
 type RoleAssignment = { member_id: string; scope_type: string; scope_id: string; role: string };
 
 export default async function TeamPage() {
-  const { supabase, member, organizationName, isAdmin } = await requireMembership();
+  const { supabase, member, organizationName, isAdmin, isPlatformAdmin } = await requireMembership();
 
   const [{ data: members }, { data: roleAssignments }, { data: locations }, { data: teams }] =
     await Promise.all([
@@ -44,7 +44,7 @@ export default async function TeamPage() {
 
   return (
     <>
-      <AppHeader isAdmin={isAdmin} />
+      <AppHeader isAdmin={isAdmin} isPlatformAdmin={isPlatformAdmin} />
       <main className={styles.appMain}>
         <div className={styles.pageHeading}>
           <h1 className={styles.pageTitle}>Team roster</h1>

@@ -4,7 +4,7 @@ import { NewTeamForm } from "./NewTeamForm";
 import styles from "@/styles/ui.module.css";
 
 export default async function TeamsPage() {
-  const { supabase, member, organizationName, isAdmin } = await requireMembership();
+  const { supabase, member, organizationName, isAdmin, isPlatformAdmin } = await requireMembership();
 
   const [{ data: teams }, { data: locations }] = await Promise.all([
     supabase
@@ -19,7 +19,7 @@ export default async function TeamsPage() {
 
   return (
     <>
-      <AppHeader isAdmin={isAdmin} />
+      <AppHeader isAdmin={isAdmin} isPlatformAdmin={isPlatformAdmin} />
       <main className={styles.appMain}>
         <div className={styles.pageHeading}>
           <h1 className={styles.pageTitle}>Teams</h1>

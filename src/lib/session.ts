@@ -29,19 +29,25 @@ export async function requireMembership(options?: { allowUnpaid?: boolean }) {
     redirect("/onboarding");
   }
 
-  const [{ data: isAdmin }, { data: organization }, { data: privilegedRole }, { data: hasAccess }] =
-    await Promise.all([
-      supabase.rpc("is_org_admin", { target_org: member.organization_id }),
-      supabase.from("organizations").select("name").eq("id", member.organization_id).single(),
-      supabase
-        .from("role_assignments")
-        .select("id")
-        .eq("member_id", member.id)
-        .in("role", ["org_admin", "location_manager"])
-        .limit(1)
-        .maybeSingle(),
-      supabase.rpc("has_active_access", { target_org: member.organization_id }),
-    ]);
+  const [
+    { data: isAdmin },
+    { data: organization },
+    { data: privilegedRole },
+    { data: hasAccess },
+    { data: isPlatformAdmin },
+  ] = await Promise.all([
+    supabase.rpc("is_org_admin", { target_org: member.organization_id }),
+    supabase.from("organizations").select("name").eq("id", member.organization_id).single(),
+    supabase
+      .from("role_assignments")
+      .select("id")
+      .eq("member_id", member.id)
+      .in("role", ["org_admin", "location_manager"])
+      .limit(1)
+      .maybeSingle(),
+    supabase.rpc("has_active_access", { target_org: member.organization_id }),
+    supabase.rpc("is_platform_admin"),
+  ]);
 
   // Every page but /billing itself is gated on an active subscription, trial,
   // or a platform-admin exemption — see has_active_access() in the billing
@@ -67,5 +73,6 @@ export async function requireMembership(options?: { allowUnpaid?: boolean }) {
     member,
     organizationName: organization?.name ?? "Your organization",
     isAdmin: Boolean(isAdmin),
+    isPlatformAdmin: Boolean(isPlatformAdmin),
   };
 }

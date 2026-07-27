@@ -3,11 +3,11 @@ import { AppHeader } from "@/components/AppHeader";
 import styles from "@/styles/ui.module.css";
 
 export default async function DashboardPage() {
-  const { member, organizationName, isAdmin } = await requireMembership();
+  const { member, organizationName, isAdmin, isPlatformAdmin } = await requireMembership();
 
   return (
     <>
-      <AppHeader isAdmin={isAdmin} />
+      <AppHeader isAdmin={isAdmin} isPlatformAdmin={isPlatformAdmin} />
       <main className={styles.appMain}>
         <div className={styles.card}>
           <div className={styles.cardHeader}>

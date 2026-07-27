@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { AppHeader } from "@/components/AppHeader";
 import { ExemptionToggle } from "./ExemptionToggle";
 import { TIER_LABEL, type PlanTier } from "@/lib/stripe";
 import styles from "@/styles/ui.module.css";
@@ -29,31 +30,34 @@ export default async function PlatformAdminPage() {
     .order("name");
 
   return (
-    <main className={styles.appMain}>
-      <div className={styles.pageHeading}>
-        <h1 className={styles.pageTitle}>Platform admin</h1>
-        <p className={styles.subtitle}>Paywall exemptions</p>
-      </div>
+    <>
+      <AppHeader isAdmin={false} isPlatformAdmin />
+      <main className={styles.appMain}>
+        <div className={styles.pageHeading}>
+          <h1 className={styles.pageTitle}>Platform admin</h1>
+          <p className={styles.subtitle}>Paywall exemptions</p>
+        </div>
 
-      <div className={styles.card}>
-        <ul className={styles.list}>
-          {(organizations ?? []).map((org) => (
-            <li key={org.id} className={styles.listRow}>
-              <div>
-                <p className={styles.itemName}>{org.name}</p>
-                <p className={styles.itemMeta}>
-                  {org.subscription_status}
-                  {org.plan_tier ? ` · ${TIER_LABEL[org.plan_tier as PlanTier]}` : ""}
-                  {org.subscription_status === "trialing" && org.trial_ends_at
-                    ? ` · trial ends ${new Date(org.trial_ends_at).toLocaleDateString()}`
-                    : ""}
-                </p>
-              </div>
-              <ExemptionToggle organizationId={org.id} exempt={org.paywall_exempt} />
-            </li>
-          ))}
-        </ul>
-      </div>
-    </main>
+        <div className={styles.card}>
+          <ul className={styles.list}>
+            {(organizations ?? []).map((org) => (
+              <li key={org.id} className={styles.listRow}>
+                <div>
+                  <p className={styles.itemName}>{org.name}</p>
+                  <p className={styles.itemMeta}>
+                    {org.subscription_status}
+                    {org.plan_tier ? ` · ${TIER_LABEL[org.plan_tier as PlanTier]}` : ""}
+                    {org.subscription_status === "trialing" && org.trial_ends_at
+                      ? ` · trial ends ${new Date(org.trial_ends_at).toLocaleDateString()}`
+                      : ""}
+                  </p>
+                </div>
+                <ExemptionToggle organizationId={org.id} exempt={org.paywall_exempt} />
+              </li>
+            ))}
+          </ul>
+        </div>
+      </main>
+    </>
   );
 }

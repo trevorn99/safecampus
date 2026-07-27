@@ -26,7 +26,7 @@ export default async function MfaSettingsPage() {
     redirect("/onboarding");
   }
 
-  const [{ data: isAdmin }, { data: privilegedRole }] = await Promise.all([
+  const [{ data: isAdmin }, { data: privilegedRole }, { data: isPlatformAdmin }] = await Promise.all([
     supabase.rpc("is_org_admin", { target_org: member.organization_id }),
     supabase
       .from("role_assignments")
@@ -35,11 +35,12 @@ export default async function MfaSettingsPage() {
       .in("role", ["org_admin", "location_manager"])
       .limit(1)
       .maybeSingle(),
+    supabase.rpc("is_platform_admin"),
   ]);
 
   return (
     <>
-      <AppHeader isAdmin={Boolean(isAdmin)} />
+      <AppHeader isAdmin={Boolean(isAdmin)} isPlatformAdmin={Boolean(isPlatformAdmin)} />
       <main className={styles.appMain}>
         <div className={styles.pageHeading}>
           <h1 className={styles.pageTitle}>Two-factor authentication</h1>

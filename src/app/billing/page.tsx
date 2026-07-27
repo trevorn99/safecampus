@@ -20,7 +20,7 @@ function isPastTrial(trialEndsAt: Date | null): boolean {
 }
 
 export default async function BillingPage() {
-  const { supabase, member, organizationName, isAdmin } = await requireMembership({
+  const { supabase, member, organizationName, isAdmin, isPlatformAdmin } = await requireMembership({
     allowUnpaid: true,
   });
 
@@ -49,7 +49,7 @@ export default async function BillingPage() {
 
   return (
     <>
-      <AppHeader isAdmin={isAdmin} />
+      <AppHeader isAdmin={isAdmin} isPlatformAdmin={isPlatformAdmin} />
       <main className={styles.appMain}>
         <div className={styles.pageHeading}>
           <h1 className={styles.pageTitle}>Billing</h1>

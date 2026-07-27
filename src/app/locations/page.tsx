@@ -4,7 +4,7 @@ import { NewLocationForm } from "./NewLocationForm";
 import styles from "@/styles/ui.module.css";
 
 export default async function LocationsPage() {
-  const { supabase, member, organizationName, isAdmin } = await requireMembership();
+  const { supabase, member, organizationName, isAdmin, isPlatformAdmin } = await requireMembership();
 
   const { data: locations } = await supabase
     .from("locations")
@@ -14,7 +14,7 @@ export default async function LocationsPage() {
 
   return (
     <>
-      <AppHeader isAdmin={isAdmin} />
+      <AppHeader isAdmin={isAdmin} isPlatformAdmin={isPlatformAdmin} />
       <main className={styles.appMain}>
         <div className={styles.pageHeading}>
           <h1 className={styles.pageTitle}>Locations</h1>
