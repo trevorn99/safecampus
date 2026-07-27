@@ -38,9 +38,12 @@ export default function OnboardingPage() {
   return (
     <main className={styles.authShell}>
       <div className={styles.authCard}>
-        <p className={styles.wordmark}>
-          Safe<span className={styles.wordmarkAccent}>Campus</span>
-        </p>
+        <div className={styles.authBrand}>
+          <p className={styles.wordmark}>
+            Safe<span className={styles.wordmarkAccent}>Campus</span>
+          </p>
+          <span className={styles.devBadge}>Beta</span>
+        </div>
         <div>
           <h1 className={styles.title}>Set up your organization</h1>
           <p className={styles.subtitle}>

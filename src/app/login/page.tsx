@@ -12,6 +12,7 @@ function Brand() {
       <span className={styles.wordmark}>
         Safe<span className={styles.wordmarkAccent}>Campus</span>
       </span>
+      <span className={styles.devBadge}>Beta</span>
     </div>
   );
 }

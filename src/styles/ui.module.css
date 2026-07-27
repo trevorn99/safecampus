@@ -7,6 +7,19 @@
 .wordmarkAccent {
   color: var(--accent-strong);
 }
+.devBadge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  background: var(--surface-muted);
+}
 .authBrand {
   display: flex;
   align-items: center;

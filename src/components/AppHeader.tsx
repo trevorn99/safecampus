@@ -22,6 +22,7 @@ export function AppHeader({ isAdmin }: { isAdmin: boolean }) {
           <a href="/dashboard" className={styles.wordmark}>
             Safe<span className={styles.wordmarkAccent}>Campus</span>
           </a>
+          <span className={styles.devBadge}>Beta</span>
           <nav className={styles.appNav}>
             {items.map((item) => (
               <a key={item.href} href={item.href} className={styles.navLink}>

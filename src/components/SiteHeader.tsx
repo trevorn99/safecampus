@@ -11,6 +11,7 @@ export function SiteHeader() {
           <span className={styles.wordmark}>
             Safe<span className={styles.wordmarkAccent}>Campus</span>
           </span>
+          <span className={styles.devBadge}>Beta</span>
         </Link>
         <nav className={styles.siteNav}>
           <a href="/features" className={styles.navLink}>
