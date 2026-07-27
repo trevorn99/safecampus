@@ -339,6 +339,31 @@
   font-size: 1.4rem;
 }
 
+/* Avatar cropper — pan/zoom needs continuous, computed values (drag
+   position, zoom level), which is the narrow, deliberate exception to
+   this file's otherwise-inline-style-free convention. */
+.cropperViewport {
+  position: relative;
+  width: 240px;
+  height: 240px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  cursor: grab;
+  touch-action: none;
+}
+.cropperViewport:active {
+  cursor: grabbing;
+}
+.cropperImage {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  max-width: none;
+  user-select: none;
+}
+
 /* Groups a labeled control cluster (e.g. platform-admin's billing vs
    support-access controls) so unrelated actions don't blend together. */
 .controlGroup {
