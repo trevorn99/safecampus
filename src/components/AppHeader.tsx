@@ -2,6 +2,7 @@ import styles from "@/styles/ui.module.css";
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard" },
+  { href: "/schedule", label: "Schedule" },
   { href: "/team", label: "Team" },
   { href: "/certifications", label: "Certifications" },
   { href: "/account/mfa", label: "Account" },
