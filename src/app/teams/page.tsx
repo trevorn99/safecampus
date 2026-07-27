@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireMembership } from "@/lib/session";
 import { AppHeader } from "@/components/AppHeader";
 import { NewTeamForm } from "./NewTeamForm";
@@ -32,7 +33,9 @@ export default async function TeamsPage() {
             {(teams ?? []).map((team) => (
               <li key={team.id} className={styles.listRow}>
                 <div>
-                  <p className={styles.itemName}>{team.name}</p>
+                  <Link href={`/teams/${team.id}`} className={styles.itemName}>
+                    {team.name}
+                  </Link>
                   <p className={styles.itemMeta}>{team.type}</p>
                 </div>
                 <span className={styles.pillMuted}>
