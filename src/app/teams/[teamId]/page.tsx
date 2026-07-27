@@ -96,7 +96,7 @@ export default async function TeamDetailPage({
               return (
                 <li key={row.id} className={styles.listRow}>
                   <div className={styles.identityRow}>
-                    <Avatar name={rowMember?.name ?? "?"} url={avatarUrl} />
+                    <Avatar name={rowMember?.name ?? "?"} url={avatarUrl} size="lg" />
                     <div>
                       <p className={styles.itemName}>{rowMember?.name ?? "Unknown member"}</p>
                       <p className={styles.itemMeta}>{ROLE_LABEL[row.role] ?? row.role}</p>
