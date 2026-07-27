@@ -43,6 +43,12 @@ const FEATURES = [
       "A restricted, audited record for incidents and individuals of concern, visible only to admins and location leadership.",
     comingSoon: true,
   },
+  {
+    title: "AI-assisted intelligence reports",
+    description:
+      "Automatically drafted threat intelligence briefs for each location, drawing on incident history and watchlist activity — reviewed by your admins before anyone sees them.",
+    comingSoon: true,
+  },
 ];
 
 export default function FeaturesPage() {
