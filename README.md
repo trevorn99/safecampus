@@ -1,6 +1,6 @@
 # SafeCampus
 
-Team management, scheduling, and notifications for church safety teams — rosters, location-scoped roles, certification and training tracking, secure document and watchlist storage, Planning Center import, and automated reminders via SendGrid and Twilio.
+Team management, scheduling, and notifications for safety teams and organizations of every kind — rosters, location-scoped roles, certification and training tracking, secure document and watchlist storage, Planning Center import, and automated reminders via SendGrid and Twilio.
 
 The full architecture and data model are documented in the project's architecture brief (Supabase/Postgres, Next.js, RLS design, platform admin support access, dev/prod environments).
 

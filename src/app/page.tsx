@@ -7,13 +7,13 @@ export default function Home() {
     <>
       <SiteHeader />
       <main className={styles.hero}>
-        <Image src="/images/logo.jpg" alt="SafeCampus" width={72} height={72} className={styles.logo} />
+        <Image src="/images/logo-mark.png" alt="SafeCampus" width={72} height={72} className={styles.logo} />
         <p className={styles.eyebrow}>Vigilance, Coordinated</p>
-        <h1 className={styles.heroTitle}>Team management for church safety teams</h1>
+        <h1 className={styles.heroTitle}>Team management for safety teams of every kind</h1>
         <p className={styles.heroDescription}>
           SafeCampus gives your safety team one place to manage rosters, build schedules, track
-          certifications, and coordinate every service — across every campus, every team, and
-          every volunteer — so everyone knows where to be and what&apos;s expected of them.
+          certifications, and coordinate every event — across every location, every team, and
+          every member — so everyone knows where to be and what&apos;s expected of them.
         </p>
         <div className={styles.heroActions}>
           <a href="/login" className={`${styles.button} ${styles.buttonPrimary}`}>

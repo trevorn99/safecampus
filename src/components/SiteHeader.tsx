@@ -7,7 +7,7 @@ export function SiteHeader() {
     <header className={styles.siteHeader}>
       <div className={styles.siteHeaderInner}>
         <Link href="/" className={styles.siteHeaderBrand}>
-          <Image src="/images/logo.jpg" alt="" width={32} height={32} className={styles.logo} />
+          <Image src="/images/logo-mark.png" alt="" width={32} height={32} className={styles.logo} />
           <span className={styles.wordmark}>
             Safe<span className={styles.wordmarkAccent}>Campus</span>
           </span>

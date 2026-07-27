@@ -56,7 +56,7 @@ export default function OnboardingPage() {
               id="orgName"
               className={styles.input}
               required
-              placeholder="Grace Community Church"
+              placeholder="Acme Corporation"
               value={orgName}
               onChange={(event) => setOrgName(event.target.value)}
             />

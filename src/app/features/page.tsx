@@ -10,7 +10,7 @@ const FEATURES = [
   {
     title: "Scheduling & recurring events",
     description:
-      "Build a position template once — who's needed, where, and when relative to the event — and reuse it for one-off events or recurring services (every Sunday, every 3rd week, however your schedule actually runs).",
+      "Build a position template once — who's needed, where, and when relative to the event — and reuse it for one-off events or recurring shifts (weekly, every 3rd week, however your schedule actually runs).",
   },
   {
     title: "Self-service certifications",
@@ -30,7 +30,7 @@ const FEATURES = [
   {
     title: "Passwordless, secure sign-in",
     description:
-      "Sign in with a magic link or Google — no passwords to manage. Every organization's data is isolated at the database level, so one church can never see another's.",
+      "Sign in with a magic link or Google — no passwords to manage. Every organization's data is isolated at the database level, so one organization can never see another's.",
   },
   {
     title: "Automated notifications",
@@ -52,7 +52,7 @@ export default function FeaturesPage() {
       <main className={styles.hero}>
         <h1 className={styles.heroTitle}>Everything your safety team needs</h1>
         <p className={styles.heroDescription}>
-          Built specifically for church safety and security teams — not a generic scheduling tool
+          Built specifically for safety and security teams — not a generic scheduling tool
           repurposed for the job.
         </p>
       </main>

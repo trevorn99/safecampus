@@ -8,7 +8,7 @@ import styles from "@/styles/ui.module.css";
 function Brand() {
   return (
     <div className={styles.authBrand}>
-      <Image src="/images/logo.jpg" alt="" width={28} height={28} className={styles.logo} />
+      <Image src="/images/logo-mark.png" alt="" width={28} height={28} className={styles.logo} />
       <span className={styles.wordmark}>
         Safe<span className={styles.wordmarkAccent}>Campus</span>
       </span>

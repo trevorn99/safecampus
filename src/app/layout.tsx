@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "SafeCampus",
-  description: "Team management and scheduling for church safety teams.",
+  description: "Team management and scheduling for safety teams and organizations of every kind.",
 };
 
 export default function RootLayout({
