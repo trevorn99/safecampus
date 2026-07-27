@@ -7,6 +7,14 @@
 
 create extension if not exists "pgcrypto";
 
+-- Several helper functions below reference tables (members, role_assignments,
+-- platform_admins, audit_logs) that don't exist yet at this point in the
+-- file. `language sql` functions are validated against the catalog at
+-- creation time, so without this they'd fail to create. Safe to leave off
+-- for the rest of the migration since every referenced table exists by the
+-- time these functions actually run.
+set check_function_bodies = off;
+
 -- ---------------------------------------------------------------------------
 -- Helper functions (security definer so they can read role_assignments /
 -- members without triggering RLS recursion on those same tables)
