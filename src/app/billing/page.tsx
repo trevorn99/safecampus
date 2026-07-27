@@ -1,6 +1,7 @@
 import { requireMembership } from "@/lib/session";
 import { AppHeader } from "@/components/AppHeader";
 import { BillingActions } from "./BillingActions";
+import { SEAT_CAPS, TIER_LABEL, tierForSeatCount, type PlanTier } from "@/lib/stripe";
 import styles from "@/styles/ui.module.css";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -26,7 +27,7 @@ export default async function BillingPage() {
   const [{ data: org }, { count: seatCount }] = await Promise.all([
     supabase
       .from("organizations")
-      .select("subscription_status, trial_ends_at, stripe_customer_id, paywall_exempt")
+      .select("subscription_status, trial_ends_at, stripe_customer_id, paywall_exempt, plan_tier")
       .eq("id", member.organization_id)
       .single(),
     supabase
@@ -42,6 +43,9 @@ export default async function BillingPage() {
     !org?.paywall_exempt &&
     org?.subscription_status !== "active" &&
     !(org?.subscription_status === "trialing" && !trialExpired);
+
+  const currentTier = (org?.plan_tier as PlanTier | null) ?? tierForSeatCount(seatCount ?? 1);
+  const overCap = !tierForSeatCount(seatCount ?? 1);
 
   return (
     <>
@@ -65,8 +69,14 @@ export default async function BillingPage() {
               </p>
             )}
             <p className={styles.itemMeta}>
-              Billed per active member — {seatCount ?? 0} seat{seatCount === 1 ? "" : "s"} today.
+              {seatCount ?? 0} active member{seatCount === 1 ? "" : "s"}
+              {currentTier && !overCap ? ` of ${SEAT_CAPS[currentTier]} on ${TIER_LABEL[currentTier]}` : ""}.
             </p>
+            {overCap && (
+              <p className={styles.itemMeta}>
+                You&apos;re over our largest self-serve plan (50 users) — contact us to set up a custom plan.
+              </p>
+            )}
           </div>
 
           {!isAdmin && needsSubscription && (
@@ -75,7 +85,7 @@ export default async function BillingPage() {
             </p>
           )}
 
-          {isAdmin && !org?.paywall_exempt && (
+          {isAdmin && !org?.paywall_exempt && !overCap && (
             <BillingActions hasStripeCustomer={Boolean(org?.stripe_customer_id)} />
           )}
         </div>

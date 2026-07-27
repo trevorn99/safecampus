@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { createStripeClient } from "@/lib/stripe";
+import { createStripeClient, priceIdToTier } from "@/lib/stripe";
 
 // Stripe subscription statuses collapsed onto organizations.subscription_status.
 const STATUS_MAP: Record<Stripe.Subscription.Status, string> = {
@@ -19,12 +19,17 @@ async function syncSubscription(subscription: Stripe.Subscription) {
   const organizationId = subscription.metadata.organization_id;
   if (!organizationId) return;
 
+  // Keeps plan_tier correct even if the price was changed directly in the
+  // Stripe dashboard rather than through syncPlanTier()'s auto-upgrade path.
+  const tier = priceIdToTier(subscription.items.data[0]?.price.id);
+
   const admin = createAdminClient();
   await admin
     .from("organizations")
     .update({
       stripe_subscription_id: subscription.id,
       subscription_status: STATUS_MAP[subscription.status] ?? "incomplete",
+      ...(tier ? { plan_tier: tier } : {}),
     })
     .eq("id", organizationId);
 }

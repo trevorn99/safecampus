@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ExemptionToggle } from "./ExemptionToggle";
+import { TIER_LABEL, type PlanTier } from "@/lib/stripe";
 import styles from "@/styles/ui.module.css";
 
 export default async function PlatformAdminPage() {
@@ -24,7 +25,7 @@ export default async function PlatformAdminPage() {
   const admin = createAdminClient();
   const { data: organizations } = await admin
     .from("organizations")
-    .select("id, name, subscription_status, trial_ends_at, paywall_exempt")
+    .select("id, name, subscription_status, trial_ends_at, paywall_exempt, plan_tier")
     .order("name");
 
   return (
@@ -42,6 +43,7 @@ export default async function PlatformAdminPage() {
                 <p className={styles.itemName}>{org.name}</p>
                 <p className={styles.itemMeta}>
                   {org.subscription_status}
+                  {org.plan_tier ? ` · ${TIER_LABEL[org.plan_tier as PlanTier]}` : ""}
                   {org.subscription_status === "trialing" && org.trial_ends_at
                     ? ` · trial ends ${new Date(org.trial_ends_at).toLocaleDateString()}`
                     : ""}

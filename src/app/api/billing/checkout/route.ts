@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { createStripeClient, STRIPE_SEAT_PRICE_ID } from "@/lib/stripe";
+import { createStripeClient, tierForSeatCount, TIER_PRICE_IDS } from "@/lib/stripe";
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -40,6 +40,14 @@ export async function POST(request: Request) {
     .eq("organization_id", member.organization_id)
     .eq("status", "active");
 
+  const tier = tierForSeatCount(seatCount ?? 1);
+  if (!tier) {
+    return NextResponse.json(
+      { error: "Your organization is larger than our self-serve plans support — contact us to set up a custom plan." },
+      { status: 400 },
+    );
+  }
+
   const stripe = createStripeClient();
   const admin = createAdminClient();
 
@@ -61,7 +69,7 @@ export async function POST(request: Request) {
   const session = await stripe.checkout.sessions.create({
     mode: "subscription",
     customer: customerId,
-    line_items: [{ price: STRIPE_SEAT_PRICE_ID, quantity: Math.max(seatCount ?? 1, 1) }],
+    line_items: [{ price: TIER_PRICE_IDS[tier], quantity: 1 }],
     success_url: `${origin}/billing?checkout=success`,
     cancel_url: `${origin}/billing?checkout=cancelled`,
     client_reference_id: member.organization_id,

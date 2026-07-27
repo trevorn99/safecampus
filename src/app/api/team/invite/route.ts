@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { createStripeClient } from "@/lib/stripe";
 
 export async function POST(request: Request) {
   const { organizationId, email, name, role, scopeType, scopeId } = await request.json();
@@ -54,32 +53,5 @@ export async function POST(request: Request) {
 
   await supabase.from("members").update({ user_id: invited.user.id }).eq("id", member.id);
 
-  await syncSeatQuantity(organizationId, admin);
-
   return NextResponse.json({ ok: true });
-}
-
-// Per-seat billing: keep the Stripe subscription's quantity matched to
-// active member count whenever the roster grows. Only orgs with an existing
-// subscription need this — trialing/exempt orgs have no subscription yet.
-async function syncSeatQuantity(organizationId: string, admin: ReturnType<typeof createAdminClient>) {
-  const { data: org } = await admin
-    .from("organizations")
-    .select("stripe_subscription_id")
-    .eq("id", organizationId)
-    .single();
-  if (!org?.stripe_subscription_id) return;
-
-  const { count } = await admin
-    .from("members")
-    .select("id", { count: "exact", head: true })
-    .eq("organization_id", organizationId)
-    .eq("status", "active");
-
-  const stripe = createStripeClient();
-  const subscription = await stripe.subscriptions.retrieve(org.stripe_subscription_id);
-  const item = subscription.items.data[0];
-  if (item) {
-    await stripe.subscriptionItems.update(item.id, { quantity: Math.max(count ?? 1, 1) });
-  }
 }
