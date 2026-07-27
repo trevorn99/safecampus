@@ -2,7 +2,7 @@ import "server-only";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
-export async function requireMembership() {
+export async function requireMembership(options?: { allowUnpaid?: boolean }) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -29,17 +29,26 @@ export async function requireMembership() {
     redirect("/onboarding");
   }
 
-  const [{ data: isAdmin }, { data: organization }, { data: privilegedRole }] = await Promise.all([
-    supabase.rpc("is_org_admin", { target_org: member.organization_id }),
-    supabase.from("organizations").select("name").eq("id", member.organization_id).single(),
-    supabase
-      .from("role_assignments")
-      .select("id")
-      .eq("member_id", member.id)
-      .in("role", ["org_admin", "location_manager"])
-      .limit(1)
-      .maybeSingle(),
-  ]);
+  const [{ data: isAdmin }, { data: organization }, { data: privilegedRole }, { data: hasAccess }] =
+    await Promise.all([
+      supabase.rpc("is_org_admin", { target_org: member.organization_id }),
+      supabase.from("organizations").select("name").eq("id", member.organization_id).single(),
+      supabase
+        .from("role_assignments")
+        .select("id")
+        .eq("member_id", member.id)
+        .in("role", ["org_admin", "location_manager"])
+        .limit(1)
+        .maybeSingle(),
+      supabase.rpc("has_active_access", { target_org: member.organization_id }),
+    ]);
+
+  // Every page but /billing itself is gated on an active subscription, trial,
+  // or a platform-admin exemption — see has_active_access() in the billing
+  // migration.
+  if (!hasAccess && !options?.allowUnpaid) {
+    redirect("/billing");
+  }
 
   // MFA is required for admin/location_manager accounts — enforced here
   // (app-level) and, for the watchlist specifically, again at the RLS

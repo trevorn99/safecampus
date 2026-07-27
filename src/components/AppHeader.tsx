@@ -10,6 +10,7 @@ const NAV_ITEMS = [
 const ADMIN_NAV_ITEMS = [
   { href: "/locations", label: "Locations" },
   { href: "/teams", label: "Teams" },
+  { href: "/billing", label: "Billing" },
 ];
 
 export function AppHeader({ isAdmin }: { isAdmin: boolean }) {
