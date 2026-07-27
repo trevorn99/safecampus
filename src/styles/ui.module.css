@@ -154,7 +154,7 @@
   background: var(--surface);
 }
 .appHeaderInner {
-  max-width: 760px;
+  max-width: 840px;
   margin: 0 auto;
   padding: 1rem 1.5rem;
   display: flex;
@@ -162,19 +162,113 @@
   justify-content: space-between;
   gap: 1rem;
 }
+.appHeaderLeft {
+  display: flex;
+  align-items: center;
+  gap: 1.75rem;
+}
+.appNav {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+.navLink {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+.navLink:hover {
+  color: var(--ink);
+}
 .appHeaderMeta {
   font-size: 0.85rem;
   color: var(--muted);
 }
 .appMain {
   flex: 1;
-  max-width: 760px;
+  max-width: 840px;
   margin: 0 auto;
   padding: 2.5rem 1.5rem;
   width: 100%;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+}
+
+.pageHeading {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.pageTitle {
+  font-size: 1.65rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  align-self: flex-start;
+}
+
+/* Roster / list rows, shared by team, locations, and teams pages */
+.list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+}
+.listRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.9rem 0;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.listRow:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+.listRow:first-child {
+  padding-top: 0;
+}
+.itemName {
+  font-weight: 600;
+}
+.itemMeta {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.tagRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.76rem;
+  font-weight: 600;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  background: var(--surface-muted);
+  color: var(--ink);
+  white-space: nowrap;
+}
+.pillMuted {
+  composes: pill;
+  background: transparent;
+  border: 1px dashed var(--border);
+  color: var(--muted);
+  font-weight: 500;
 }
 
 .card {
