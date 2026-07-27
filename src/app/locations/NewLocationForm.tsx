@@ -99,7 +99,7 @@ export function NewLocationForm({ organizationId }: { organizationId: string }) 
             Cancel
           </button>
         </div>
-        {error && <p className={styles.errorText}>{error}</p>}
+        {error && <p className={styles.errorText} role="alert">{error}</p>}
       </form>
     </div>
   );

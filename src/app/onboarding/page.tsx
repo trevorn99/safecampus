@@ -93,7 +93,7 @@ export default function OnboardingPage() {
           >
             {loading ? "Creating…" : "Create organization"}
           </button>
-          {error && <p className={styles.errorText}>{error}</p>}
+          {error && <p className={styles.errorText} role="alert">{error}</p>}
         </form>
       </div>
     </main>

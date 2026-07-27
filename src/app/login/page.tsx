@@ -127,7 +127,7 @@ export default function LoginPage() {
           >
             {status === "sending" ? "Sending…" : "Send sign-in link"}
           </button>
-          {status === "error" && <p className={styles.errorText}>{errorMessage}</p>}
+          {status === "error" && <p className={styles.errorText} role="alert">{errorMessage}</p>}
         </form>
       </div>
     </main>

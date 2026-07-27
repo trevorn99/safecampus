@@ -168,7 +168,7 @@ export function InviteForm({
         >
           {status === "sending" ? "Sending…" : "Send invite"}
         </button>
-        {status === "error" && <p className={styles.errorText}>{error}</p>}
+        {status === "error" && <p className={styles.errorText} role="alert">{error}</p>}
       </form>
     </div>
   );
