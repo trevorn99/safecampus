@@ -1,5 +1,7 @@
 import { requireMembership } from "@/lib/session";
 import { AppHeader } from "@/components/AppHeader";
+import { Avatar } from "@/components/Avatar";
+import { getAvatarUrlMap } from "@/lib/avatars";
 import { CancelInviteButton } from "./CancelInviteButton";
 import styles from "@/styles/ui.module.css";
 
@@ -19,13 +21,18 @@ export default async function TeamPage() {
     await Promise.all([
       supabase
         .from("members")
-        .select("id, name, email, status")
+        .select("id, name, email, status, profile_picture_url")
         .eq("organization_id", member.organization_id)
         .order("name"),
       supabase.from("role_assignments").select("member_id, scope_type, scope_id, role"),
       supabase.from("locations").select("id, name").eq("organization_id", member.organization_id),
       supabase.from("teams").select("id, name").eq("organization_id", member.organization_id),
     ]);
+
+  const avatarUrls = await getAvatarUrlMap(
+    supabase,
+    (members ?? []).map((teamMember) => teamMember.profile_picture_url),
+  );
 
   const locationNames = new Map((locations ?? []).map((location) => [location.id, location.name]));
   const teamNames = new Map((teams ?? []).map((team) => [team.id, team.name]));
@@ -57,9 +64,19 @@ export default async function TeamPage() {
           <ul className={styles.list}>
             {(members ?? []).map((teamMember) => (
               <li key={teamMember.id} className={styles.listRow}>
-                <div>
-                  <p className={styles.itemName}>{teamMember.name}</p>
-                  <p className={styles.itemMeta}>{teamMember.email}</p>
+                <div className={styles.identityRow}>
+                  <Avatar
+                    name={teamMember.name}
+                    url={
+                      teamMember.profile_picture_url
+                        ? (avatarUrls.get(teamMember.profile_picture_url) ?? null)
+                        : null
+                    }
+                  />
+                  <div>
+                    <p className={styles.itemName}>{teamMember.name}</p>
+                    <p className={styles.itemMeta}>{teamMember.email}</p>
+                  </div>
                 </div>
                 <div className={styles.tagRow}>
                   {(rolesByMember.get(teamMember.id) ?? []).map((row, index) => (

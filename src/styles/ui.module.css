@@ -294,6 +294,51 @@
   gap: 0.4rem;
 }
 
+/* Pairs an Avatar with a name/meta block in list rows */
+.identityRow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.avatar {
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.avatarSmall {
+  composes: avatar;
+  width: 32px;
+  height: 32px;
+}
+.avatarLarge {
+  composes: avatar;
+  width: 72px;
+  height: 72px;
+}
+.avatarFallback {
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-muted);
+  color: var(--muted);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.avatarFallbackSmall {
+  composes: avatarFallback;
+  width: 32px;
+  height: 32px;
+  font-size: 0.72rem;
+}
+.avatarFallbackLarge {
+  composes: avatarFallback;
+  width: 72px;
+  height: 72px;
+  font-size: 1.4rem;
+}
+
 /* Groups a labeled control cluster (e.g. platform-admin's billing vs
    support-access controls) so unrelated actions don't blend together. */
 .controlGroup {

@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { requireMembership } from "@/lib/session";
 import { AppHeader } from "@/components/AppHeader";
+import { Avatar } from "@/components/Avatar";
+import { getAvatarUrlMap } from "@/lib/avatars";
 import { EditTeamForm } from "./EditTeamForm";
 import { AddTeamMemberForm } from "./AddTeamMemberForm";
 import { RemoveTeamMemberButton } from "./RemoveTeamMemberButton";
@@ -31,7 +33,7 @@ export default async function TeamDetailPage({
         .eq("scope_id", teamId),
       supabase
         .from("members")
-        .select("id, name")
+        .select("id, name, profile_picture_url")
         .eq("organization_id", member.organization_id)
         .order("name"),
     ]);
@@ -51,9 +53,13 @@ export default async function TeamDetailPage({
   }
 
   const locationName = locations?.find((location) => location.id === team.location_id)?.name;
-  const memberNameById = new Map((orgMembers ?? []).map((m) => [m.id, m.name]));
+  const memberById = new Map((orgMembers ?? []).map((m) => [m.id, m]));
   const assignedMemberIds = new Set((assignments ?? []).map((row) => row.member_id));
   const availableMembers = (orgMembers ?? []).filter((m) => !assignedMemberIds.has(m.id));
+  const avatarUrls = await getAvatarUrlMap(
+    supabase,
+    (orgMembers ?? []).map((m) => m.profile_picture_url),
+  );
 
   return (
     <>
@@ -82,20 +88,29 @@ export default async function TeamDetailPage({
             <p className={styles.helperText}>No one is assigned to this team yet.</p>
           )}
           <ul className={styles.list}>
-            {(assignments ?? []).map((row) => (
-              <li key={row.id} className={styles.listRow}>
-                <div>
-                  <p className={styles.itemName}>{memberNameById.get(row.member_id) ?? "Unknown member"}</p>
-                  <p className={styles.itemMeta}>{ROLE_LABEL[row.role] ?? row.role}</p>
-                </div>
-                {isAdmin && (
-                  <RemoveTeamMemberButton
-                    assignmentId={row.id}
-                    memberName={memberNameById.get(row.member_id) ?? "this member"}
-                  />
-                )}
-              </li>
-            ))}
+            {(assignments ?? []).map((row) => {
+              const rowMember = memberById.get(row.member_id);
+              const avatarUrl = rowMember?.profile_picture_url
+                ? (avatarUrls.get(rowMember.profile_picture_url) ?? null)
+                : null;
+              return (
+                <li key={row.id} className={styles.listRow}>
+                  <div className={styles.identityRow}>
+                    <Avatar name={rowMember?.name ?? "?"} url={avatarUrl} />
+                    <div>
+                      <p className={styles.itemName}>{rowMember?.name ?? "Unknown member"}</p>
+                      <p className={styles.itemMeta}>{ROLE_LABEL[row.role] ?? row.role}</p>
+                    </div>
+                  </div>
+                  {isAdmin && (
+                    <RemoveTeamMemberButton
+                      assignmentId={row.id}
+                      memberName={rowMember?.name ?? "this member"}
+                    />
+                  )}
+                </li>
+              );
+            })}
           </ul>
           {isAdmin && <AddTeamMemberForm teamId={team.id} members={availableMembers} />}
         </div>
