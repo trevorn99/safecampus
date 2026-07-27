@@ -37,6 +37,20 @@ export function MfaManager() {
   async function handleEnroll() {
     setError("");
     const supabase = createClient();
+
+    // A previous enroll that was never verified (e.g. abandoned mid-setup)
+    // leaves an unverified factor with a blank friendly name behind, which
+    // blocks a fresh enroll with the same default name. `.totp` here is
+    // filtered to verified-only by the API, so check `.all` instead, which
+    // includes both.
+    const { data: existing } = await supabase.auth.mfa.listFactors();
+    const stale = existing?.all?.find(
+      (factor) => factor.factor_type === "totp" && factor.status === "unverified",
+    );
+    if (stale) {
+      await supabase.auth.mfa.unenroll({ factorId: stale.id });
+    }
+
     const { data, error } = await supabase.auth.mfa.enroll({ factorType: "totp", issuer: "SafeCampus" });
     if (error) {
       setError(error.message);
