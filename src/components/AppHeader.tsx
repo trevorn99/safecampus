@@ -12,6 +12,7 @@ const ADMIN_NAV_ITEMS = [
   { href: "/locations", label: "Locations" },
   { href: "/teams", label: "Teams" },
   { href: "/billing", label: "Billing" },
+  { href: "/audit-log", label: "Audit log" },
 ];
 
 const PLATFORM_ADMIN_NAV_ITEMS = [{ href: "/platform-admin", label: "Platform" }];
