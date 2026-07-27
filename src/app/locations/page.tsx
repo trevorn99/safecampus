@@ -30,7 +30,12 @@ export default async function LocationsPage() {
                   <p className={styles.itemName}>{location.name}</p>
                   {location.address && <p className={styles.itemMeta}>{location.address}</p>}
                 </div>
-                {location.timezone && <span className={styles.pillMuted}>{location.timezone}</span>}
+                <div className={styles.tagRow}>
+                  {location.timezone && <span className={styles.pillMuted}>{location.timezone}</span>}
+                  <a href={`/locations/${location.id}/map`} className={styles.link}>
+                    Map
+                  </a>
+                </div>
               </li>
             ))}
           </ul>
