@@ -1,6 +1,41 @@
 import "server-only";
+import type Stripe from "stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { createStripeClient, tierForSeatCount, TIER_PRICE_IDS } from "@/lib/stripe";
+import { createStripeClient, tierForSeatCount, priceIdToTier, TIER_PRICE_IDS } from "@/lib/stripe";
+
+// Stripe subscription statuses collapsed onto organizations.subscription_status.
+const STATUS_MAP: Record<Stripe.Subscription.Status, string> = {
+  trialing: "trialing",
+  active: "active",
+  past_due: "past_due",
+  canceled: "canceled",
+  incomplete: "incomplete",
+  incomplete_expired: "canceled",
+  unpaid: "past_due",
+  paused: "canceled",
+};
+
+// Shared by the webhook (event-driven) and the manual "sync now" action on
+// /billing (on-demand fallback for whenever a webhook event is delayed,
+// missed, or — as happened once — blocked entirely by Deployment Protection).
+export async function syncSubscriptionFromStripe(subscription: Stripe.Subscription) {
+  const organizationId = subscription.metadata.organization_id;
+  if (!organizationId) return;
+
+  // Keeps plan_tier correct even if the price was changed directly in the
+  // Stripe dashboard rather than through syncPlanTier()'s auto-upgrade path.
+  const tier = priceIdToTier(subscription.items.data[0]?.price.id);
+
+  const admin = createAdminClient();
+  await admin
+    .from("organizations")
+    .update({
+      stripe_subscription_id: subscription.id,
+      subscription_status: STATUS_MAP[subscription.status] ?? "incomplete",
+      ...(tier ? { plan_tier: tier } : {}),
+    })
+    .eq("id", organizationId);
+}
 
 // Called whenever a member's status flips to "active" (accepting an
 // invite, or being the founding admin). Active member count is the only

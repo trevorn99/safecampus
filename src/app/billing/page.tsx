@@ -91,7 +91,12 @@ export default async function BillingPage() {
           )}
 
           {isAdmin && !org?.paywall_exempt && !overCap && (
-            <BillingActions hasStripeCustomer={Boolean(org?.stripe_customer_id)} />
+            <BillingActions
+              hasStripeCustomer={Boolean(org?.stripe_customer_id)}
+              hasSubscription={
+                org?.subscription_status === "active" || org?.subscription_status === "past_due"
+              }
+            />
           )}
         </div>
 
