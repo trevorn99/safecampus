@@ -1,5 +1,4 @@
 import { SiteHeader } from "@/components/SiteHeader";
-import { SiteFooter } from "@/components/SiteFooter";
 import styles from "@/styles/ui.module.css";
 
 export default function PrivacyPage() {
@@ -238,7 +237,6 @@ export default function PrivacyPage() {
           the in-app support form if you already have an account.
         </p>
       </main>
-      <SiteFooter />
     </>
   );
 }

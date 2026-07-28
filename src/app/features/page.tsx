@@ -1,5 +1,4 @@
 import { SiteHeader } from "@/components/SiteHeader";
-import { SiteFooter } from "@/components/SiteFooter";
 import styles from "@/styles/ui.module.css";
 
 const FEATURES = [
@@ -82,7 +81,6 @@ export default function FeaturesPage() {
           Sign in to get started
         </a>
       </div>
-      <SiteFooter />
     </>
   );
 }

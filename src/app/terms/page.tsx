@@ -1,5 +1,4 @@
 import { SiteHeader } from "@/components/SiteHeader";
-import { SiteFooter } from "@/components/SiteFooter";
 import styles from "@/styles/ui.module.css";
 
 export default function TermsPage() {
@@ -156,7 +155,6 @@ export default function TermsPage() {
           in-app support form if you already have an account.
         </p>
       </main>
-      <SiteFooter />
     </>
   );
 }
