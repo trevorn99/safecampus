@@ -611,6 +611,51 @@
   gap: 1rem;
 }
 
+/* Homepage-only two-column hero: text left, illustration right. Other
+   pages (features, etc.) keep the centered single-column .hero above. */
+.homeHero {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 4.5rem 1.5rem 6rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3.5rem;
+  flex-wrap: wrap;
+}
+.homeHeroContent {
+  flex: 1 1 380px;
+  max-width: 540px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  gap: 1.75rem;
+}
+.homeHeroVisual {
+  flex: 0 1 320px;
+  display: flex;
+  justify-content: center;
+}
+.homeHeroImage {
+  width: 100%;
+  max-width: 320px;
+  height: auto;
+  display: block;
+  border-radius: var(--radius-lg);
+  border: 2px solid var(--accent);
+  box-shadow: var(--shadow-md);
+}
+@media (max-width: 720px) {
+  .homeHero {
+    padding-top: 3rem;
+  }
+  .homeHeroContent {
+    align-items: center;
+    text-align: center;
+  }
+}
+
 /* Feature grid (features page) */
 .featureGrid {
   display: grid;
