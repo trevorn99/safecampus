@@ -45,7 +45,7 @@ export default async function SeriesListPage() {
         </div>
 
         <div className={styles.actions}>
-          <Link href="/schedule/series/new" className={`${styles.button} ${styles.buttonPrimary}`}>
+          <Link href="/schedule/new" className={`${styles.button} ${styles.buttonPrimary}`}>
             New series
           </Link>
           <Link href="/schedule" className={`${styles.button} ${styles.buttonSecondary}`}>

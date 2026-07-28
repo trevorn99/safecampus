@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { WEEKDAYS, ORDINALS, buildWeeklyRule, buildMonthlyRule } from "@/lib/recurrence";
 import styles from "@/styles/ui.module.css";
 
 type Option = { id: string; name: string };
@@ -24,6 +25,7 @@ type PositionRow = {
   endOffset: string;
   slots: string;
 };
+type Repeats = "never" | "weekly" | "monthly";
 
 function emptyRow(): PositionRow {
   return { key: crypto.randomUUID(), title: "", teamId: "", startOffset: "0", endOffset: "", slots: "1" };
@@ -54,6 +56,17 @@ export function NewEventForm({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const [repeats, setRepeats] = useState<Repeats>("never");
+  const [durationMinutes, setDurationMinutes] = useState("60");
+  const [interval, setInterval] = useState("1");
+  const [weekDays, setWeekDays] = useState<string[]>([]);
+  const [ordinal, setOrdinal] = useState("1");
+  const [monthDay, setMonthDay] = useState("SU");
+
+  function toggleWeekDay(day: string) {
+    setWeekDays((prev) => (prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]));
+  }
+
   function handleTemplateChange(nextTemplateId: string) {
     setTemplateId(nextTemplateId);
     if (!nextTemplateId) return;
@@ -78,10 +91,44 @@ export function NewEventForm({
     setPositions((prev) => prev.filter((row) => row.key !== key));
   }
 
+  // Whenever this event repeats, positions can only carry forward to future
+  // occurrences via a template — so a name is required (no "save?" checkbox
+  // needed, unlike the one-off case where saving one is optional).
+  const needsTemplateName = repeats !== "never" && positions.length > 0;
+
+  async function createTemplateFromPositions(name: string): Promise<string | null> {
+    const supabase = createClient();
+    const { data: newTemplate, error: templateError } = await supabase
+      .from("event_templates")
+      .insert({ organization_id: organizationId, name })
+      .select("id")
+      .single();
+    if (templateError) throw new Error(templateError.message);
+
+    const { error: templatePositionsError } = await supabase.from("template_positions").insert(
+      positions.map((row) => ({
+        template_id: newTemplate.id,
+        title: row.title,
+        team_id: row.teamId || null,
+        start_offset_minutes: Number(row.startOffset),
+        end_offset_minutes: row.endOffset ? Number(row.endOffset) : null,
+        slots: Number(row.slots),
+      })),
+    );
+    if (templatePositionsError) {
+      throw new Error(`Template created, but its positions failed to save: ${templatePositionsError.message}`);
+    }
+    return newTemplate.id;
+  }
+
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    if (saveAsTemplate && !templateName.trim()) {
-      setError("Name the template you're saving, or uncheck \"save as template.\"");
+    if (repeats === "weekly" && weekDays.length === 0) {
+      setError("Pick at least one day of the week.");
+      return;
+    }
+    if ((repeats === "never" && saveAsTemplate && !templateName.trim()) || (needsTemplateName && !templateName.trim())) {
+      setError("Name the template you're saving, or remove the positions.");
       return;
     }
 
@@ -91,77 +138,81 @@ export function NewEventForm({
     const supabase = createClient();
     const startTimeIso = new Date(startTime).toISOString();
 
-    let newTemplateId: string | null = null;
-    if (saveAsTemplate && positions.length > 0) {
-      const { data: newTemplate, error: templateError } = await supabase
-        .from("event_templates")
-        .insert({ organization_id: organizationId, name: templateName.trim() })
+    try {
+      let newTemplateId: string | null = null;
+      if (positions.length > 0 && (needsTemplateName || (repeats === "never" && saveAsTemplate))) {
+        newTemplateId = await createTemplateFromPositions(templateName.trim());
+      }
+      const effectiveTemplateId = newTemplateId ?? templateId ?? null;
+
+      if (repeats === "never") {
+        const { data: createdEvent, error: eventError } = await supabase
+          .from("events")
+          .insert({
+            organization_id: organizationId,
+            location_id: locationId || null,
+            title,
+            type,
+            start_time: startTimeIso,
+            template_id: effectiveTemplateId,
+          })
+          .select("id")
+          .single();
+        if (eventError) throw new Error(eventError.message);
+
+        if (positions.length > 0) {
+          const startMs = new Date(startTimeIso).getTime();
+          const { error: positionsError } = await supabase.from("event_positions").insert(
+            positions.map((row) => ({
+              event_id: createdEvent.id,
+              title: row.title,
+              team_id: row.teamId || null,
+              start_time: new Date(startMs + Number(row.startOffset) * 60_000).toISOString(),
+              end_time: row.endOffset ? new Date(startMs + Number(row.endOffset) * 60_000).toISOString() : null,
+              slots: Number(row.slots),
+            })),
+          );
+          if (positionsError) {
+            throw new Error(`Event created, but its positions failed to save: ${positionsError.message}`);
+          }
+        }
+
+        setLoading(false);
+        router.push(`/schedule/${createdEvent.id}`);
+        return;
+      }
+
+      const recurrenceRule =
+        repeats === "weekly" ? buildWeeklyRule(Number(interval), weekDays) : buildMonthlyRule(ordinal, monthDay);
+
+      const { data: series, error: seriesError } = await supabase
+        .from("event_series")
+        .insert({
+          organization_id: organizationId,
+          location_id: locationId || null,
+          template_id: effectiveTemplateId,
+          title,
+          type,
+          recurrence_rule: recurrenceRule,
+          first_occurrence_at: startTimeIso,
+          duration_minutes: Number(durationMinutes),
+        })
         .select("id")
         .single();
-      if (templateError) {
-        setLoading(false);
-        setError(templateError.message);
-        return;
-      }
-      newTemplateId = newTemplate.id;
+      if (seriesError) throw new Error(seriesError.message);
 
-      const { error: templatePositionsError } = await supabase.from("template_positions").insert(
-        positions.map((row) => ({
-          template_id: newTemplateId,
-          title: row.title,
-          team_id: row.teamId || null,
-          start_offset_minutes: Number(row.startOffset),
-          end_offset_minutes: row.endOffset ? Number(row.endOffset) : null,
-          slots: Number(row.slots),
-        })),
-      );
-      if (templatePositionsError) {
-        setLoading(false);
-        setError(`Template created, but its positions failed to save: ${templatePositionsError.message}`);
-        return;
-      }
-    }
+      await fetch("/api/schedule/series/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ seriesId: series.id }),
+      }).catch(() => {});
 
-    const { data: createdEvent, error: eventError } = await supabase
-      .from("events")
-      .insert({
-        organization_id: organizationId,
-        location_id: locationId || null,
-        title,
-        type,
-        start_time: startTimeIso,
-        template_id: newTemplateId ?? templateId ?? null,
-      })
-      .select("id")
-      .single();
-
-    if (eventError) {
       setLoading(false);
-      setError(eventError.message);
-      return;
+      router.push(`/schedule/series/${series.id}`);
+    } catch (submitError) {
+      setLoading(false);
+      setError(submitError instanceof Error ? submitError.message : "Something went wrong");
     }
-
-    if (positions.length > 0) {
-      const startMs = new Date(startTimeIso).getTime();
-      const { error: positionsError } = await supabase.from("event_positions").insert(
-        positions.map((row) => ({
-          event_id: createdEvent.id,
-          title: row.title,
-          team_id: row.teamId || null,
-          start_time: new Date(startMs + Number(row.startOffset) * 60_000).toISOString(),
-          end_time: row.endOffset ? new Date(startMs + Number(row.endOffset) * 60_000).toISOString() : null,
-          slots: Number(row.slots),
-        })),
-      );
-      if (positionsError) {
-        setLoading(false);
-        setError(`Event created, but its positions failed to save: ${positionsError.message}`);
-        return;
-      }
-    }
-
-    setLoading(false);
-    router.push(`/schedule/${createdEvent.id}`);
   }
 
   return (
@@ -213,7 +264,7 @@ export function NewEventForm({
         </div>
         <div className={styles.field}>
           <label className={styles.label} htmlFor="eventStart">
-            Start time
+            {repeats === "never" ? "Start time" : "First occurrence"}
           </label>
           <input
             id="eventStart"
@@ -224,6 +275,97 @@ export function NewEventForm({
             onChange={(event) => setStartTime(event.target.value)}
           />
         </div>
+
+        <div className={styles.field}>
+          <label className={styles.label} htmlFor="repeats">
+            Repeats
+          </label>
+          <select
+            id="repeats"
+            className={styles.select}
+            value={repeats}
+            onChange={(event) => setRepeats(event.target.value as Repeats)}
+          >
+            <option value="never">Never — one-time event</option>
+            <option value="weekly">Weekly</option>
+            <option value="monthly">Monthly</option>
+          </select>
+        </div>
+
+        {repeats !== "never" && (
+          <>
+            <div className={styles.field}>
+              <label className={styles.label} htmlFor="durationMinutes">
+                Duration <span className={styles.hint}>minutes (informational)</span>
+              </label>
+              <input
+                id="durationMinutes"
+                type="number"
+                min={1}
+                className={styles.input}
+                required
+                value={durationMinutes}
+                onChange={(event) => setDurationMinutes(event.target.value)}
+              />
+            </div>
+
+            {repeats === "weekly" && (
+              <>
+                <div className={styles.field}>
+                  <label className={styles.label} htmlFor="interval">
+                    Every <span className={styles.hint}>weeks</span>
+                  </label>
+                  <input
+                    id="interval"
+                    type="number"
+                    min={1}
+                    className={styles.input}
+                    value={interval}
+                    onChange={(event) => setInterval(event.target.value)}
+                  />
+                </div>
+                <div className={styles.field}>
+                  <label className={styles.label}>On these days</label>
+                  <div className={styles.tagRow}>
+                    {WEEKDAYS.map((day) => (
+                      <button
+                        type="button"
+                        key={day.value}
+                        className={weekDays.includes(day.value) ? styles.pill : styles.pillMuted}
+                        onClick={() => toggleWeekDay(day.value)}
+                      >
+                        {day.label.slice(0, 3)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {repeats === "monthly" && (
+              <div className={styles.field}>
+                <label className={styles.label}>On the</label>
+                <div className={styles.tagRow}>
+                  <select className={styles.select} value={ordinal} onChange={(event) => setOrdinal(event.target.value)}>
+                    {ORDINALS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <select className={styles.select} value={monthDay} onChange={(event) => setMonthDay(event.target.value)}>
+                    {WEEKDAYS.map((day) => (
+                      <option key={day.value} value={day.value}>
+                        {day.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
         {templates.length > 0 && (
           <div className={styles.field}>
             <label className={styles.label} htmlFor="eventTemplate">
@@ -251,52 +393,72 @@ export function NewEventForm({
             <p className={styles.hint}>No positions yet — add one below, or pick a template above.</p>
           )}
           {positions.map((row) => (
-            <div key={row.key} className={styles.tagRow}>
-              <input
-                className={styles.input}
-                placeholder="Position title"
-                required
-                value={row.title}
-                onChange={(event) => updateRow(row.key, { title: event.target.value })}
-              />
-              <select
-                className={styles.select}
-                value={row.teamId}
-                onChange={(event) => updateRow(row.key, { teamId: event.target.value })}
-              >
-                <option value="">Any team</option>
-                {teams.map((team) => (
-                  <option key={team.id} value={team.id}>
-                    {team.name}
-                  </option>
-                ))}
-              </select>
-              <input
-                type="number"
-                className={styles.input}
-                title="Start offset (minutes from event start)"
-                value={row.startOffset}
-                onChange={(event) => updateRow(row.key, { startOffset: event.target.value })}
-              />
-              <input
-                type="number"
-                className={styles.input}
-                title="End offset (minutes from event start, optional)"
-                placeholder="end (min)"
-                value={row.endOffset}
-                onChange={(event) => updateRow(row.key, { endOffset: event.target.value })}
-              />
-              <input
-                type="number"
-                min={1}
-                className={styles.input}
-                title="People needed"
-                value={row.slots}
-                onChange={(event) => updateRow(row.key, { slots: event.target.value })}
-              />
-              <button type="button" className={`${styles.button} ${styles.buttonSecondary}`} onClick={() => removeRow(row.key)}>
-                Remove
-              </button>
+            <div key={row.key} className={styles.card}>
+              <div className={styles.tagRow}>
+                <div className={styles.field}>
+                  <label className={styles.label}>Position</label>
+                  <input
+                    className={styles.input}
+                    placeholder="Main Entrance"
+                    required
+                    value={row.title}
+                    onChange={(event) => updateRow(row.key, { title: event.target.value })}
+                  />
+                </div>
+                <div className={styles.field}>
+                  <label className={styles.label}>Team</label>
+                  <select
+                    className={styles.select}
+                    value={row.teamId}
+                    onChange={(event) => updateRow(row.key, { teamId: event.target.value })}
+                  >
+                    <option value="">Any team</option>
+                    {teams.map((team) => (
+                      <option key={team.id} value={team.id}>
+                        {team.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className={styles.field}>
+                  <label className={styles.label}>
+                    Starts <span className={styles.hint}>min. from event start — negative for before, e.g. -15</span>
+                  </label>
+                  <input
+                    type="number"
+                    className={styles.input}
+                    value={row.startOffset}
+                    onChange={(event) => updateRow(row.key, { startOffset: event.target.value })}
+                  />
+                </div>
+                <div className={styles.field}>
+                  <label className={styles.label}>
+                    Ends <span className={styles.hint}>min. from event start, optional</span>
+                  </label>
+                  <input
+                    type="number"
+                    className={styles.input}
+                    placeholder="No set end"
+                    value={row.endOffset}
+                    onChange={(event) => updateRow(row.key, { endOffset: event.target.value })}
+                  />
+                </div>
+                <div className={styles.field}>
+                  <label className={styles.label}>People needed</label>
+                  <input
+                    type="number"
+                    min={1}
+                    className={styles.input}
+                    value={row.slots}
+                    onChange={(event) => updateRow(row.key, { slots: event.target.value })}
+                  />
+                </div>
+              </div>
+              <div className={styles.actions}>
+                <button type="button" className={`${styles.button} ${styles.buttonSecondary}`} onClick={() => removeRow(row.key)}>
+                  Remove position
+                </button>
+              </div>
             </div>
           ))}
           <div className={styles.actions}>
@@ -310,7 +472,7 @@ export function NewEventForm({
           </div>
         </div>
 
-        {positions.length > 0 && (
+        {positions.length > 0 && repeats === "never" && (
           <div className={styles.field}>
             <label className={styles.checkboxRow}>
               <input
@@ -331,9 +493,24 @@ export function NewEventForm({
           </div>
         )}
 
+        {needsTemplateName && (
+          <div className={styles.field}>
+            <label className={styles.label} htmlFor="seriesTemplateName">
+              Template name <span className={styles.hint}>positions repeat every occurrence via this template</span>
+            </label>
+            <input
+              id="seriesTemplateName"
+              className={styles.input}
+              placeholder="Template name"
+              value={templateName}
+              onChange={(event) => setTemplateName(event.target.value)}
+            />
+          </div>
+        )}
+
         <div className={styles.actions}>
           <button type="submit" className={`${styles.button} ${styles.buttonPrimary}`} disabled={loading}>
-            {loading ? "Creating…" : "Create event"}
+            {loading ? "Creating…" : repeats === "never" ? "Create event" : "Create series"}
           </button>
         </div>
         {error && <p className={styles.errorText} role="alert">{error}</p>}

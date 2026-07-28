@@ -43,6 +43,7 @@ export type EventSeriesRow = {
   location_id: string | null;
   template_id: string | null;
   title: string;
+  type: string;
   recurrence_rule: string;
   first_occurrence_at: string;
 };
@@ -122,6 +123,7 @@ export async function generateSeriesOccurrences(
         organization_id: series.organization_id,
         location_id: series.location_id,
         title: series.title,
+        type: series.type,
         start_time: occurrence.toISOString(),
         series_id: series.id,
         template_id: series.template_id,

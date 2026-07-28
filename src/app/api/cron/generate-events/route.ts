@@ -15,7 +15,7 @@ export async function GET(request: Request) {
   const admin = createAdminClient();
   const { data: seriesList } = await admin
     .from("event_series")
-    .select("id, organization_id, location_id, template_id, title, recurrence_rule, first_occurrence_at")
+    .select("id, organization_id, location_id, template_id, title, type, recurrence_rule, first_occurrence_at")
     .eq("active", true)
     .returns<EventSeriesRow[]>();
 
