@@ -1,23 +1,54 @@
 import styles from "@/styles/ui.module.css";
+import { AppNav, type NavEntry } from "@/components/AppNav";
 
-const NAV_ITEMS = [
-  { href: "/dashboard", label: "Dashboard" },
-  { href: "/schedule", label: "Schedule" },
-  { href: "/team", label: "Team" },
-  { href: "/certifications", label: "Certifications" },
-  { href: "/account/mfa", label: "Account" },
-  { href: "/support", label: "Support" },
-  { href: "/help", label: "Help" },
-];
+function buildNav(isAdmin: boolean, isPlatformAdmin: boolean): NavEntry[] {
+  const items: NavEntry[] = [
+    { href: "/dashboard", label: "Dashboard" },
+    {
+      label: "Schedule",
+      items: [
+        { href: "/schedule", label: "Calendar" },
+        { href: "/schedule/integrations", label: "Integrations" },
+      ],
+    },
+    {
+      label: "Team",
+      items: [
+        { href: "/team", label: "Roster" },
+        { href: "/certifications", label: "Certifications" },
+        ...(isAdmin
+          ? [
+              { href: "/teams", label: "Manage teams" },
+              { href: "/locations", label: "Locations" },
+            ]
+          : []),
+      ],
+    },
+    isAdmin
+      ? {
+          label: "Account",
+          items: [
+            { href: "/account/mfa", label: "Security & MFA" },
+            { href: "/billing", label: "Billing" },
+            { href: "/audit-log", label: "Audit log" },
+          ],
+        }
+      : { href: "/account/mfa", label: "Account" },
+    {
+      label: "Support",
+      items: [
+        { href: "/support", label: "Get help" },
+        { href: "/help", label: "Documentation" },
+      ],
+    },
+  ];
 
-const ADMIN_NAV_ITEMS = [
-  { href: "/locations", label: "Locations" },
-  { href: "/teams", label: "Teams" },
-  { href: "/billing", label: "Billing" },
-  { href: "/audit-log", label: "Audit log" },
-];
+  if (isPlatformAdmin) {
+    items.push({ href: "/platform-admin", label: "Platform" });
+  }
 
-const PLATFORM_ADMIN_NAV_ITEMS = [{ href: "/platform-admin", label: "Platform" }];
+  return items;
+}
 
 export function AppHeader({
   isAdmin,
@@ -26,11 +57,7 @@ export function AppHeader({
   isAdmin: boolean;
   isPlatformAdmin?: boolean;
 }) {
-  const items = [
-    ...NAV_ITEMS,
-    ...(isAdmin ? ADMIN_NAV_ITEMS : []),
-    ...(isPlatformAdmin ? PLATFORM_ADMIN_NAV_ITEMS : []),
-  ];
+  const items = buildNav(isAdmin, isPlatformAdmin);
 
   return (
     <header className={styles.appHeader}>
@@ -40,13 +67,7 @@ export function AppHeader({
             Safe<span className={styles.wordmarkAccent}>Campus</span>
           </a>
           <span className={styles.devBadge}>Beta</span>
-          <nav className={styles.appNav}>
-            {items.map((item) => (
-              <a key={item.href} href={item.href} className={styles.navLink}>
-                {item.label}
-              </a>
-            ))}
-          </nav>
+          <AppNav items={items} />
         </div>
         <form action="/auth/signout" method="post">
           <button type="submit" className={styles.navLink}>

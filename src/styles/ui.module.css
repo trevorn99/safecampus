@@ -250,6 +250,42 @@
 .navLink:hover {
   color: var(--ink);
 }
+.navGroup {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.navCaret {
+  font-size: 0.7em;
+  margin-left: 0.15rem;
+  color: var(--muted);
+}
+.navDropdown {
+  position: absolute;
+  top: calc(100% + 0.9rem);
+  left: 0;
+  min-width: 180px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+  padding: 0.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  z-index: 20;
+}
+.navDropdownLink {
+  font-size: 0.86rem;
+  font-weight: 500;
+  color: var(--ink);
+  padding: 0.5rem 0.6rem;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+}
+.navDropdownLink:hover {
+  background: var(--surface-muted);
+}
 .appHeaderMeta {
   font-size: 0.85rem;
   color: var(--muted);
