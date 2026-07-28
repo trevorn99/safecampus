@@ -13,6 +13,11 @@ const FEATURES = [
       "Build a position template once — who's needed, where, and when relative to the event — and reuse it for one-off events or recurring shifts (weekly, every 3rd week, however your schedule actually runs).",
   },
   {
+    title: "Planning Center integration",
+    description:
+      "Connect your own Planning Center account and pull in upcoming calendar events on demand. Nothing gets added to your schedule automatically — you choose which events actually need a safety team presence.",
+  },
+  {
     title: "Self-service certifications",
     description:
       "Members upload their own certifications and supporting documents. Admins track expirations and compliance across the whole team from one place.",

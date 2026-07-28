@@ -138,6 +138,10 @@ export default function LoginPage() {
           </button>
           {status === "error" && <p className={styles.errorText} role="alert">{errorMessage}</p>}
         </form>
+        <p className={styles.hint}>
+          By continuing, you agree to our <a href="/terms" className={styles.link}>Terms</a> and{" "}
+          <a href="/privacy" className={styles.link}>Privacy Policy</a>.
+        </p>
       </div>
     </main>
   );

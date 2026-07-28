@@ -2,18 +2,35 @@ import styles from "@/styles/ui.module.css";
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard" },
+  { href: "/schedule", label: "Schedule" },
   { href: "/team", label: "Team" },
   { href: "/certifications", label: "Certifications" },
-  { href: "/account/mfa", label: "Security" },
+  { href: "/account/mfa", label: "Account" },
+  { href: "/support", label: "Support" },
+  { href: "/help", label: "Help" },
 ];
 
 const ADMIN_NAV_ITEMS = [
   { href: "/locations", label: "Locations" },
   { href: "/teams", label: "Teams" },
+  { href: "/billing", label: "Billing" },
+  { href: "/audit-log", label: "Audit log" },
 ];
 
-export function AppHeader({ isAdmin }: { isAdmin: boolean }) {
-  const items = isAdmin ? [...NAV_ITEMS, ...ADMIN_NAV_ITEMS] : NAV_ITEMS;
+const PLATFORM_ADMIN_NAV_ITEMS = [{ href: "/platform-admin", label: "Platform" }];
+
+export function AppHeader({
+  isAdmin,
+  isPlatformAdmin = false,
+}: {
+  isAdmin: boolean;
+  isPlatformAdmin?: boolean;
+}) {
+  const items = [
+    ...NAV_ITEMS,
+    ...(isAdmin ? ADMIN_NAV_ITEMS : []),
+    ...(isPlatformAdmin ? PLATFORM_ADMIN_NAV_ITEMS : []),
+  ];
 
   return (
     <header className={styles.appHeader}>

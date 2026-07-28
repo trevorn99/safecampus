@@ -5,7 +5,7 @@ import { InviteForm } from "./InviteForm";
 import styles from "@/styles/ui.module.css";
 
 export default async function InviteTeamMemberPage() {
-  const { supabase, member, isAdmin } = await requireMembership();
+  const { supabase, member, isAdmin, isPlatformAdmin } = await requireMembership();
 
   if (!isAdmin) {
     redirect("/team");
@@ -18,7 +18,7 @@ export default async function InviteTeamMemberPage() {
 
   return (
     <>
-      <AppHeader isAdmin={isAdmin} />
+      <AppHeader isAdmin={isAdmin} isPlatformAdmin={isPlatformAdmin} />
       <main className={styles.appMain}>
         <InviteForm
           organizationId={member.organization_id}

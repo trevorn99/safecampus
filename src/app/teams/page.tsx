@@ -1,10 +1,11 @@
+import Link from "next/link";
 import { requireMembership } from "@/lib/session";
 import { AppHeader } from "@/components/AppHeader";
 import { NewTeamForm } from "./NewTeamForm";
 import styles from "@/styles/ui.module.css";
 
 export default async function TeamsPage() {
-  const { supabase, member, organizationName, isAdmin } = await requireMembership();
+  const { supabase, member, organizationName, isAdmin, isPlatformAdmin } = await requireMembership();
 
   const [{ data: teams }, { data: locations }] = await Promise.all([
     supabase
@@ -19,7 +20,7 @@ export default async function TeamsPage() {
 
   return (
     <>
-      <AppHeader isAdmin={isAdmin} />
+      <AppHeader isAdmin={isAdmin} isPlatformAdmin={isPlatformAdmin} />
       <main className={styles.appMain}>
         <div className={styles.pageHeading}>
           <h1 className={styles.pageTitle}>Teams</h1>
@@ -32,7 +33,9 @@ export default async function TeamsPage() {
             {(teams ?? []).map((team) => (
               <li key={team.id} className={styles.listRow}>
                 <div>
-                  <p className={styles.itemName}>{team.name}</p>
+                  <Link href={`/teams/${team.id}`} className={styles.itemName}>
+                    {team.name}
+                  </Link>
                   <p className={styles.itemMeta}>{team.type}</p>
                 </div>
                 <span className={styles.pillMuted}>

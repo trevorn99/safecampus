@@ -5,7 +5,12 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import styles from "@/styles/ui.module.css";
 
-type EnrolledFactor = { id: string; friendly_name?: string };
+type EnrolledFactor = { id: string; friendly_name?: string; factor_type: string };
+
+function factorLabel(factor: EnrolledFactor) {
+  if (factor.friendly_name) return factor.friendly_name;
+  return factor.factor_type === "webauthn" ? "Passkey" : "Authenticator app";
+}
 
 export function MfaManager() {
   const router = useRouter();
@@ -17,12 +22,15 @@ export function MfaManager() {
   const [factorId, setFactorId] = useState<string | null>(null);
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
+  const [webauthnSupported, setWebauthnSupported] = useState(false);
+  const [passkeyName, setPasskeyName] = useState("");
+  const [addingPasskey, setAddingPasskey] = useState(false);
 
   async function loadFactors() {
     const supabase = createClient();
     const { data } = await supabase.auth.mfa.listFactors();
-    // data.totp is already filtered to verified factors by the API.
-    setFactors(data?.totp ?? []);
+    // .totp/.webauthn are each already filtered to verified factors by the API.
+    setFactors([...(data?.totp ?? []), ...(data?.webauthn ?? [])]);
     setLoading(false);
   }
 
@@ -32,6 +40,7 @@ export function MfaManager() {
     // call resolves, so there's no cascading-render issue here.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     loadFactors();
+    setWebauthnSupported(typeof window !== "undefined" && "PublicKeyCredential" in window);
   }, []);
 
   async function handleEnroll() {
@@ -86,6 +95,36 @@ export function MfaManager() {
     router.refresh();
   }
 
+  async function handleAddPasskey() {
+    setError("");
+    setAddingPasskey(true);
+    const supabase = createClient();
+
+    // Same class of issue as the TOTP stale-factor case: if a previous
+    // passkey ceremony was cancelled (e.g. the user dismissed the Face ID/
+    // Touch ID prompt) after enrolling but before verifying, it leaves an
+    // unverified webauthn factor behind. Clear it first.
+    const { data: existing } = await supabase.auth.mfa.listFactors();
+    const stale = existing?.all?.find(
+      (factor) => factor.factor_type === "webauthn" && factor.status === "unverified",
+    );
+    if (stale) {
+      await supabase.auth.mfa.unenroll({ factorId: stale.id });
+    }
+
+    const { error } = await supabase.auth.mfa.webauthn.register({
+      friendlyName: passkeyName.trim() || "Passkey",
+    });
+    setAddingPasskey(false);
+    if (error) {
+      setError(error.message);
+      return;
+    }
+    setPasskeyName("");
+    await loadFactors();
+    router.refresh();
+  }
+
   async function handleRemove(id: string) {
     const supabase = createClient();
     await supabase.auth.mfa.unenroll({ factorId: id });
@@ -102,7 +141,12 @@ export function MfaManager() {
           <ul className={styles.list}>
             {factors.map((factor) => (
               <li key={factor.id} className={styles.listRow}>
-                <p className={styles.itemName}>{factor.friendly_name ?? "Authenticator app"}</p>
+                <div>
+                  <p className={styles.itemName}>{factorLabel(factor)}</p>
+                  <p className={styles.itemMeta}>
+                    {factor.factor_type === "webauthn" ? "Passkey / security key" : "Authenticator app"}
+                  </p>
+                </div>
                 <button
                   type="button"
                   className={`${styles.button} ${styles.buttonSecondary}`}
@@ -116,11 +160,38 @@ export function MfaManager() {
         </>
       )}
 
-      {factors.length === 0 && !enrolling && (
-        <div className={styles.actions}>
-          <button className={`${styles.button} ${styles.buttonPrimary}`} onClick={handleEnroll}>
-            Set up authenticator app
-          </button>
+      {!enrolling && (
+        <div className={styles.form}>
+          <div className={styles.actions}>
+            <button className={`${styles.button} ${styles.buttonPrimary}`} onClick={handleEnroll}>
+              Set up authenticator app
+            </button>
+          </div>
+
+          {webauthnSupported && (
+            <div className={styles.field}>
+              <label className={styles.label} htmlFor="passkeyName">
+                Add a passkey <span className={styles.hint}>(Face ID, Touch ID, Windows Hello, or a security key)</span>
+              </label>
+              <div className={styles.tagRow}>
+                <input
+                  id="passkeyName"
+                  className={styles.input}
+                  placeholder="e.g. MacBook Touch ID"
+                  value={passkeyName}
+                  onChange={(event) => setPasskeyName(event.target.value)}
+                />
+                <button
+                  type="button"
+                  className={`${styles.button} ${styles.buttonSecondary}`}
+                  disabled={addingPasskey}
+                  onClick={handleAddPasskey}
+                >
+                  {addingPasskey ? "Waiting for device…" : "Add passkey"}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

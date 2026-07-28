@@ -14,7 +14,7 @@ type Cert = {
 };
 
 export default async function CertificationsPage() {
-  const { supabase, member, organizationName, isAdmin } = await requireMembership();
+  const { supabase, member, organizationName, isAdmin, isPlatformAdmin } = await requireMembership();
 
   const { data: ownCerts } = await supabase
     .from("certifications")
@@ -83,7 +83,7 @@ export default async function CertificationsPage() {
 
   return (
     <>
-      <AppHeader isAdmin={isAdmin} />
+      <AppHeader isAdmin={isAdmin} isPlatformAdmin={isPlatformAdmin} />
       <main className={styles.appMain}>
         <div className={styles.pageHeading}>
           <h1 className={styles.pageTitle}>Certifications</h1>
