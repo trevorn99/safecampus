@@ -28,12 +28,20 @@ export function SmsPreferencesForm({
 
     const wasOptedIn = currentOptIn;
 
-    const response = await fetch("/api/account/sms-preference", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ phone, smsOptIn }),
-    });
-    const data = await response.json();
+    let response: Response;
+    let data: { error?: string } = {};
+    try {
+      response = await fetch("/api/account/sms-preference", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone, smsOptIn }),
+      });
+      data = await response.json();
+    } catch {
+      setLoading(false);
+      setError("Something went wrong — please try again.");
+      return;
+    }
 
     setLoading(false);
     if (!response.ok) {

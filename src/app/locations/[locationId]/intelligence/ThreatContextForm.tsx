@@ -27,21 +27,29 @@ export function ThreatContextForm({
     setError("");
     setSaved(false);
 
-    const [orgResponse, locationResult] = await Promise.all([
-      fetch("/api/org/update-threat-context", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ threatContext: orgContext }),
-      }),
-      createClient()
-        .from("locations")
-        .update({ threat_context: locationContext.trim() || null })
-        .eq("id", locationId),
-    ]);
+    let orgResponse: Response;
+    let locationResult: { error: { message: string } | null };
+    try {
+      [orgResponse, locationResult] = await Promise.all([
+        fetch("/api/org/update-threat-context", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ threatContext: orgContext }),
+        }),
+        createClient()
+          .from("locations")
+          .update({ threat_context: locationContext.trim() || null })
+          .eq("id", locationId),
+      ]);
+    } catch {
+      setLoading(false);
+      setError("Something went wrong — please try again.");
+      return;
+    }
 
     setLoading(false);
     if (!orgResponse.ok) {
-      const data = await orgResponse.json();
+      const data = await orgResponse.json().catch(() => ({}) as { error?: string });
       setError(data.error ?? "Something went wrong");
       return;
     }

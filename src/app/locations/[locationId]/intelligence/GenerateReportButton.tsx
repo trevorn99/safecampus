@@ -19,8 +19,16 @@ export function GenerateReportButton({
     setLoading(true);
     setError("");
 
-    const response = await fetch(`/api/locations/${locationId}/intelligence/generate`, { method: "POST" });
-    const data = await response.json();
+    let response: Response;
+    let data: { error?: string } = {};
+    try {
+      response = await fetch(`/api/locations/${locationId}/intelligence/generate`, { method: "POST" });
+      data = await response.json();
+    } catch {
+      setLoading(false);
+      setError("Something went wrong — please try again.");
+      return;
+    }
 
     setLoading(false);
     if (!response.ok) {
