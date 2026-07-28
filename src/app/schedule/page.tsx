@@ -90,6 +90,23 @@ export default async function SchedulePage() {
           </div>
         )}
 
+        {isAdmin && (
+          <div className={styles.actions}>
+            <Link href="/schedule/new" className={`${styles.button} ${styles.buttonPrimary}`}>
+              New event
+            </Link>
+            <Link href="/schedule/templates" className={`${styles.button} ${styles.buttonSecondary}`}>
+              Manage templates
+            </Link>
+            <Link href="/schedule/series" className={`${styles.button} ${styles.buttonSecondary}`}>
+              Recurring series
+            </Link>
+            <Link href="/schedule/planning-center" className={`${styles.button} ${styles.buttonSecondary}`}>
+              Planning Center
+            </Link>
+          </div>
+        )}
+
         <div className={styles.card}>
           <div className={styles.cardHeader}>
             <h2 className={styles.cardTitle}>Upcoming events</h2>
@@ -112,23 +129,6 @@ export default async function SchedulePage() {
             ))}
           </ul>
         </div>
-
-        {isAdmin && (
-          <div className={styles.actions}>
-            <Link href="/schedule/new" className={`${styles.button} ${styles.buttonPrimary}`}>
-              New event
-            </Link>
-            <Link href="/schedule/templates" className={`${styles.button} ${styles.buttonSecondary}`}>
-              Manage templates
-            </Link>
-            <Link href="/schedule/series" className={`${styles.button} ${styles.buttonSecondary}`}>
-              Recurring series
-            </Link>
-            <Link href="/schedule/planning-center" className={`${styles.button} ${styles.buttonSecondary}`}>
-              Planning Center
-            </Link>
-          </div>
-        )}
       </main>
     </>
   );
