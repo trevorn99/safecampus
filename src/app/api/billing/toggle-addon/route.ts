@@ -50,13 +50,19 @@ export async function POST(request: Request) {
   const subscription = await stripe.subscriptions.retrieve(org.stripe_subscription_id);
   const addonItem = subscription.items.data.find((item) => item.price.id === THREAT_INTEL_PRICE_ID);
 
+  // Default proration ("create_prorations") just queues the prorated amount
+  // onto the org's *next* regular invoice — nothing gets billed at the
+  // moment they flip the toggle. always_invoice forces Stripe to invoice
+  // (and attempt to charge) the prorated amount immediately instead, so
+  // enabling this actually bills for it right away.
   if (enabled && !addonItem) {
     await stripe.subscriptionItems.create({
       subscription: org.stripe_subscription_id,
       price: THREAT_INTEL_PRICE_ID,
+      proration_behavior: "always_invoice",
     });
   } else if (!enabled && addonItem) {
-    await stripe.subscriptionItems.del(addonItem.id);
+    await stripe.subscriptionItems.del(addonItem.id, { proration_behavior: "always_invoice" });
   }
 
   const admin = createAdminClient();
