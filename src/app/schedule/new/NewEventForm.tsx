@@ -145,7 +145,9 @@ export function NewEventForm({
       if (positions.length > 0 && (needsTemplateName || (repeats === "never" && saveAsTemplate))) {
         newTemplateId = await createTemplateFromPositions(templateName.trim());
       }
-      const effectiveTemplateId = newTemplateId ?? templateId ?? null;
+      // templateId defaults to "" (not null) when nothing's selected — ??
+      // only skips null/undefined, so it wouldn't catch that empty string.
+      const effectiveTemplateId = newTemplateId || templateId || null;
 
       if (repeats === "never") {
         const { data: createdEvent, error: eventError } = await supabase
