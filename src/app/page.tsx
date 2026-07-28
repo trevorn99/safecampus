@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { SiteHeader } from "@/components/SiteHeader";
+import { SiteFooter } from "@/components/SiteFooter";
 import styles from "@/styles/ui.module.css";
 
 export default function Home() {
@@ -24,6 +25,7 @@ export default function Home() {
           </a>
         </div>
       </main>
+      <SiteFooter />
     </>
   );
 }

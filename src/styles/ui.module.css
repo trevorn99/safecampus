@@ -648,3 +648,68 @@
 .featuresSection .featureGrid {
   width: 100%;
 }
+
+/* Legal pages (privacy/terms) — long-form prose reads best narrower than
+   the 1080px marketing max-width. */
+.legalMain {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 4rem 1.5rem 6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+}
+.legalMain h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.legalMain h2 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin-top: 0.5rem;
+}
+.legalMain p,
+.legalMain li {
+  font-size: 0.95rem;
+  color: var(--ink);
+  line-height: 1.65;
+}
+.legalMain ul {
+  padding-left: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.legalMain a {
+  color: var(--accent-strong);
+  font-weight: 600;
+}
+
+/* Public-site footer */
+.siteFooter {
+  border-top: 1px solid var(--border);
+  margin-top: auto;
+}
+.siteFooterInner {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+.siteFooterLinks {
+  display: flex;
+  gap: 1.25rem;
+}
+.siteFooterLinks a {
+  color: var(--muted);
+}
+.siteFooterLinks a:hover {
+  color: var(--ink);
+}
