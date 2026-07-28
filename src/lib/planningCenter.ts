@@ -116,16 +116,26 @@ export async function importPcoEvents(organizationId: string): Promise<{ importe
 
   const admin = createAdminClient();
   const nowIso = new Date().toISOString();
-  let url: string | undefined =
-    `${API_BASE}/calendar/v2/events?per_page=100&where[starts_at][gte]=${encodeURIComponent(nowIso)}`;
+  // TEMP: filter dropped for this diagnostic round to rule out the filter
+  // syntax itself being wrong vs. PCO genuinely returning nothing.
+  let url: string | undefined = `${API_BASE}/calendar/v2/events?per_page=100`;
   let imported = 0;
 
   while (url) {
+    // TEMP diagnostic logging — remove once the empty-results issue is
+    // confirmed/fixed. Deliberately never logs the access token.
+    console.log("[pco import] fetching", url);
     const response = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
     if (!response.ok) {
       throw new Error(`Planning Center events request failed: ${await response.text()}`);
     }
     const body: PcoEventsResponse = await response.json();
+    console.log(
+      "[pco import] raw data.length =",
+      body.data.length,
+      "first item =",
+      JSON.stringify(body.data[0] ?? null),
+    );
 
     const upcoming = body.data.filter((event) => event.attributes.starts_at >= nowIso);
     if (upcoming.length > 0) {
