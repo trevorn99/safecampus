@@ -18,7 +18,7 @@ const ERROR_MESSAGE: Record<string, string> = {
   no_credentials: "Save your Planning Center client ID and secret first.",
 };
 
-export default async function PlanningCenterPage({
+export default async function IntegrationsPage({
   searchParams,
 }: {
   searchParams: Promise<{ connected?: string; error?: string }>;
@@ -76,8 +76,13 @@ export default async function PlanningCenterPage({
       <AppHeader isAdmin={isAdmin} isPlatformAdmin={isPlatformAdmin} />
       <main className={styles.appMain}>
         <div className={styles.pageHeading}>
-          <h1 className={styles.pageTitle}>Planning Center</h1>
+          <h1 className={styles.pageTitle}>Integrations</h1>
           <p className={styles.subtitle}>{organizationName}</p>
+        </div>
+
+        <div className={styles.pageHeading}>
+          <h2 className={styles.pageTitle}>Planning Center</h2>
+          <p className={styles.subtitle}>Import calendar events to build your schedule from</p>
         </div>
 
         {connected && <p className={styles.helperText}>Connected to Planning Center.</p>}

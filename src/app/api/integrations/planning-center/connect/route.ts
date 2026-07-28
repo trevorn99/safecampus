@@ -32,7 +32,7 @@ export async function GET(request: Request) {
   const credentials = await getAppCredentials(member.organization_id);
   if (!credentials) {
     return NextResponse.redirect(
-      new URL("/schedule/planning-center?error=no_credentials", request.url),
+      new URL("/schedule/integrations?error=no_credentials", request.url),
     );
   }
 

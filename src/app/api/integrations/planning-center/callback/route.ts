@@ -16,18 +16,18 @@ export async function GET(request: Request) {
   cookieStore.delete(STATE_COOKIE);
 
   if (!code || !returnedState || !rawCookie) {
-    return NextResponse.redirect(`${origin}/schedule/planning-center?error=missing_state`);
+    return NextResponse.redirect(`${origin}/schedule/integrations?error=missing_state`);
   }
 
   let expected: { state: string; organizationId: string };
   try {
     expected = JSON.parse(rawCookie);
   } catch {
-    return NextResponse.redirect(`${origin}/schedule/planning-center?error=invalid_state`);
+    return NextResponse.redirect(`${origin}/schedule/integrations?error=invalid_state`);
   }
 
   if (expected.state !== returnedState) {
-    return NextResponse.redirect(`${origin}/schedule/planning-center?error=state_mismatch`);
+    return NextResponse.redirect(`${origin}/schedule/integrations?error=state_mismatch`);
   }
 
   const supabase = await createClient();
@@ -44,12 +44,12 @@ export async function GET(request: Request) {
     .eq("organization_id", expected.organizationId)
     .maybeSingle();
   if (!member) {
-    return NextResponse.redirect(`${origin}/schedule/planning-center?error=not_a_member`);
+    return NextResponse.redirect(`${origin}/schedule/integrations?error=not_a_member`);
   }
 
   const credentials = await getAppCredentials(expected.organizationId);
   if (!credentials) {
-    return NextResponse.redirect(`${origin}/schedule/planning-center?error=no_credentials`);
+    return NextResponse.redirect(`${origin}/schedule/integrations?error=no_credentials`);
   }
 
   try {
@@ -76,8 +76,8 @@ export async function GET(request: Request) {
       .update({ pco_connected: true })
       .eq("id", expected.organizationId);
   } catch {
-    return NextResponse.redirect(`${origin}/schedule/planning-center?error=token_exchange_failed`);
+    return NextResponse.redirect(`${origin}/schedule/integrations?error=token_exchange_failed`);
   }
 
-  return NextResponse.redirect(`${origin}/schedule/planning-center?connected=1`);
+  return NextResponse.redirect(`${origin}/schedule/integrations?connected=1`);
 }
