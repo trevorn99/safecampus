@@ -3,10 +3,10 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { generateThreatReport, getNextEligibleGenerationDate } from "@/lib/threatIntelligence";
 
-// Generation itself can take a while (Claude Opus 5 thinking, plus the
-// location/incident/watchlist reads) — well past a default serverless
-// timeout.
-export const maxDuration = 60;
+// Generation itself can take a while — Claude Opus 5 thinking, several web
+// searches for protest/advisory info, and possibly a few pause_turn resumes
+// — well past a default serverless timeout.
+export const maxDuration = 180;
 
 export async function POST(request: Request, { params }: { params: Promise<{ locationId: string }> }) {
   const { locationId } = await params;

@@ -52,6 +52,7 @@ type WatchlistRow = {
 // threat_reports' own RLS.
 function buildPrompt(
   locationName: string,
+  locationAddress: string | null,
   orgContext: string | null,
   locationContext: string | null,
   incidents: IncidentRow[],
@@ -78,6 +79,8 @@ function buildPrompt(
     .filter(Boolean)
     .join("\n\n");
 
+  const searchTarget = locationAddress ? `${locationName} (${locationAddress})` : locationName;
+
   return `You are drafting an internal threat intelligence brief for the safety team at "${locationName}". This is reviewed by a human admin before anyone else sees it — flag uncertainty rather than overstating confidence.
 ${contextSection ? `\n${contextSection}\n` : ""}
 Incident reports (last 90 days):
@@ -86,15 +89,28 @@ ${incidentsText}
 Watchlist entries:
 ${watchlistText}
 
-Write a concise brief (3-5 short paragraphs) covering: (1) a summary of recent activity and any patterns, (2) specific risks or concerns worth the team's attention this week — weighing the org's own stated concerns above alongside the incident/watchlist data, (3) any recommended precautions. If there's genuinely nothing notable, say so plainly rather than padding the report.`;
+You have web search available — use it to check current public information relevant to physical safety planning at this location:
+1. Recent or upcoming protests, demonstrations, rallies, or civil disturbances at or near ${searchTarget}${
+    locationAddress ? "" : " (no street address is on file — search by name/region as best you can, and say so if that limits what you can find)"
+  }.
+2. Public advisories or warnings from government agencies — FBI, DHS/CISA, or state/local law enforcement — relevant to this location's region or the type of site it is.
+Cite your source (publication or agency name, and approximate date) for anything drawn from a search result, so a human reviewer can verify it independently. If searches turn up nothing relevant, say so plainly rather than speculating or padding the report with generic advice.
+
+Write a concise brief (4-6 short paragraphs) covering: (1) a summary of recent activity and any patterns from the incident/watchlist data above, (2) anything relevant found via web search (protests/civil unrest, government advisories), (3) specific risks or concerns worth the team's attention this week — weighing the org's own stated concerns alongside everything above, (4) any recommended precautions. If there's genuinely nothing notable anywhere, say so plainly rather than padding the report.`;
 }
+
+// Server-side tools (web search) can pause a turn after many internal
+// search rounds (stop_reason: "pause_turn") — resume by re-sending the
+// conversation so far, per Anthropic's documented pattern. Capped so one
+// report can't loop indefinitely.
+const MAX_PAUSE_TURN_RESUMES = 3;
 
 export async function generateThreatReport(admin: SupabaseClient, locationId: string) {
   const since = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
 
   const { data: location } = await admin
     .from("locations")
-    .select("name, organization_id, threat_context")
+    .select("name, address, organization_id, threat_context")
     .eq("id", locationId)
     .single();
 
@@ -116,20 +132,41 @@ export async function generateThreatReport(admin: SupabaseClient, locationId: st
 
   const prompt = buildPrompt(
     location?.name ?? "this location",
+    location?.address ?? null,
     org?.threat_context ?? null,
     location?.threat_context ?? null,
     incidents ?? [],
     watchlist ?? [],
   );
 
-  const message = await anthropic.messages.create({
+  const tools: Anthropic.Messages.ToolUnion[] = [{ type: "web_search_20260209", name: "web_search" }];
+  let messages: Anthropic.Messages.MessageParam[] = [{ role: "user", content: prompt }];
+
+  let response = await anthropic.messages.create({
     model: "claude-opus-5",
-    max_tokens: 2000,
+    max_tokens: 4000,
     thinking: { type: "adaptive" },
-    messages: [{ role: "user", content: prompt }],
+    tools,
+    messages,
   });
 
-  const summary = message.content.find((block) => block.type === "text")?.text ?? "";
+  let resumes = 0;
+  while (response.stop_reason === "pause_turn" && resumes < MAX_PAUSE_TURN_RESUMES) {
+    messages = [...messages, { role: "assistant", content: response.content }];
+    response = await anthropic.messages.create({
+      model: "claude-opus-5",
+      max_tokens: 4000,
+      thinking: { type: "adaptive" },
+      tools,
+      messages,
+    });
+    resumes += 1;
+  }
+
+  const summary = response.content
+    .filter((block): block is Anthropic.Messages.TextBlock => block.type === "text")
+    .map((block) => block.text)
+    .join("\n\n");
 
   const { data: report, error } = await admin
     .from("threat_reports")
