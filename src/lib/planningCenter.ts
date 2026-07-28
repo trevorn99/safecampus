@@ -99,7 +99,14 @@ async function getValidAccessToken(organizationId: string): Promise<string | nul
   return refreshed.access_token;
 }
 
-type PcoEventsResponse = {
+// The top-level Event resource carries no date/time itself — Planning
+// Center splits an event's metadata (name, approval status) from its actual
+// scheduled occurrences, which live on the separate EventInstance resource
+// (one per calendar occurrence, so a recurring PCO event naturally yields
+// one instance per occurrence — confirmed against a real connected account
+// before writing this, not assumed). Each instance carries its own `name`
+// too, so no extra lookup back to the parent Event is needed.
+type PcoEventInstancesResponse = {
   data: Array<{ id: string; attributes: { name: string; starts_at: string } }>;
   links?: { next?: string };
 };
@@ -116,52 +123,28 @@ export async function importPcoEvents(organizationId: string): Promise<{ importe
 
   const admin = createAdminClient();
   const nowIso = new Date().toISOString();
-  // TEMP: filter dropped for this diagnostic round to rule out the filter
-  // syntax itself being wrong vs. PCO genuinely returning nothing.
-  let url: string | undefined = `${API_BASE}/calendar/v2/events?per_page=100`;
+  // filter=future is a documented PCO filter on this resource; the client-
+  // side check below is just a belt-and-suspenders backstop in case its
+  // exact boundary differs from "now".
+  let url: string | undefined =
+    `${API_BASE}/calendar/v2/event_instances?per_page=100&filter=future&order=starts_at`;
   let imported = 0;
 
   while (url) {
-    // TEMP diagnostic logging — remove once the empty-results issue is
-    // confirmed/fixed. Deliberately never logs the access token.
-    console.log("[pco import] fetching", url);
     const response = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
     if (!response.ok) {
       throw new Error(`Planning Center events request failed: ${await response.text()}`);
     }
-    const body: PcoEventsResponse = await response.json();
-    console.log(
-      "[pco import] raw data.length =",
-      body.data.length,
-      "first item =",
-      JSON.stringify(body.data[0] ?? null),
-    );
+    const body: PcoEventInstancesResponse = await response.json();
 
-    // TEMP: Event has no starts_at of its own — probing the nested
-    // event_instances endpoint for the first event to find where the actual
-    // date/time lives before fixing the real mapping.
-    if (body.data[0]) {
-      const instancesUrl = `${API_BASE}/calendar/v2/events/${body.data[0].id}/event_instances`;
-      console.log("[pco import] probing", instancesUrl);
-      const instancesResponse = await fetch(instancesUrl, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
-      console.log(
-        "[pco import] event_instances status =",
-        instancesResponse.status,
-        "body =",
-        await instancesResponse.text(),
-      );
-    }
-
-    const upcoming = body.data.filter((event) => event.attributes.starts_at >= nowIso);
+    const upcoming = body.data.filter((instance) => instance.attributes.starts_at >= nowIso);
     if (upcoming.length > 0) {
       const { error } = await admin.from("pco_imported_events").upsert(
-        upcoming.map((event) => ({
+        upcoming.map((instance) => ({
           organization_id: organizationId,
-          pco_event_id: event.id,
-          title: event.attributes.name,
-          starts_at: event.attributes.starts_at,
+          pco_event_id: instance.id,
+          title: instance.attributes.name,
+          starts_at: instance.attributes.starts_at,
         })),
         { onConflict: "organization_id,pco_event_id" },
       );
