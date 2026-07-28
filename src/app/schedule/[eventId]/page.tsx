@@ -8,6 +8,7 @@ import { AddPositionForm } from "./AddPositionForm";
 import { AssignMemberForm } from "./AssignMemberForm";
 import { RemoveAssignmentButton } from "./RemoveAssignmentButton";
 import { DeletePositionButton } from "./DeletePositionButton";
+import { PositionHeader } from "./PositionHeader";
 import styles from "@/styles/ui.module.css";
 
 const TYPE_LABEL: Record<string, string> = {
@@ -28,12 +29,16 @@ export default async function EventDetailPage({
 
   const [{ data: event }, { data: locations }, { data: teams }, { data: positions }, { data: orgMembers }, { data: teamAssignments }] =
     await Promise.all([
-      supabase.from("events").select("id, title, start_time, type, location_id").eq("id", eventId).maybeSingle(),
+      supabase
+        .from("events")
+        .select("id, title, start_time, type, location_id, series_id")
+        .eq("id", eventId)
+        .maybeSingle(),
       supabase.from("locations").select("id, name").eq("organization_id", member.organization_id),
       supabase.from("teams").select("id, name").eq("organization_id", member.organization_id),
       supabase
         .from("event_positions")
-        .select("id, title, team_id, location_id, start_time, end_time, slots")
+        .select("id, title, team_id, location_id, start_time, end_time, slots, template_position_id")
         .eq("event_id", eventId)
         .order("start_time"),
       supabase
@@ -111,20 +116,34 @@ export default async function EventDetailPage({
             : (orgMembers ?? []);
           const eligibleMembers = eligiblePool.filter((m) => !assignedMemberIds.has(m.id));
 
+          const metaText = [
+            new Date(position.start_time).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) +
+              (position.end_time
+                ? ` – ${new Date(position.end_time).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`
+                : ""),
+            position.team_id ? (teams?.find((t) => t.id === position.team_id)?.name ?? "Unknown team") : null,
+            position.location_id ? (locationName.get(position.location_id) ?? "Unknown location") : null,
+            `${positionAssignments.length} of ${position.slots} filled`,
+          ]
+            .filter(Boolean)
+            .join(" · ");
+
           return (
             <div key={position.id} className={styles.card}>
-              <div className={styles.cardHeader}>
-                <h2 className={styles.cardTitle}>{position.title}</h2>
-                <p className={styles.itemMeta}>
-                  {new Date(position.start_time).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
-                  {position.end_time
-                    ? ` – ${new Date(position.end_time).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`
-                    : ""}
-                  {position.team_id ? ` · ${teams?.find((t) => t.id === position.team_id)?.name ?? "Unknown team"}` : ""}
-                  {position.location_id ? ` · ${locationName.get(position.location_id) ?? "Unknown location"}` : ""}
-                  {` · ${positionAssignments.length} of ${position.slots} filled`}
-                </p>
-              </div>
+              {isAdmin ? (
+                <PositionHeader
+                  position={position}
+                  metaText={metaText}
+                  teams={teams ?? []}
+                  locations={locations ?? []}
+                  seriesId={event.series_id}
+                />
+              ) : (
+                <div className={styles.cardHeader}>
+                  <h2 className={styles.cardTitle}>{position.title}</h2>
+                  <p className={styles.itemMeta}>{metaText}</p>
+                </div>
+              )}
 
               <ul className={styles.list}>
                 {positionAssignments.map((assignment) => {
