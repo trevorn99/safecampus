@@ -4,7 +4,17 @@ import { AppHeader } from "@/components/AppHeader";
 import { GenerateReportButton } from "./GenerateReportButton";
 import { ReportCard } from "./ReportCard";
 import { ThreatContextForm } from "./ThreatContextForm";
+import { MIN_DAYS_BETWEEN_REPORTS } from "@/lib/threatIntelligence";
 import styles from "@/styles/ui.module.css";
+
+// Pulled out of the component body: react-hooks/purity flags impure calls
+// (Date.now()) made directly during render — see billing/page.tsx's
+// isPastTrial() for the same pattern.
+function nextEligibleDate(latestGeneratedAt: string | undefined): Date | null {
+  if (!latestGeneratedAt) return null;
+  const next = new Date(new Date(latestGeneratedAt).getTime() + MIN_DAYS_BETWEEN_REPORTS * 24 * 60 * 60 * 1000);
+  return next.getTime() > Date.now() ? next : null;
+}
 
 export default async function ThreatIntelligencePage({
   params,
@@ -39,6 +49,7 @@ export default async function ThreatIntelligencePage({
   ]);
 
   const enabled = Boolean(org?.threat_intel_enabled);
+  const nextEligibleAt = nextEligibleDate(reports?.[0]?.generated_at);
 
   return (
     <>
@@ -78,7 +89,12 @@ export default async function ThreatIntelligencePage({
               />
             )}
 
-            {Boolean(canManage) && <GenerateReportButton locationId={locationId} />}
+            {Boolean(canManage) && (
+              <GenerateReportButton
+                locationId={locationId}
+                nextEligibleAt={nextEligibleAt ? nextEligibleAt.toISOString() : null}
+              />
+            )}
 
             {(reports ?? []).length === 0 && (
               <div className={styles.card}>

@@ -4,6 +4,31 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 const anthropic = new Anthropic();
 
+// Hard cap: at most one report per location per rolling week, regardless of
+// source (weekly cron or the on-demand "Generate report now" button) — both
+// call this before generateThreatReport().
+export const MIN_DAYS_BETWEEN_REPORTS = 7;
+
+export async function getNextEligibleGenerationDate(
+  admin: SupabaseClient,
+  locationId: string,
+): Promise<Date | null> {
+  const { data: latest } = await admin
+    .from("threat_reports")
+    .select("generated_at")
+    .eq("location_id", locationId)
+    .order("generated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!latest) return null;
+
+  const nextEligible = new Date(
+    new Date(latest.generated_at).getTime() + MIN_DAYS_BETWEEN_REPORTS * 24 * 60 * 60 * 1000,
+  );
+  return nextEligible.getTime() > Date.now() ? nextEligible : null;
+}
+
 type IncidentRow = {
   id: string;
   occurred_at: string;

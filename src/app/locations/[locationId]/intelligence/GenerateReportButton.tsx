@@ -4,7 +4,13 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import styles from "@/styles/ui.module.css";
 
-export function GenerateReportButton({ locationId }: { locationId: string }) {
+export function GenerateReportButton({
+  locationId,
+  nextEligibleAt,
+}: {
+  locationId: string;
+  nextEligibleAt: string | null;
+}) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -22,6 +28,16 @@ export function GenerateReportButton({ locationId }: { locationId: string }) {
       return;
     }
     router.refresh();
+  }
+
+  if (nextEligibleAt) {
+    return (
+      <div className={styles.actions}>
+        <p className={styles.helperText}>
+          Only one report per week — the next one can be generated on {new Date(nextEligibleAt).toLocaleDateString()}.
+        </p>
+      </div>
+    );
   }
 
   return (

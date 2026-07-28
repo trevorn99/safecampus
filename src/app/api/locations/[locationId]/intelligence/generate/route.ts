@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { generateThreatReport } from "@/lib/threatIntelligence";
+import { generateThreatReport, getNextEligibleGenerationDate } from "@/lib/threatIntelligence";
 
 // Generation itself can take a while (Claude Opus 5 thinking, plus the
 // location/incident/watchlist reads) — well past a default serverless
@@ -53,6 +53,17 @@ export async function POST(request: Request, { params }: { params: Promise<{ loc
   }
 
   const admin = createAdminClient();
+
+  const nextEligibleAt = await getNextEligibleGenerationDate(admin, locationId);
+  if (nextEligibleAt) {
+    return NextResponse.json(
+      {
+        error: `Only one report per week — the next one can be generated on ${nextEligibleAt.toLocaleDateString()}.`,
+      },
+      { status: 429 },
+    );
+  }
+
   const report = await generateThreatReport(admin, locationId);
 
   return NextResponse.json({ ok: true, report });
