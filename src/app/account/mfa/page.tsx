@@ -4,6 +4,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { getAvatarUrlMap } from "@/lib/avatars";
 import { MfaManager } from "./MfaManager";
 import { ProfilePictureForm } from "./ProfilePictureForm";
+import { ForgetDevicesButton } from "./ForgetDevicesButton";
 import styles from "@/styles/ui.module.css";
 
 export default async function MfaSettingsPage() {
@@ -66,6 +67,7 @@ export default async function MfaSettingsPage() {
           </p>
         </div>
         <MfaManager />
+        <ForgetDevicesButton />
       </main>
     </>
   );

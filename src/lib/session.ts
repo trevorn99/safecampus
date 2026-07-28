@@ -1,6 +1,7 @@
 import "server-only";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { isTrustedDeviceRequest } from "@/lib/trustedDevice";
 
 export async function requireMembership(options?: { allowUnpaid?: boolean }) {
   const supabase = await createClient();
@@ -16,7 +17,12 @@ export async function requireMembership(options?: { allowUnpaid?: boolean }) {
   // through /auth/callback's own check (e.g. a long-lived cookie).
   const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
   if (aal && aal.nextLevel === "aal2" && aal.currentLevel !== "aal2") {
-    redirect("/auth/mfa-challenge");
+    // A trusted-device cookie skips only this app-level redirect — the
+    // underlying session genuinely stays at AAL1, so is_aal2()-gated RLS
+    // (watchlist_entries) still can't be satisfied by it. See trustedDevice.ts.
+    if (!(await isTrustedDeviceRequest(user.id))) {
+      redirect("/auth/mfa-challenge");
+    }
   }
 
   const { data: member } = await supabase
@@ -61,8 +67,8 @@ export async function requireMembership(options?: { allowUnpaid?: boolean }) {
   // layer via is_aal2() so it holds even against direct API calls.
   if (privilegedRole) {
     const { data: factors } = await supabase.auth.mfa.listFactors();
-    // data.totp is already filtered to verified factors by the API.
-    if (!factors?.totp?.length) {
+    // .totp/.webauthn are each already filtered to verified factors by the API.
+    if (!factors?.totp?.length && !factors?.webauthn?.length) {
       redirect("/account/mfa");
     }
   }
