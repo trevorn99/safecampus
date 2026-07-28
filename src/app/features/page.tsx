@@ -38,9 +38,9 @@ const FEATURES = [
       "Sign in with a magic link or Google — no passwords to manage. Every organization's data is isolated at the database level, so one organization can never see another's.",
   },
   {
-    title: "Automated notifications",
-    description: "Schedule reminders and certification-expiry alerts, delivered by email and SMS.",
-    comingSoon: true,
+    title: "SMS shift reminders",
+    description:
+      "Members can opt in to a text 3 days and 24 hours before a shift they're assigned to — no app to check, just a reminder that shows up.",
   },
   {
     title: "Incident reports & watchlist",
