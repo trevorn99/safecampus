@@ -137,6 +137,23 @@ export async function importPcoEvents(organizationId: string): Promise<{ importe
       JSON.stringify(body.data[0] ?? null),
     );
 
+    // TEMP: Event has no starts_at of its own — probing the nested
+    // event_instances endpoint for the first event to find where the actual
+    // date/time lives before fixing the real mapping.
+    if (body.data[0]) {
+      const instancesUrl = `${API_BASE}/calendar/v2/events/${body.data[0].id}/event_instances`;
+      console.log("[pco import] probing", instancesUrl);
+      const instancesResponse = await fetch(instancesUrl, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      console.log(
+        "[pco import] event_instances status =",
+        instancesResponse.status,
+        "body =",
+        await instancesResponse.text(),
+      );
+    }
+
     const upcoming = body.data.filter((event) => event.attributes.starts_at >= nowIso);
     if (upcoming.length > 0) {
       const { error } = await admin.from("pco_imported_events").upsert(
