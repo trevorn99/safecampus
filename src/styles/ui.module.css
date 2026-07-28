@@ -181,6 +181,21 @@
   font-size: 0.85rem;
   color: var(--muted);
 }
+.docBody {
+  font-size: 0.92rem;
+  color: var(--ink);
+  line-height: 1.6;
+}
+.docList {
+  margin: 0;
+  padding-left: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  font-size: 0.92rem;
+  color: var(--ink);
+  line-height: 1.5;
+}
 .errorText {
   font-size: 0.85rem;
   color: var(--danger);
