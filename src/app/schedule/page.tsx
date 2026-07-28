@@ -124,6 +124,9 @@ export default async function SchedulePage() {
             <Link href="/schedule/series" className={`${styles.button} ${styles.buttonSecondary}`}>
               Recurring series
             </Link>
+            <Link href="/schedule/planning-center" className={`${styles.button} ${styles.buttonSecondary}`}>
+              Planning Center
+            </Link>
           </div>
         )}
       </main>

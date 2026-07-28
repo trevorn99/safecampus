@@ -37,18 +37,20 @@ export function NewEventForm({
   teams,
   templates,
   templatePositions,
+  pcoCandidate,
 }: {
   organizationId: string;
   locations: Option[];
   teams: Option[];
   templates: Option[];
   templatePositions: TemplatePosition[];
+  pcoCandidate?: { id: string; title: string; startTime: string } | null;
 }) {
   const router = useRouter();
-  const [title, setTitle] = useState("");
+  const [title, setTitle] = useState(pcoCandidate?.title ?? "");
   const [type, setType] = useState("service");
   const [locationId, setLocationId] = useState("");
-  const [startTime, setStartTime] = useState("");
+  const [startTime, setStartTime] = useState(pcoCandidate?.startTime ?? "");
   const [templateId, setTemplateId] = useState("");
   const [positions, setPositions] = useState<PositionRow[]>([]);
   const [saveAsTemplate, setSaveAsTemplate] = useState(false);
@@ -177,6 +179,13 @@ export function NewEventForm({
           }
         }
 
+        if (pcoCandidate) {
+          await supabase
+            .from("pco_imported_events")
+            .update({ promoted_event_id: createdEvent.id })
+            .eq("id", pcoCandidate.id);
+        }
+
         setLoading(false);
         router.push(`/schedule/${createdEvent.id}`);
         return;
@@ -219,6 +228,9 @@ export function NewEventForm({
     <div className={styles.card}>
       <div className={styles.cardHeader}>
         <h1 className={styles.cardTitle}>New event</h1>
+        {pcoCandidate && (
+          <p className={styles.helperText}>Creating from a Planning Center calendar event — edit anything below.</p>
+        )}
       </div>
       <form onSubmit={handleSubmit} className={styles.form}>
         <div className={styles.field}>
