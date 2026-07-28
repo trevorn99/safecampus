@@ -213,6 +213,16 @@
 .link:hover {
   text-decoration: underline;
 }
+/* Same look as .link, but for a <button> — resets browser button chrome
+   (font-family specifically, since buttons don't inherit it by default) */
+.linkButton {
+  composes: link;
+  font-family: inherit;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
 
 /* Authenticated app shell (dashboard, team pages) */
 .appHeader {

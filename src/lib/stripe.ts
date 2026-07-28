@@ -16,6 +16,10 @@ export const TIER_PRICE_IDS = {
 
 export type PlanTier = keyof typeof TIER_PRICE_IDS;
 
+// Threat Intelligence add-on: $30/mo, added as a second item on an org's
+// existing subscription rather than a separate plan or Checkout session.
+export const THREAT_INTEL_PRICE_ID = process.env.STRIPE_THREAT_INTEL_PRICE_ID!;
+
 export const SEAT_CAPS: Record<PlanTier, number> = {
   tier_10: 10,
   tier_30: 30,

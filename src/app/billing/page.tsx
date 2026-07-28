@@ -1,6 +1,7 @@
 import { requireMembership } from "@/lib/session";
 import { AppHeader } from "@/components/AppHeader";
 import { BillingActions } from "./BillingActions";
+import { ThreatIntelToggle } from "./ThreatIntelToggle";
 import { SEAT_CAPS, TIER_LABEL, tierForSeatCount, createStripeClient, type PlanTier } from "@/lib/stripe";
 import styles from "@/styles/ui.module.css";
 
@@ -27,7 +28,7 @@ export default async function BillingPage() {
   const [{ data: org }, { count: seatCount }] = await Promise.all([
     supabase
       .from("organizations")
-      .select("subscription_status, trial_ends_at, stripe_customer_id, paywall_exempt, plan_tier")
+      .select("subscription_status, trial_ends_at, stripe_customer_id, paywall_exempt, plan_tier, threat_intel_enabled")
       .eq("id", member.organization_id)
       .single(),
     supabase
@@ -46,6 +47,7 @@ export default async function BillingPage() {
 
   const currentTier = (org?.plan_tier as PlanTier | null) ?? tierForSeatCount(seatCount ?? 1);
   const overCap = !tierForSeatCount(seatCount ?? 1);
+  const hasSubscription = org?.subscription_status === "active" || org?.subscription_status === "past_due";
 
   const invoices =
     isAdmin && org?.stripe_customer_id
@@ -91,14 +93,13 @@ export default async function BillingPage() {
           )}
 
           {isAdmin && !org?.paywall_exempt && !overCap && (
-            <BillingActions
-              hasStripeCustomer={Boolean(org?.stripe_customer_id)}
-              hasSubscription={
-                org?.subscription_status === "active" || org?.subscription_status === "past_due"
-              }
-            />
+            <BillingActions hasStripeCustomer={Boolean(org?.stripe_customer_id)} hasSubscription={hasSubscription} />
           )}
         </div>
+
+        {isAdmin && !org?.paywall_exempt && (
+          <ThreatIntelToggle initialEnabled={Boolean(org?.threat_intel_enabled)} hasSubscription={hasSubscription} />
+        )}
 
         {isAdmin && invoices.length > 0 && (
           <div className={styles.card}>

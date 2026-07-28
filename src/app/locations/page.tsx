@@ -1,6 +1,7 @@
 import { requireMembership } from "@/lib/session";
 import { AppHeader } from "@/components/AppHeader";
 import { NewLocationForm } from "./NewLocationForm";
+import { LocationRow } from "./LocationRow";
 import styles from "@/styles/ui.module.css";
 
 export default async function LocationsPage() {
@@ -25,18 +26,7 @@ export default async function LocationsPage() {
           {(locations ?? []).length === 0 && <p className={styles.helperText}>No locations yet.</p>}
           <ul className={styles.list}>
             {(locations ?? []).map((location) => (
-              <li key={location.id} className={styles.listRow}>
-                <div>
-                  <p className={styles.itemName}>{location.name}</p>
-                  {location.address && <p className={styles.itemMeta}>{location.address}</p>}
-                </div>
-                <div className={styles.tagRow}>
-                  {location.timezone && <span className={styles.pillMuted}>{location.timezone}</span>}
-                  <a href={`/locations/${location.id}/map`} className={styles.link}>
-                    Map
-                  </a>
-                </div>
-              </li>
+              <LocationRow key={location.id} location={location} isAdmin={isAdmin} />
             ))}
           </ul>
         </div>

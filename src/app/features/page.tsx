@@ -49,10 +49,9 @@ const FEATURES = [
     comingSoon: true,
   },
   {
-    title: "AI-assisted intelligence reports",
+    title: "Threat Intelligence ($30/mo add-on)",
     description:
-      "Automatically drafted threat intelligence briefs for each location, drawing on incident history and watchlist activity — reviewed by your admins before anyone sees them.",
-    comingSoon: true,
+      "AI-drafted intelligence briefs for each location, refreshing weekly and available on demand — drawing on incident history and watchlist activity, reviewed by your admins before release.",
   },
 ];
 
