@@ -249,6 +249,12 @@
   flex-direction: column;
   gap: 1.5rem;
 }
+/* Wider variant for content that needs the room on large screens (the
+   dashboard's calendar grid feels cramped at the standard 840px). */
+.appMainWide {
+  composes: appMain;
+  max-width: 1200px;
+}
 
 .pageHeading {
   display: flex;

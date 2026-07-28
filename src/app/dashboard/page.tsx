@@ -46,7 +46,7 @@ export default async function DashboardPage() {
   return (
     <>
       <AppHeader isAdmin={isAdmin} isPlatformAdmin={isPlatformAdmin} />
-      <main className={styles.appMain}>
+      <main className={styles.appMainWide}>
         <div className={styles.card}>
           <div className={styles.identityRow}>
             <Avatar name={member.name} url={avatarUrl} size="lg" />
