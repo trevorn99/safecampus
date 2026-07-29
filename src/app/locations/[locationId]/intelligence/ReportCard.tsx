@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Markdown from "react-markdown";
 import { createClient } from "@/lib/supabase/client";
 import styles from "@/styles/ui.module.css";
 
@@ -70,10 +71,8 @@ export function ReportCard({
         </div>
       </div>
 
-      <div className={styles.docBody}>
-        {(report.summary ?? "").split(/\n{2,}/).map((paragraph, index) => (
-          <p key={index}>{paragraph}</p>
-        ))}
+      <div className={`${styles.docBody} ${styles.reportMarkdown}`}>
+        <Markdown>{report.summary ?? ""}</Markdown>
       </div>
 
       {canManage && (

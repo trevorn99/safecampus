@@ -196,6 +196,62 @@
   color: var(--ink);
   line-height: 1.5;
 }
+/* Renders react-markdown output (Threat Intelligence reports) with the
+   same voice as .docBody, plus real heading/list/emphasis styling instead
+   of raw markdown syntax showing up as literal asterisks/hashes. */
+.reportMarkdown > *:first-child {
+  margin-top: 0;
+}
+.reportMarkdown > *:last-child {
+  margin-bottom: 0;
+}
+.reportMarkdown p {
+  margin: 0 0 1rem;
+}
+.reportMarkdown h1,
+.reportMarkdown h2,
+.reportMarkdown h3 {
+  font-weight: 700;
+  color: var(--ink);
+  margin: 1.25rem 0 0.5rem;
+}
+.reportMarkdown h1 {
+  font-size: 1.1rem;
+}
+.reportMarkdown h2 {
+  font-size: 1.02rem;
+}
+.reportMarkdown h3 {
+  font-size: 0.96rem;
+}
+.reportMarkdown ul,
+.reportMarkdown ol {
+  margin: 0 0 1rem;
+  padding-left: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.reportMarkdown li {
+  line-height: 1.55;
+}
+.reportMarkdown strong {
+  font-weight: 700;
+  color: var(--ink);
+}
+.reportMarkdown a {
+  color: var(--accent-strong);
+  font-weight: 600;
+}
+.reportMarkdown a:hover {
+  text-decoration: underline;
+}
+.reportMarkdown blockquote {
+  margin: 0 0 1rem;
+  padding-left: 0.9rem;
+  border-left: 2px solid var(--border);
+  color: var(--muted);
+}
 .errorText {
   font-size: 0.85rem;
   color: var(--danger);

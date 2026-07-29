@@ -96,7 +96,15 @@ You have web search available — use it to check current public information rel
 2. Public advisories or warnings from government agencies — FBI, DHS/CISA, or state/local law enforcement — relevant to this location's region or the type of site it is.
 Cite your source (publication or agency name, and approximate date) for anything drawn from a search result, so a human reviewer can verify it independently. If searches turn up nothing relevant, say so plainly rather than speculating or padding the report with generic advice.
 
-Write a concise brief (4-6 short paragraphs) covering: (1) a summary of recent activity and any patterns from the incident/watchlist data above, (2) anything relevant found via web search (protests/civil unrest, government advisories), (3) specific risks or concerns worth the team's attention this week — weighing the org's own stated concerns alongside everything above, (4) any recommended precautions. If there's genuinely nothing notable anywhere, say so plainly rather than padding the report.`;
+Format the brief in markdown with exactly these four "## " section headings, in this order, each with 1-3 short paragraphs (use a bullet list only where you're listing several distinct items, e.g. multiple sources or precautions — not as a substitute for prose):
+## Recent Activity
+Summary of recent activity and any patterns from the incident/watchlist data above.
+## Public Safety Findings
+Anything relevant found via web search — protests/civil unrest, government advisories — each with its cited source. State plainly if nothing relevant turned up.
+## Risks & Concerns
+Specific risks worth the team's attention this week, weighing the org's own stated concerns alongside everything above.
+## Recommended Precautions
+Concrete, actionable precautions. If there's genuinely nothing notable anywhere in this report, say so plainly under the relevant heading rather than padding it.`;
 }
 
 // Server-side tools (web search) can pause a turn after many internal
