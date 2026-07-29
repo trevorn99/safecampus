@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { generateThreatReport, getNextEligibleGenerationDate } from "@/lib/threatIntelligence";
+import { generateThreatReport, getGenerationStatus } from "@/lib/threatIntelligence";
 
 // Triggered weekly by Vercel Cron (see vercel.json) — refreshes every
 // location's Threat Intelligence report for orgs with the add-on enabled.
@@ -25,10 +25,11 @@ export async function GET(request: Request) {
   for (const org of orgs ?? []) {
     const { data: locations } = await admin.from("locations").select("id").eq("organization_id", org.id);
     for (const location of locations ?? []) {
-      // An admin may have already generated one on demand this week —
-      // enforce the same one-per-week cap here rather than doubling up.
-      const nextEligibleAt = await getNextEligibleGenerationDate(admin, location.id);
-      if (nextEligibleAt) {
+      // An admin may have already generated one on demand this week, or one
+      // may still be generating right now — enforce the same status check
+      // here rather than doubling up.
+      const status = await getGenerationStatus(admin, location.id);
+      if (status.state !== "idle") {
         skipped += 1;
         continue;
       }

@@ -9,24 +9,48 @@ const anthropic = new Anthropic();
 // call this before generateThreatReport().
 export const MIN_DAYS_BETWEEN_REPORTS = 7;
 
-export async function getNextEligibleGenerationDate(
-  admin: SupabaseClient,
-  locationId: string,
-): Promise<Date | null> {
+// If a "generating" placeholder is older than this, the run that created it
+// crashed or hit the function timeout without cleaning up — treat it as
+// stale rather than letting it block this location forever.
+export const GENERATION_STALE_MINUTES = 10;
+
+export type GenerationStatus =
+  | { state: "idle" }
+  | { state: "generating" }
+  | { state: "cooldown"; nextEligibleAt: Date };
+
+// The single source of truth for "can this location generate a report right
+// now" — checked by the on-demand route, the weekly cron, and reflected in
+// the UI, so leaving the page (or a retry, or the cron overlapping an
+// on-demand click) can never start a second concurrent generation for the
+// same location: the in-progress placeholder row (see generateThreatReport)
+// itself is what "generating" detects.
+export async function getGenerationStatus(admin: SupabaseClient, locationId: string): Promise<GenerationStatus> {
   const { data: latest } = await admin
     .from("threat_reports")
-    .select("generated_at")
+    .select("id, status, generated_at")
     .eq("location_id", locationId)
     .order("generated_at", { ascending: false })
     .limit(1)
     .maybeSingle();
 
-  if (!latest) return null;
+  if (!latest) return { state: "idle" };
+
+  if (latest.status === "generating") {
+    const ageMinutes = (Date.now() - new Date(latest.generated_at).getTime()) / 60_000;
+    if (ageMinutes < GENERATION_STALE_MINUTES) {
+      return { state: "generating" };
+    }
+    // Stale — the attempt that created this never finished it. Clean it up
+    // and treat this location as free to try again.
+    await admin.from("threat_reports").delete().eq("id", latest.id);
+    return { state: "idle" };
+  }
 
   const nextEligible = new Date(
     new Date(latest.generated_at).getTime() + MIN_DAYS_BETWEEN_REPORTS * 24 * 60 * 60 * 1000,
   );
-  return nextEligible.getTime() > Date.now() ? nextEligible : null;
+  return nextEligible.getTime() > Date.now() ? { state: "cooldown", nextEligibleAt: nextEligible } : { state: "idle" };
 }
 
 type IncidentRow = {
@@ -120,85 +144,106 @@ One or two sentences stating what was actually checked this time (e.g. "DHS NTAS
 const MAX_PAUSE_TURN_RESUMES = 3;
 
 export async function generateThreatReport(admin: SupabaseClient, locationId: string) {
-  const since = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
-
-  const { data: location } = await admin
-    .from("locations")
-    .select("name, address, organization_id, threat_context")
-    .eq("id", locationId)
+  // Claim this location immediately, before any slow work — this row (not
+  // client-side loading state) is what getGenerationStatus() sees, so it
+  // survives the requester leaving the page, a retry, or the weekly cron
+  // overlapping an on-demand click without any of them starting a second
+  // concurrent generation for the same location. The server-side work below
+  // continues to completion regardless of whether the original HTTP client
+  // is still connected.
+  const { data: placeholder, error: placeholderError } = await admin
+    .from("threat_reports")
+    .insert({ location_id: locationId, status: "generating" })
+    .select("id")
     .single();
+  if (placeholderError) throw placeholderError;
 
-  const [{ data: org }, { data: incidents }, { data: watchlist }] = await Promise.all([
-    admin.from("organizations").select("threat_context").eq("id", location?.organization_id).single(),
-    admin
-      .from("incident_reports")
-      .select("id, occurred_at, type, narrative, status")
-      .eq("location_id", locationId)
-      .gte("occurred_at", since)
-      .order("occurred_at", { ascending: false })
-      .returns<IncidentRow[]>(),
-    admin
-      .from("watchlist_entries")
-      .select("id, name, severity, reason, description")
-      .eq("location_id", locationId)
-      .returns<WatchlistRow[]>(),
-  ]);
+  try {
+    const since = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
 
-  const prompt = buildPrompt(
-    location?.name ?? "this location",
-    location?.address ?? null,
-    org?.threat_context ?? null,
-    location?.threat_context ?? null,
-    incidents ?? [],
-    watchlist ?? [],
-  );
+    const { data: location } = await admin
+      .from("locations")
+      .select("name, address, organization_id, threat_context")
+      .eq("id", locationId)
+      .single();
 
-  const tools: Anthropic.Messages.ToolUnion[] = [
-    { type: "web_search_20260209", name: "web_search" },
-    { type: "web_fetch_20260209", name: "web_fetch" },
-  ];
-  let messages: Anthropic.Messages.MessageParam[] = [{ role: "user", content: prompt }];
+    const [{ data: org }, { data: incidents }, { data: watchlist }] = await Promise.all([
+      admin.from("organizations").select("threat_context").eq("id", location?.organization_id).single(),
+      admin
+        .from("incident_reports")
+        .select("id, occurred_at, type, narrative, status")
+        .eq("location_id", locationId)
+        .gte("occurred_at", since)
+        .order("occurred_at", { ascending: false })
+        .returns<IncidentRow[]>(),
+      admin
+        .from("watchlist_entries")
+        .select("id, name, severity, reason, description")
+        .eq("location_id", locationId)
+        .returns<WatchlistRow[]>(),
+    ]);
 
-  let response = await anthropic.messages.create({
-    model: "claude-opus-5",
-    max_tokens: 5000,
-    thinking: { type: "adaptive" },
-    tools,
-    messages,
-  });
+    const prompt = buildPrompt(
+      location?.name ?? "this location",
+      location?.address ?? null,
+      org?.threat_context ?? null,
+      location?.threat_context ?? null,
+      incidents ?? [],
+      watchlist ?? [],
+    );
 
-  let resumes = 0;
-  while (response.stop_reason === "pause_turn" && resumes < MAX_PAUSE_TURN_RESUMES) {
-    messages = [...messages, { role: "assistant", content: response.content }];
-    response = await anthropic.messages.create({
+    const tools: Anthropic.Messages.ToolUnion[] = [
+      { type: "web_search_20260209", name: "web_search" },
+      { type: "web_fetch_20260209", name: "web_fetch" },
+    ];
+    let messages: Anthropic.Messages.MessageParam[] = [{ role: "user", content: prompt }];
+
+    let response = await anthropic.messages.create({
       model: "claude-opus-5",
       max_tokens: 5000,
       thinking: { type: "adaptive" },
       tools,
       messages,
     });
-    resumes += 1;
+
+    let resumes = 0;
+    while (response.stop_reason === "pause_turn" && resumes < MAX_PAUSE_TURN_RESUMES) {
+      messages = [...messages, { role: "assistant", content: response.content }];
+      response = await anthropic.messages.create({
+        model: "claude-opus-5",
+        max_tokens: 5000,
+        thinking: { type: "adaptive" },
+        tools,
+        messages,
+      });
+      resumes += 1;
+    }
+
+    const summary = response.content
+      .filter((block): block is Anthropic.Messages.TextBlock => block.type === "text")
+      .map((block) => block.text)
+      .join("\n\n");
+
+    const { data: report, error } = await admin
+      .from("threat_reports")
+      .update({
+        summary,
+        status: "draft",
+        source_refs: {
+          incident_report_ids: (incidents ?? []).map((incident) => incident.id),
+          watchlist_entry_ids: (watchlist ?? []).map((entry) => entry.id),
+        },
+      })
+      .eq("id", placeholder.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return report;
+  } catch (err) {
+    // Don't leave a dead "generating" row occupying this location's weekly
+    // slot — a failed attempt shouldn't block the next real one.
+    await admin.from("threat_reports").delete().eq("id", placeholder.id);
+    throw err;
   }
-
-  const summary = response.content
-    .filter((block): block is Anthropic.Messages.TextBlock => block.type === "text")
-    .map((block) => block.text)
-    .join("\n\n");
-
-  const { data: report, error } = await admin
-    .from("threat_reports")
-    .insert({
-      location_id: locationId,
-      summary,
-      status: "draft",
-      source_refs: {
-        incident_report_ids: (incidents ?? []).map((incident) => incident.id),
-        watchlist_entry_ids: (watchlist ?? []).map((entry) => entry.id),
-      },
-    })
-    .select()
-    .single();
-
-  if (error) throw error;
-  return report;
 }

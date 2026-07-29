@@ -1,5 +1,6 @@
 import { requireMembership } from "@/lib/session";
 import { AppHeader } from "@/components/AppHeader";
+import { GENERATION_STALE_MINUTES } from "@/lib/threatIntelligence";
 import styles from "@/styles/ui.module.css";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -7,6 +8,15 @@ const STATUS_LABEL: Record<string, string> = {
   reviewed: "Reviewed",
   released: "Released",
 };
+
+// Mirrors getGenerationStatus()'s staleness math (src/lib/threatIntelligence.ts)
+// so a dead placeholder from a crashed/timed-out run doesn't show as
+// "Generating…" forever.
+function isActivelyGenerating(report: { status: string; generated_at: string } | undefined): boolean {
+  if (!report || report.status !== "generating") return false;
+  const ageMinutes = (Date.now() - new Date(report.generated_at).getTime()) / 60_000;
+  return ageMinutes < GENERATION_STALE_MINUTES;
+}
 
 export default async function ThreatIntelligenceIndexPage() {
   const { supabase, member, organizationName, isAdmin, isPlatformAdmin } = await requireMembership();
@@ -73,16 +83,19 @@ export default async function ThreatIntelligenceIndexPage() {
               <ul className={styles.list}>
                 {(locations ?? []).map((location) => {
                   const latest = latestByLocation.get(location.id);
+                  const generating = isActivelyGenerating(latest);
                   return (
                     <li key={location.id} className={styles.listRow}>
                       <div>
                         <p className={styles.itemName}>{location.name}</p>
                         <p className={styles.itemMeta}>
-                          {latest
-                            ? `Last report: ${new Date(latest.generated_at).toLocaleDateString()} · ${
-                                STATUS_LABEL[latest.status] ?? latest.status
-                              }`
-                            : "No reports yet"}
+                          {generating
+                            ? "Generating…"
+                            : latest
+                              ? `Last report: ${new Date(latest.generated_at).toLocaleDateString()} · ${
+                                  STATUS_LABEL[latest.status] ?? latest.status
+                                }`
+                              : "No reports yet"}
                         </p>
                       </div>
                       <a href={`/locations/${location.id}/intelligence`} className={styles.link}>

@@ -4,7 +4,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { GenerateReportButton } from "./GenerateReportButton";
 import { ReportCard } from "./ReportCard";
 import { ThreatContextForm } from "./ThreatContextForm";
-import { MIN_DAYS_BETWEEN_REPORTS } from "@/lib/threatIntelligence";
+import { MIN_DAYS_BETWEEN_REPORTS, GENERATION_STALE_MINUTES } from "@/lib/threatIntelligence";
 import styles from "@/styles/ui.module.css";
 
 // Pulled out of the component body: react-hooks/purity flags impure calls
@@ -14,6 +14,14 @@ function nextEligibleDate(latestGeneratedAt: string | undefined): Date | null {
   if (!latestGeneratedAt) return null;
   const next = new Date(new Date(latestGeneratedAt).getTime() + MIN_DAYS_BETWEEN_REPORTS * 24 * 60 * 60 * 1000);
   return next.getTime() > Date.now() ? next : null;
+}
+
+// Mirrors getGenerationStatus()'s staleness math so the UI never shows "in
+// progress" for a placeholder the backend would already treat as dead.
+function isActivelyGenerating(report: { status: string; generated_at: string } | undefined): boolean {
+  if (!report || report.status !== "generating") return false;
+  const ageMinutes = (Date.now() - new Date(report.generated_at).getTime()) / 60_000;
+  return ageMinutes < GENERATION_STALE_MINUTES;
 }
 
 export default async function ThreatIntelligencePage({
@@ -49,7 +57,9 @@ export default async function ThreatIntelligencePage({
   ]);
 
   const enabled = Boolean(org?.threat_intel_enabled);
-  const nextEligibleAt = nextEligibleDate(reports?.[0]?.generated_at);
+  const generating = isActivelyGenerating(reports?.[0]);
+  const nextEligibleAt = generating ? null : nextEligibleDate(reports?.[0]?.generated_at);
+  const visibleReports = (reports ?? []).filter((report) => report.status !== "generating");
 
   return (
     <>
@@ -99,16 +109,17 @@ export default async function ThreatIntelligencePage({
               <GenerateReportButton
                 locationId={locationId}
                 nextEligibleAt={nextEligibleAt ? nextEligibleAt.toISOString() : null}
+                generating={generating}
               />
             )}
 
-            {(reports ?? []).length === 0 && (
+            {visibleReports.length === 0 && (
               <div className={styles.card}>
                 <p className={styles.helperText}>No reports yet.</p>
               </div>
             )}
 
-            {(reports ?? []).map((report) => (
+            {visibleReports.map((report) => (
               <ReportCard key={report.id} report={report} canManage={Boolean(canManage)} memberId={member.id} />
             ))}
           </>

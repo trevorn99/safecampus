@@ -1,19 +1,32 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import styles from "@/styles/ui.module.css";
 
 export function GenerateReportButton({
   locationId,
   nextEligibleAt,
+  generating,
 }: {
   locationId: string;
   nextEligibleAt: string | null;
+  generating: boolean;
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // While a report is generating (whether started from this tab, another
+  // tab, or the weekly cron), poll so the page notices it finished without
+  // requiring a manual refresh — this is the same DB-backed state the
+  // server checks, so it's accurate even if this tab wasn't the one that
+  // started the run.
+  useEffect(() => {
+    if (!generating) return;
+    const interval = setInterval(() => router.refresh(), 15_000);
+    return () => clearInterval(interval);
+  }, [generating, router]);
 
   async function handleGenerate() {
     setLoading(true);
@@ -36,6 +49,14 @@ export function GenerateReportButton({
       return;
     }
     router.refresh();
+  }
+
+  if (generating) {
+    return (
+      <div className={styles.actions}>
+        <p className={styles.helperText}>A report is currently being generated for this location — this can take a few minutes. This page updates automatically.</p>
+      </div>
+    );
   }
 
   if (nextEligibleAt) {

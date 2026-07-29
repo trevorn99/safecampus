@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { generateThreatReport, getNextEligibleGenerationDate } from "@/lib/threatIntelligence";
+import { generateThreatReport, getGenerationStatus } from "@/lib/threatIntelligence";
 
 // Generation itself can take a while — Claude Opus 5 thinking, several web
 // searches for protest/advisory info, and possibly a few pause_turn resumes
 // — well past a default serverless timeout.
-export const maxDuration = 180;
+export const maxDuration = 300;
 
 export async function POST(request: Request, { params }: { params: Promise<{ locationId: string }> }) {
   const { locationId } = await params;
@@ -54,11 +54,17 @@ export async function POST(request: Request, { params }: { params: Promise<{ loc
 
   const admin = createAdminClient();
 
-  const nextEligibleAt = await getNextEligibleGenerationDate(admin, locationId);
-  if (nextEligibleAt) {
+  const status = await getGenerationStatus(admin, locationId);
+  if (status.state === "generating") {
+    return NextResponse.json(
+      { error: "A report is already being generated for this location — check back in a few minutes." },
+      { status: 429 },
+    );
+  }
+  if (status.state === "cooldown") {
     return NextResponse.json(
       {
-        error: `Only one report per week — the next one can be generated on ${nextEligibleAt.toLocaleDateString()}.`,
+        error: `Only one report per week — the next one can be generated on ${status.nextEligibleAt.toLocaleDateString()}.`,
       },
       { status: 429 },
     );
