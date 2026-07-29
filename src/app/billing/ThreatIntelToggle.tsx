@@ -55,6 +55,10 @@ export function ThreatIntelToggle({
           AI-drafted intelligence briefs for each location, refreshed weekly and available on demand — drawing
           on incident history and watchlist activity, reviewed by your admins before release.
         </p>
+        <p className={styles.helperText}>
+          Uses public web search and government advisories (DHS, FBI/CISA) — it cannot access private social media
+          (Facebook groups, Instagram, TikTok).
+        </p>
       </div>
       {!hasSubscription ? (
         <p className={styles.helperText}>Subscribe to a plan before enabling add-ons.</p>

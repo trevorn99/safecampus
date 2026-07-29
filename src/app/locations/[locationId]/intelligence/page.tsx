@@ -81,6 +81,12 @@ export default async function ThreatIntelligencePage({
           </div>
         ) : (
           <>
+            <p className={styles.disclaimer}>
+              Reports draw on this organization&apos;s own incident/watchlist records, plus public web search and
+              government advisories (DHS, FBI/CISA). They cannot access private social media — Facebook groups,
+              Instagram, or TikTok content is not searchable this way and will not appear in a report.
+            </p>
+
             {isAdmin && (
               <ThreatContextForm
                 locationId={locationId}

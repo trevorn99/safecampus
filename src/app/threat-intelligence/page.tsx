@@ -62,31 +62,38 @@ export default async function ThreatIntelligenceIndexPage() {
             </p>
           </div>
         ) : (
-          <div className={styles.card}>
-            {(locations ?? []).length === 0 && <p className={styles.helperText}>No locations yet.</p>}
-            <ul className={styles.list}>
-              {(locations ?? []).map((location) => {
-                const latest = latestByLocation.get(location.id);
-                return (
-                  <li key={location.id} className={styles.listRow}>
-                    <div>
-                      <p className={styles.itemName}>{location.name}</p>
-                      <p className={styles.itemMeta}>
-                        {latest
-                          ? `Last report: ${new Date(latest.generated_at).toLocaleDateString()} · ${
-                              STATUS_LABEL[latest.status] ?? latest.status
-                            }`
-                          : "No reports yet"}
-                      </p>
-                    </div>
-                    <a href={`/locations/${location.id}/intelligence`} className={styles.link}>
-                      View reports
-                    </a>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
+          <>
+            <p className={styles.disclaimer}>
+              Reports draw on this organization&apos;s own incident/watchlist records, plus public web search and
+              government advisories (DHS, FBI/CISA). They cannot access private social media — Facebook groups,
+              Instagram, or TikTok content is not searchable this way and will not appear in a report.
+            </p>
+            <div className={styles.card}>
+              {(locations ?? []).length === 0 && <p className={styles.helperText}>No locations yet.</p>}
+              <ul className={styles.list}>
+                {(locations ?? []).map((location) => {
+                  const latest = latestByLocation.get(location.id);
+                  return (
+                    <li key={location.id} className={styles.listRow}>
+                      <div>
+                        <p className={styles.itemName}>{location.name}</p>
+                        <p className={styles.itemMeta}>
+                          {latest
+                            ? `Last report: ${new Date(latest.generated_at).toLocaleDateString()} · ${
+                                STATUS_LABEL[latest.status] ?? latest.status
+                              }`
+                            : "No reports yet"}
+                        </p>
+                      </div>
+                      <a href={`/locations/${location.id}/intelligence`} className={styles.link}>
+                        View reports
+                      </a>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          </>
         )}
       </main>
     </>
