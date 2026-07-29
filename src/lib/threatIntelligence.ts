@@ -89,26 +89,32 @@ ${incidentsText}
 Watchlist entries:
 ${watchlistText}
 
-You have web search available — use it to check current public information relevant to physical safety planning at this location:
-1. Recent or upcoming protests, demonstrations, rallies, or civil disturbances at or near ${searchTarget}${
+You have web search and web fetch available. Use them to check current public information relevant to physical safety planning at this location:
+
+1. **DHS national advisory level (always check).** Fetch https://www.dhs.gov/national-terrorism-advisory-system directly and report the current National Terrorism Advisory System bulletin status (e.g. no current advisory, or a summary of an active Bulletin/Alert and what it covers).
+2. **Other government advisories.** Search for current FBI public warnings/press releases and DHS/CISA advisories relevant to this location's region or the type of site it is (e.g. search "FBI warning [region]" and "CISA advisory [region/sector]").
+3. **Protests and civil unrest.** Recent or upcoming protests, demonstrations, rallies, or civil disturbances at or near ${searchTarget}${
     locationAddress ? "" : " (no street address is on file — search by name/region as best you can, and say so if that limits what you can find)"
   }.
-2. Public advisories or warnings from government agencies — FBI, DHS/CISA, or state/local law enforcement — relevant to this location's region or the type of site it is.
-Cite your source (publication or agency name, and approximate date) for anything drawn from a search result, so a human reviewer can verify it independently. If searches turn up nothing relevant, say so plainly rather than speculating or padding the report with generic advice.
+4. **Public mentions relevant to this specific type of organization.** If the organization's own description above indicates a specific institution type (e.g. a house of worship, school, or event venue), tailor a search to that — for example, for a church/house of worship: search for recent news coverage of threats, hate crimes, or planned protests targeting similar institutions in the area, plus any faith-based security guidance DHS/FBI have issued (e.g. the Nonprofit Security Grant Program). This is a public web search only — it cannot see into private Facebook groups, Instagram, or TikTok, which are not indexed or accessible this way; look for public news coverage or public event listings that reference such activity instead, and say plainly that private-platform content is out of scope rather than implying it was checked.
 
-Format the brief in markdown with exactly these four "## " section headings, in this order, each with 1-3 short paragraphs (use a bullet list only where you're listing several distinct items, e.g. multiple sources or precautions — not as a substitute for prose):
+Cite your source (publication or agency name, and approximate date) for anything drawn from a search or fetch result, so a human reviewer can verify it independently. If searches turn up nothing relevant, say so plainly rather than speculating or padding the report with generic advice.
+
+Format the brief in markdown with exactly these five "## " section headings, in this order, each with 1-3 short paragraphs (use a bullet list only where you're listing several distinct items, e.g. multiple sources or precautions — not as a substitute for prose):
 ## Recent Activity
 Summary of recent activity and any patterns from the incident/watchlist data above.
 ## Public Safety Findings
-Anything relevant found via web search — protests/civil unrest, government advisories — each with its cited source. State plainly if nothing relevant turned up.
+The DHS national advisory status, other government advisories, protests/civil unrest, and any org-type-specific public mentions found above — each with its cited source. State plainly if nothing relevant turned up.
 ## Risks & Concerns
 Specific risks worth the team's attention this week, weighing the org's own stated concerns alongside everything above.
 ## Recommended Precautions
-Concrete, actionable precautions. If there's genuinely nothing notable anywhere in this report, say so plainly under the relevant heading rather than padding it.`;
+Concrete, actionable precautions. If there's genuinely nothing notable anywhere in this report, say so plainly under the relevant heading rather than padding it.
+## Coverage Note
+One or two sentences stating what was actually checked this time (e.g. "DHS NTAS, FBI/CISA search, and local protest search were checked; no direct access to private social media platforms") so a reviewer knows the report's real scope, not just its findings.`;
 }
 
-// Server-side tools (web search) can pause a turn after many internal
-// search rounds (stop_reason: "pause_turn") — resume by re-sending the
+// Server-side tools (web search, web fetch) can pause a turn after many
+// internal rounds (stop_reason: "pause_turn") — resume by re-sending the
 // conversation so far, per Anthropic's documented pattern. Capped so one
 // report can't loop indefinitely.
 const MAX_PAUSE_TURN_RESUMES = 3;
@@ -147,12 +153,15 @@ export async function generateThreatReport(admin: SupabaseClient, locationId: st
     watchlist ?? [],
   );
 
-  const tools: Anthropic.Messages.ToolUnion[] = [{ type: "web_search_20260209", name: "web_search" }];
+  const tools: Anthropic.Messages.ToolUnion[] = [
+    { type: "web_search_20260209", name: "web_search" },
+    { type: "web_fetch_20260209", name: "web_fetch" },
+  ];
   let messages: Anthropic.Messages.MessageParam[] = [{ role: "user", content: prompt }];
 
   let response = await anthropic.messages.create({
     model: "claude-opus-5",
-    max_tokens: 4000,
+    max_tokens: 5000,
     thinking: { type: "adaptive" },
     tools,
     messages,
@@ -163,7 +172,7 @@ export async function generateThreatReport(admin: SupabaseClient, locationId: st
     messages = [...messages, { role: "assistant", content: response.content }];
     response = await anthropic.messages.create({
       model: "claude-opus-5",
-      max_tokens: 4000,
+      max_tokens: 5000,
       thinking: { type: "adaptive" },
       tools,
       messages,
