@@ -219,6 +219,17 @@ export async function generateThreatReport(admin: SupabaseClient, locationId: st
       resumes += 1;
     }
 
+    // TEMPORARY diagnostic — remove once we've confirmed why DHS NTAS
+    // fetches are (apparently) failing. Logs block types and, for the two
+    // server-tool result kinds, whether Anthropic reported an error.
+    for (const block of response.content) {
+      if (block.type === "web_fetch_tool_result" || block.type === "web_search_tool_result") {
+        console.log("[threat-intel diagnostic]", block.type, JSON.stringify(block.content).slice(0, 500));
+      } else {
+        console.log("[threat-intel diagnostic] block type:", block.type);
+      }
+    }
+
     const summary = response.content
       .filter((block): block is Anthropic.Messages.TextBlock => block.type === "text")
       .map((block) => block.text)
