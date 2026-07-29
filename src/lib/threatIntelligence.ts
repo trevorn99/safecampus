@@ -198,6 +198,24 @@ export async function generateThreatReport(admin: SupabaseClient, locationId: st
     ];
     let messages: Anthropic.Messages.MessageParam[] = [{ role: "user", content: prompt }];
 
+    // TEMPORARY diagnostic — logs incrementally (elapsed time, stop_reason,
+    // block types) so we see where time actually goes even if the function
+    // gets killed by the timeout before reaching the end. Remove once
+    // confirmed why DHS NTAS fetches are apparently taking this long.
+    const startedAt = Date.now();
+    function logProgress(label: string, msg: Anthropic.Messages.Message) {
+      const elapsedSec = Math.round((Date.now() - startedAt) / 1000);
+      const blockSummary = msg.content
+        .map((block) => {
+          if (block.type === "web_fetch_tool_result" || block.type === "web_search_tool_result") {
+            return `${block.type}=${JSON.stringify(block.content).slice(0, 300)}`;
+          }
+          return block.type;
+        })
+        .join(", ");
+      console.log(`[threat-intel diagnostic] ${label} @${elapsedSec}s stop_reason=${msg.stop_reason} blocks=[${blockSummary}]`);
+    }
+
     let response = await anthropic.messages.create({
       model: "claude-opus-5",
       max_tokens: 5000,
@@ -205,6 +223,7 @@ export async function generateThreatReport(admin: SupabaseClient, locationId: st
       tools,
       messages,
     });
+    logProgress("initial call", response);
 
     let resumes = 0;
     while (response.stop_reason === "pause_turn" && resumes < MAX_PAUSE_TURN_RESUMES) {
@@ -217,17 +236,7 @@ export async function generateThreatReport(admin: SupabaseClient, locationId: st
         messages,
       });
       resumes += 1;
-    }
-
-    // TEMPORARY diagnostic — remove once we've confirmed why DHS NTAS
-    // fetches are (apparently) failing. Logs block types and, for the two
-    // server-tool result kinds, whether Anthropic reported an error.
-    for (const block of response.content) {
-      if (block.type === "web_fetch_tool_result" || block.type === "web_search_tool_result") {
-        console.log("[threat-intel diagnostic]", block.type, JSON.stringify(block.content).slice(0, 500));
-      } else {
-        console.log("[threat-intel diagnostic] block type:", block.type);
-      }
+      logProgress(`resume #${resumes}`, response);
     }
 
     const summary = response.content
