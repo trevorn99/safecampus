@@ -7,6 +7,7 @@ import { ProfilePictureForm } from "./ProfilePictureForm";
 import { ForgetDevicesButton } from "./ForgetDevicesButton";
 import { SmsPreferencesForm } from "./SmsPreferencesForm";
 import { OrgSmsToggle } from "./OrgSmsToggle";
+import { OrgNameForm } from "./OrgNameForm";
 import styles from "@/styles/ui.module.css";
 
 export default async function MfaSettingsPage() {
@@ -41,7 +42,7 @@ export default async function MfaSettingsPage() {
       .limit(1)
       .maybeSingle(),
     supabase.rpc("is_platform_admin"),
-    supabase.from("organizations").select("sms_enabled").eq("id", member.organization_id).single(),
+    supabase.from("organizations").select("name, sms_enabled").eq("id", member.organization_id).single(),
   ]);
 
   const avatarUrls = await getAvatarUrlMap(supabase, [member.profile_picture_url]);
@@ -60,6 +61,8 @@ export default async function MfaSettingsPage() {
           name={member.name}
           currentUrl={member.profile_picture_url ? (avatarUrls.get(member.profile_picture_url) ?? null) : null}
         />
+
+        {Boolean(isAdmin) && <OrgNameForm initialName={org?.name ?? ""} />}
 
         <SmsPreferencesForm currentPhone={member.phone} currentOptIn={member.sms_opt_in} orgSmsEnabled={Boolean(org?.sms_enabled)} />
         {Boolean(isAdmin) && <OrgSmsToggle initialEnabled={Boolean(org?.sms_enabled)} />}
