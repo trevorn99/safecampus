@@ -60,7 +60,16 @@ export function SmsPreferencesForm({
       <div className={styles.cardHeader}>
         <h2 className={styles.cardTitle}>SMS shift reminders</h2>
         <p className={styles.helperText}>
-          Get a text 3 days and 24 hours before a shift you&apos;re assigned to. Msg &amp; data rates may apply.
+          Get a text 3 days and 24 hours before a shift you&apos;re assigned to. Message frequency varies based on
+          your schedule. Msg &amp; data rates may apply. Reply STOP to unsubscribe, HELP for help. See our{" "}
+          <a href="/privacy" className={styles.link}>
+            Privacy Policy
+          </a>{" "}
+          and{" "}
+          <a href="/terms" className={styles.link}>
+            Terms of Service
+          </a>
+          .
         </p>
       </div>
 
