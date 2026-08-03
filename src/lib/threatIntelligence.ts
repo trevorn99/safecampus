@@ -156,6 +156,8 @@ Cite your source (publication/agency name and approximate date for web search re
 
 Write each paragraph as full, flowing prose — multiple sentences joined together normally, not one sentence per line and not a line break after every period. Only start a new line for an actual new paragraph, a bullet/numbered list item, or a heading.
 
+Do not write a "Prepared:" date or a "Status:" line anywhere in the brief (e.g. no "Status: Draft for admin review"). The app displays the actual generation date and current review status (draft/reviewed/released) alongside this report, and anything you write here would go stale the moment that status changes — start directly with a title heading, then go straight into the sections below.
+
 Format the brief in markdown with exactly these five "## " section headings, in this order, each with 1-3 short paragraphs (use a bullet list only where you're listing several distinct items, e.g. multiple sources, multiple locations, or precautions — not as a substitute for prose):
 ## Recent Activity
 Summary of recent activity and any patterns from the incident/watchlist data above, across all locations — note which campus each item involves.
