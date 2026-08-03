@@ -26,6 +26,10 @@ function isActivelyGenerating(report: { status: string; generated_at: string } |
 export default async function ThreatIntelligencePage() {
   const { supabase, member, organizationName, isAdmin, isPlatformAdmin } = await requireMembership();
 
+  const { data: isTeamLead } = isAdmin
+    ? { data: false }
+    : await supabase.rpc("is_team_lead", { target_org: member.organization_id });
+
   const [{ data: org }, { data: locations }, { data: reports }] = await Promise.all([
     supabase
       .from("organizations")
@@ -75,9 +79,11 @@ export default async function ThreatIntelligencePage() {
               )}
             </p>
           </div>
-        ) : !isAdmin ? (
+        ) : !isAdmin && !isTeamLead ? (
           <div className={styles.card}>
-            <p className={styles.helperText}>Threat Intelligence reports are visible to org admins only.</p>
+            <p className={styles.helperText}>
+              Threat Intelligence reports are visible to org admins, and to team leads once a report is released.
+            </p>
           </div>
         ) : (
           <>
@@ -90,23 +96,29 @@ export default async function ThreatIntelligencePage() {
               never as a replacement for it.
             </p>
 
-            <ThreatContextForm
-              initialOrgContext={org?.threat_context ?? ""}
-              locations={(locations ?? []).map((location) => ({
-                id: location.id,
-                name: location.name,
-                threatContext: location.threat_context ?? "",
-              }))}
-            />
+            {isAdmin && (
+              <>
+                <ThreatContextForm
+                  initialOrgContext={org?.threat_context ?? ""}
+                  locations={(locations ?? []).map((location) => ({
+                    id: location.id,
+                    name: location.name,
+                    threatContext: location.threat_context ?? "",
+                  }))}
+                />
 
-            <GenerateReportButton
-              nextEligibleAt={nextEligibleAt ? nextEligibleAt.toISOString() : null}
-              generating={generating}
-            />
+                <GenerateReportButton
+                  nextEligibleAt={nextEligibleAt ? nextEligibleAt.toISOString() : null}
+                  generating={generating}
+                />
+              </>
+            )}
 
             {visibleReports.length === 0 && (
               <div className={styles.card}>
-                <p className={styles.helperText}>No reports yet.</p>
+                <p className={styles.helperText}>
+                  {isAdmin ? "No reports yet." : "No released reports yet."}
+                </p>
               </div>
             )}
 

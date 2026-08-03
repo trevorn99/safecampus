@@ -33,6 +33,29 @@ function formatGeneratedAt(iso: string): string {
   return `${day} · ${time}`;
 }
 
+// The model occasionally breaks a single paragraph across multiple lines
+// (one sentence per line, or a break after a period) instead of writing
+// flowing prose — CommonMark treats a lone "\n" as a soft break, but a
+// non-breaking one still reads as a stray new line once rendered. Merge any
+// line that isn't blank, a heading, or a list item into the previous line
+// with a space, so genuine paragraph/list/heading breaks are kept and
+// nothing else is.
+function normalizeReportMarkdown(text: string): string {
+  const lines = text.split("\n");
+  const result: string[] = [];
+  const isStructural = (line: string) => /^\s*(#{1,6}\s|[-*+]\s|\d+[.)]\s|>\s)/.test(line) || line.trim() === "";
+
+  for (const line of lines) {
+    const previous = result[result.length - 1];
+    if (result.length === 0 || isStructural(line) || previous === undefined || isStructural(previous)) {
+      result.push(line);
+    } else {
+      result[result.length - 1] = `${previous.replace(/\s+$/, "")} ${line.replace(/^\s+/, "")}`;
+    }
+  }
+  return result.join("\n");
+}
+
 export function ReportCard({
   report,
   canManage,
@@ -85,7 +108,7 @@ export function ReportCard({
       </div>
 
       <div className={`${styles.docBody} ${styles.reportMarkdown}`}>
-        <Markdown>{report.summary ?? ""}</Markdown>
+        <Markdown>{normalizeReportMarkdown(report.summary ?? "")}</Markdown>
       </div>
 
       {canManage && (

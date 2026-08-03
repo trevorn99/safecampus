@@ -148,6 +148,8 @@ You have web search available. Use it to check current public information releva
 
 Cite your source (publication or agency name, and approximate date) for anything drawn from a search result, so a human reviewer can verify it independently. If searches turn up nothing relevant, say so plainly rather than speculating or padding the report with generic advice. Where a finding applies to one specific campus rather than the whole organization, name that campus.
 
+Write each paragraph as full, flowing prose — multiple sentences joined together normally, not one sentence per line and not a line break after every period. Only start a new line for an actual new paragraph, a bullet/numbered list item, or a heading.
+
 Format the brief in markdown with exactly these five "## " section headings, in this order, each with 1-3 short paragraphs (use a bullet list only where you're listing several distinct items, e.g. multiple sources, multiple locations, or precautions — not as a substitute for prose):
 ## Recent Activity
 Summary of recent activity and any patterns from the incident/watchlist data above, across all locations — note which campus each item involves.
