@@ -219,7 +219,23 @@
   font-size: 1.1rem;
 }
 .reportMarkdown h2 {
-  font-size: 1.02rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--accent-strong);
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border);
+}
+.reportMarkdown h2:first-child {
+  padding-top: 0;
+  border-top: none;
+}
+/* The prompt always emits "Coverage Note" as the final section — a
+   methodology footnote, not a finding, so it reads quieter than the rest. */
+.reportMarkdown h2:last-of-type {
+  color: var(--muted);
+  font-weight: 600;
 }
 .reportMarkdown h3 {
   font-size: 0.96rem;

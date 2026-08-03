@@ -113,16 +113,16 @@ ${incidentsText}
 Watchlist entries:
 ${watchlistText}
 
-You have web search and web fetch available. Use them to check current public information relevant to physical safety planning at this location:
+You have web search available. Use it to check current public information relevant to physical safety planning at this location:
 
-1. **DHS national advisory level (always check).** Fetch https://www.dhs.gov/national-terrorism-advisory-system directly and report the current National Terrorism Advisory System bulletin status (e.g. no current advisory, or a summary of an active Bulletin/Alert and what it covers).
+1. **DHS national advisory level (always check).** Search for the current DHS National Terrorism Advisory System (NTAS) bulletin status (e.g. search "DHS National Terrorism Advisory System current bulletin") and report what you find — no current advisory, or a summary of an active Bulletin/Alert and what it covers.
 2. **Other government advisories.** Search for current FBI public warnings/press releases and DHS/CISA advisories relevant to this location's region or the type of site it is (e.g. search "FBI warning [region]" and "CISA advisory [region/sector]").
 3. **Protests and civil unrest.** Recent or upcoming protests, demonstrations, rallies, or civil disturbances at or near ${searchTarget}${
     locationAddress ? "" : " (no street address is on file — search by name/region as best you can, and say so if that limits what you can find)"
   }.
 4. **Public mentions relevant to this specific type of organization.** If the organization's own description above indicates a specific institution type (e.g. a house of worship, school, or event venue), tailor a search to that — for example, for a church/house of worship: search for recent news coverage of threats, hate crimes, or planned protests targeting similar institutions in the area, plus any faith-based security guidance DHS/FBI have issued (e.g. the Nonprofit Security Grant Program). This is a public web search only — it cannot see into private Facebook groups, Instagram, or TikTok, which are not indexed or accessible this way; look for public news coverage or public event listings that reference such activity instead, and say plainly that private-platform content is out of scope rather than implying it was checked.
 
-Cite your source (publication or agency name, and approximate date) for anything drawn from a search or fetch result, so a human reviewer can verify it independently. If searches turn up nothing relevant, say so plainly rather than speculating or padding the report with generic advice.
+Cite your source (publication or agency name, and approximate date) for anything drawn from a search result, so a human reviewer can verify it independently. If searches turn up nothing relevant, say so plainly rather than speculating or padding the report with generic advice.
 
 Format the brief in markdown with exactly these five "## " section headings, in this order, each with 1-3 short paragraphs (use a bullet list only where you're listing several distinct items, e.g. multiple sources or precautions — not as a substitute for prose):
 ## Recent Activity
@@ -137,8 +137,8 @@ Concrete, actionable precautions. If there's genuinely nothing notable anywhere 
 One or two sentences stating what was actually checked this time (e.g. "DHS NTAS, FBI/CISA search, and local protest search were checked; no direct access to private social media platforms") so a reviewer knows the report's real scope, not just its findings.`;
 }
 
-// Server-side tools (web search, web fetch) can pause a turn after many
-// internal rounds (stop_reason: "pause_turn") — resume by re-sending the
+// Server-side tools (web search) can pause a turn after many internal
+// rounds (stop_reason: "pause_turn") — resume by re-sending the
 // conversation so far, per Anthropic's documented pattern. Capped so one
 // report can't loop indefinitely.
 const MAX_PAUSE_TURN_RESUMES = 3;
@@ -192,29 +192,8 @@ export async function generateThreatReport(admin: SupabaseClient, locationId: st
       watchlist ?? [],
     );
 
-    const tools: Anthropic.Messages.ToolUnion[] = [
-      { type: "web_search_20260209", name: "web_search" },
-      { type: "web_fetch_20260209", name: "web_fetch" },
-    ];
+    const tools: Anthropic.Messages.ToolUnion[] = [{ type: "web_search_20260209", name: "web_search" }];
     let messages: Anthropic.Messages.MessageParam[] = [{ role: "user", content: prompt }];
-
-    // TEMPORARY diagnostic — logs incrementally (elapsed time, stop_reason,
-    // block types) so we see where time actually goes even if the function
-    // gets killed by the timeout before reaching the end. Remove once
-    // confirmed why DHS NTAS fetches are apparently taking this long.
-    const startedAt = Date.now();
-    function logProgress(label: string, msg: Anthropic.Messages.Message) {
-      const elapsedSec = Math.round((Date.now() - startedAt) / 1000);
-      const blockSummary = msg.content
-        .map((block) => {
-          if (block.type === "web_fetch_tool_result" || block.type === "web_search_tool_result") {
-            return `${block.type}=${JSON.stringify(block.content).slice(0, 300)}`;
-          }
-          return block.type;
-        })
-        .join(", ");
-      console.log(`[threat-intel diagnostic] ${label} @${elapsedSec}s stop_reason=${msg.stop_reason} blocks=[${blockSummary}]`);
-    }
 
     let response = await anthropic.messages.create({
       model: "claude-opus-5",
@@ -223,7 +202,6 @@ export async function generateThreatReport(admin: SupabaseClient, locationId: st
       tools,
       messages,
     });
-    logProgress("initial call", response);
 
     let resumes = 0;
     while (response.stop_reason === "pause_turn" && resumes < MAX_PAUSE_TURN_RESUMES) {
@@ -236,7 +214,6 @@ export async function generateThreatReport(admin: SupabaseClient, locationId: st
         messages,
       });
       resumes += 1;
-      logProgress(`resume #${resumes}`, response);
     }
 
     const summary = response.content

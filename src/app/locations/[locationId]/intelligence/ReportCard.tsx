@@ -20,6 +20,19 @@ const STATUS_LABEL: Record<string, string> = {
   released: "Released",
 };
 
+function statusPillClass(status: string): string {
+  if (status === "released") return styles.badge;
+  if (status === "reviewed") return styles.pill;
+  return styles.pillMuted;
+}
+
+function formatGeneratedAt(iso: string): string {
+  const date = new Date(iso);
+  const day = date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+  const time = date.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+  return `${day} · ${time}`;
+}
+
 export function ReportCard({
   report,
   canManage,
@@ -66,8 +79,8 @@ export function ReportCard({
     <div className={styles.card}>
       <div className={styles.cardHeader}>
         <div className={styles.tagRow}>
-          <span className={styles.pillMuted}>{STATUS_LABEL[report.status] ?? report.status}</span>
-          <span className={styles.itemMeta}>{new Date(report.generated_at).toLocaleString()}</span>
+          <span className={statusPillClass(report.status)}>{STATUS_LABEL[report.status] ?? report.status}</span>
+          <span className={styles.itemMeta}>{formatGeneratedAt(report.generated_at)}</span>
         </div>
       </div>
 
