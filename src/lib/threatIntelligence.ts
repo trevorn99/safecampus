@@ -2,6 +2,7 @@ import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { gatherXFindings } from "./xSearch";
+import { fetchChurchSecurityAdvisory } from "./churchSecurityAdvisory";
 
 const anthropic = new Anthropic();
 
@@ -91,6 +92,7 @@ function buildPrompt(
   incidents: IncidentRow[],
   watchlist: WatchlistRow[],
   xFindings: string,
+  churchSecurityAdvisory: string | null,
 ): string {
   const locationName = (locationId: string | null) =>
     locations.find((location) => location.id === locationId)?.name ?? "an unspecified location";
@@ -152,7 +154,11 @@ X/Twitter was already pre-searched for you (not something you need to search for
 
 ${xFindings}
 
-Cite your source (publication/agency name and approximate date for web search results; "X/Twitter search" and the post date for X findings) for anything drawn from a search result, so a human reviewer can verify it independently. If searches turn up nothing relevant, say so plainly rather than speculating or padding the report with generic advice. Where a finding applies to one specific campus rather than the whole organization, name that campus.
+${
+  churchSecurityAdvisory
+    ? `A national church security threat-level advisory was also pre-fetched below, from Christian Warrior Training (a private church-security organization, not a government source — cite it as such and don't present it with more certainty than the government advisories above). It is a single nationwide rating, not specific to this organization or any location. Only include it under item 4 above if this organization's own description indicates it is a house of worship; otherwise ignore it entirely and don't mention it:\n\n${churchSecurityAdvisory}\n`
+    : ""
+}Cite your source (publication/agency name and approximate date for web search results; "X/Twitter search" and the post date for X findings) for anything drawn from a search result, so a human reviewer can verify it independently. If searches turn up nothing relevant, say so plainly rather than speculating or padding the report with generic advice. Where a finding applies to one specific campus rather than the whole organization, name that campus.
 
 Write each paragraph as full, flowing prose — multiple sentences joined together normally, not one sentence per line and not a line break after every period. Only start a new line for an actual new paragraph, a bullet/numbered list item, or a heading.
 
@@ -226,7 +232,10 @@ export async function generateThreatReport(admin: SupabaseClient, organizationId
         : Promise.resolve({ data: [] as WatchlistRow[] }),
     ]);
 
-    const xFindings = await gatherXFindings(admin, organizationId, org?.name ?? "this organization", locations ?? []);
+    const [xFindings, churchSecurityAdvisory] = await Promise.all([
+      gatherXFindings(admin, organizationId, org?.name ?? "this organization", locations ?? []),
+      fetchChurchSecurityAdvisory(),
+    ]);
 
     const prompt = buildPrompt(
       org?.name ?? "this organization",
@@ -235,6 +244,7 @@ export async function generateThreatReport(admin: SupabaseClient, organizationId
       incidents ?? [],
       watchlist ?? [],
       xFindings,
+      churchSecurityAdvisory,
     );
 
     const tools: Anthropic.Messages.ToolUnion[] = [{ type: "web_search_20260209", name: "web_search" }];
