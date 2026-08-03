@@ -89,11 +89,11 @@ export default async function ThreatIntelligencePage() {
           <>
             <p className={styles.disclaimer}>
               This report is AI-drafted from your organization&apos;s own incident/watchlist records across every
-              location, plus public web search and government advisories (DHS, FBI/CISA). Certain platforms —
-              including private Facebook groups, Instagram, and TikTok — cannot be monitored through an API in an
-              automated fashion, so activity there will not appear here. Treat this report as a starting point:
-              always combine it with your team&apos;s own human intelligence and local knowledge before acting on it,
-              never as a replacement for it.
+              location, plus public web search, X/Twitter search, and government advisories (DHS, FBI/CISA). Certain
+              platforms — including private Facebook groups, Instagram, and TikTok — cannot be monitored through an
+              API in an automated fashion, so activity there will not appear here. Treat this report as a starting
+              point: always combine it with your team&apos;s own human intelligence and local knowledge before
+              acting on it, never as a replacement for it.
             </p>
 
             {isAdmin && (

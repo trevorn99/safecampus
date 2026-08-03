@@ -51,7 +51,7 @@ const FEATURES = [
   {
     title: "Threat Intelligence ($30/mo add-on)",
     description:
-      "One AI-drafted intelligence brief covering your whole organization — every location combined — refreshing weekly and available on demand, drawing on incident history, watchlist activity, public web search, and government advisories (DHS, FBI/CISA), reviewed by your admins before release. Certain platforms (private Facebook groups, Instagram, TikTok) can't be monitored via API in an automated way — always pair this with your team's own human intelligence.",
+      "One AI-drafted intelligence brief covering your whole organization — every location combined — refreshing weekly and available on demand, drawing on incident history, watchlist activity, public web search, X/Twitter search, and government advisories (DHS, FBI/CISA), reviewed by your admins before release. Certain platforms (private Facebook groups, Instagram, TikTok) can't be monitored via API in an automated way — always pair this with your team's own human intelligence.",
   },
 ];
 

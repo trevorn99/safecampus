@@ -57,10 +57,10 @@ export function ThreatIntelToggle({
           admins before release.
         </p>
         <p className={styles.helperText}>
-          Uses public web search and government advisories (DHS, FBI/CISA). Certain platforms — including private
-          Facebook groups, Instagram, and TikTok — can&apos;t be monitored through an API in an automated fashion, so
-          this is always a starting point to combine with your team&apos;s own human intelligence, not a replacement
-          for it.
+          Uses public web search, X/Twitter search, and government advisories (DHS, FBI/CISA). Certain platforms —
+          including private Facebook groups, Instagram, and TikTok — can&apos;t be monitored through an API in an
+          automated fashion, so this is always a starting point to combine with your team&apos;s own human
+          intelligence, not a replacement for it.
         </p>
       </div>
       {!hasSubscription ? (

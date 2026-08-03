@@ -1,6 +1,7 @@
 import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { gatherXFindings } from "./xSearch";
 
 const anthropic = new Anthropic();
 
@@ -89,6 +90,7 @@ function buildPrompt(
   locations: LocationInfo[],
   incidents: IncidentRow[],
   watchlist: WatchlistRow[],
+  xFindings: string,
 ): string {
   const locationName = (locationId: string | null) =>
     locations.find((location) => location.id === locationId)?.name ?? "an unspecified location";
@@ -144,9 +146,13 @@ You have web search available. Use it to check current public information releva
 3. **Protests and civil unrest, per location.** For each location with an address below, search for recent or upcoming protests, demonstrations, rallies, or civil disturbances near it, and note which campus each finding applies to: ${
     searchTargets.length ? searchTargets.join("; ") : "no locations have a street address on file — say so rather than guessing"
   }.
-4. **Public mentions relevant to this specific type of organization.** If the organization's own description above indicates a specific institution type (e.g. a house of worship, school, or event venue), tailor a search to that — for example, for a church/house of worship: search for recent news coverage of threats, hate crimes, or planned protests targeting similar institutions, plus any faith-based security guidance DHS/FBI have issued (e.g. the Nonprofit Security Grant Program). This is a public web search only — it cannot see into private Facebook groups, Instagram, or TikTok, which are not indexed or reachable this way via an automated API; look for public news coverage or public event listings that reference such activity instead, and say plainly that private-platform content is out of scope rather than implying it was checked.
+4. **Public mentions relevant to this specific type of organization.** If the organization's own description above indicates a specific institution type (e.g. a house of worship, school, or event venue), tailor a search to that — for example, for a church/house of worship: search for recent news coverage of threats, hate crimes, or planned protests targeting similar institutions, plus any faith-based security guidance DHS/FBI have issued (e.g. the Nonprofit Security Grant Program). This is a public web search — it cannot see into private Facebook groups, Instagram, or TikTok, which are not indexed or reachable this way via an automated API; look for public news coverage or public event listings that reference such activity instead, and say plainly that private-platform content is out of scope rather than implying it was checked.
 
-Cite your source (publication or agency name, and approximate date) for anything drawn from a search result, so a human reviewer can verify it independently. If searches turn up nothing relevant, say so plainly rather than speculating or padding the report with generic advice. Where a finding applies to one specific campus rather than the whole organization, name that campus.
+X/Twitter was already pre-searched for you (not something you need to search for yourself) — one query for the organization's name plus one per location address, run through the X API directly. Fold genuinely relevant findings into the sections above (protest/unrest chatter under item 3, general threat/safety mentions under item 4); if a line below says a query was skipped or exhausted, or found nothing, say so plainly rather than guessing at what it might have found:
+
+${xFindings}
+
+Cite your source (publication/agency name and approximate date for web search results; "X/Twitter search" and the post date for X findings) for anything drawn from a search result, so a human reviewer can verify it independently. If searches turn up nothing relevant, say so plainly rather than speculating or padding the report with generic advice. Where a finding applies to one specific campus rather than the whole organization, name that campus.
 
 Write each paragraph as full, flowing prose — multiple sentences joined together normally, not one sentence per line and not a line break after every period. Only start a new line for an actual new paragraph, a bullet/numbered list item, or a heading.
 
@@ -154,13 +160,13 @@ Format the brief in markdown with exactly these five "## " section headings, in 
 ## Recent Activity
 Summary of recent activity and any patterns from the incident/watchlist data above, across all locations — note which campus each item involves.
 ## Public Safety Findings
-The DHS national advisory status, other government advisories, protests/civil unrest per location, and any org-type-specific public mentions found above — each with its cited source. State plainly if nothing relevant turned up.
+The DHS national advisory status, other government advisories, protests/civil unrest per location, any org-type-specific public mentions found above, and any relevant X/Twitter findings — each with its cited source. State plainly if nothing relevant turned up.
 ## Risks & Concerns
 Specific risks worth the team's attention this week, weighing the org's own stated concerns (and each location's, where given) alongside everything above.
 ## Recommended Precautions
 Concrete, actionable precautions — call out which campus a precaution applies to if it's not organization-wide. If there's genuinely nothing notable anywhere in this report, say so plainly under the relevant heading rather than padding it.
 ## Coverage Note
-One or two sentences stating what was actually checked this time (e.g. "DHS NTAS, FBI/CISA search, and a per-location protest search were checked for N locations; no direct access to private social media platforms") so a reviewer knows the report's real scope, not just its findings.`;
+One or two sentences stating what was actually checked this time (e.g. "DHS NTAS, FBI/CISA search, a per-location protest search, and X/Twitter search were checked for N locations; no direct access to private Facebook groups, Instagram, or TikTok") so a reviewer knows the report's real scope, not just its findings.`;
 }
 
 // Server-side tools (web search) can pause a turn after many internal
@@ -218,12 +224,15 @@ export async function generateThreatReport(admin: SupabaseClient, organizationId
         : Promise.resolve({ data: [] as WatchlistRow[] }),
     ]);
 
+    const xFindings = await gatherXFindings(admin, organizationId, org?.name ?? "this organization", locations ?? []);
+
     const prompt = buildPrompt(
       org?.name ?? "this organization",
       org?.threat_context ?? null,
       locations ?? [],
       incidents ?? [],
       watchlist ?? [],
+      xFindings,
     );
 
     const tools: Anthropic.Messages.ToolUnion[] = [{ type: "web_search_20260209", name: "web_search" }];
