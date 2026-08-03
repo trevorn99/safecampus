@@ -384,19 +384,16 @@
 }
 .appMain {
   flex: 1;
-  max-width: 840px;
+  /* Matches .appHeaderInner so the header bar and page content share the
+     same edges — was 840px, which left most of a wide monitor as empty
+     margin since cards/lists stretch to fill this container's width. */
+  max-width: 1200px;
   margin: 0 auto;
   padding: 2.5rem 1.5rem;
   width: 100%;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
-}
-/* Wider variant for content that needs the room on large screens (the
-   dashboard's calendar grid feels cramped at the standard 840px). */
-.appMainWide {
-  composes: appMain;
-  max-width: 1200px;
 }
 
 .pageHeading {
