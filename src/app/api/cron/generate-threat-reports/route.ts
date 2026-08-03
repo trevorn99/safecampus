@@ -2,10 +2,11 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { generateThreatReport, getGenerationStatus } from "@/lib/threatIntelligence";
 
-// Triggered weekly by Vercel Cron (see vercel.json) — refreshes every
-// location's Threat Intelligence report for orgs with the add-on enabled.
-// Report generation is slow (Claude Opus 5 + thinking), so this route can
-// run long; keep it well under Vercel's function timeout for the plan.
+// Triggered weekly by Vercel Cron (see vercel.json) — refreshes the single
+// combined Threat Intelligence report for each org with the add-on enabled
+// (one report per organization, covering every location together).
+// Generation is slow (Claude Opus 5 + thinking + a search per location), so
+// this route can run long; keep it well under Vercel's function timeout.
 export const maxDuration = 300;
 
 export async function GET(request: Request) {
@@ -23,22 +24,19 @@ export async function GET(request: Request) {
   let failed = 0;
 
   for (const org of orgs ?? []) {
-    const { data: locations } = await admin.from("locations").select("id").eq("organization_id", org.id);
-    for (const location of locations ?? []) {
-      // An admin may have already generated one on demand this week, or one
-      // may still be generating right now — enforce the same status check
-      // here rather than doubling up.
-      const status = await getGenerationStatus(admin, location.id);
-      if (status.state !== "idle") {
-        skipped += 1;
-        continue;
-      }
-      try {
-        await generateThreatReport(admin, location.id);
-        generated += 1;
-      } catch {
-        failed += 1;
-      }
+    // An admin may have already generated one on demand this week, or one
+    // may still be generating right now — enforce the same status check
+    // here rather than doubling up.
+    const status = await getGenerationStatus(admin, org.id);
+    if (status.state !== "idle") {
+      skipped += 1;
+      continue;
+    }
+    try {
+      await generateThreatReport(admin, org.id);
+      generated += 1;
+    } catch {
+      failed += 1;
     }
   }
 

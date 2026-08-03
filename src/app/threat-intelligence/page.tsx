@@ -1,49 +1,53 @@
 import { requireMembership } from "@/lib/session";
 import { AppHeader } from "@/components/AppHeader";
-import { GENERATION_STALE_MINUTES } from "@/lib/threatIntelligence";
+import { GenerateReportButton } from "./GenerateReportButton";
+import { ReportCard } from "./ReportCard";
+import { ThreatContextForm } from "./ThreatContextForm";
+import { MIN_DAYS_BETWEEN_REPORTS, GENERATION_STALE_MINUTES } from "@/lib/threatIntelligence";
 import styles from "@/styles/ui.module.css";
 
-const STATUS_LABEL: Record<string, string> = {
-  draft: "Draft",
-  reviewed: "Reviewed",
-  released: "Released",
-};
+// Pulled out of the component body: react-hooks/purity flags impure calls
+// (Date.now()) made directly during render — see billing/page.tsx's
+// isPastTrial() for the same pattern.
+function nextEligibleDate(latestGeneratedAt: string | undefined): Date | null {
+  if (!latestGeneratedAt) return null;
+  const next = new Date(new Date(latestGeneratedAt).getTime() + MIN_DAYS_BETWEEN_REPORTS * 24 * 60 * 60 * 1000);
+  return next.getTime() > Date.now() ? next : null;
+}
 
-// Mirrors getGenerationStatus()'s staleness math (src/lib/threatIntelligence.ts)
-// so a dead placeholder from a crashed/timed-out run doesn't show as
-// "Generating…" forever.
+// Mirrors getGenerationStatus()'s staleness math so the UI never shows "in
+// progress" for a placeholder the backend would already treat as dead.
 function isActivelyGenerating(report: { status: string; generated_at: string } | undefined): boolean {
   if (!report || report.status !== "generating") return false;
   const ageMinutes = (Date.now() - new Date(report.generated_at).getTime()) / 60_000;
   return ageMinutes < GENERATION_STALE_MINUTES;
 }
 
-export default async function ThreatIntelligenceIndexPage() {
+export default async function ThreatIntelligencePage() {
   const { supabase, member, organizationName, isAdmin, isPlatformAdmin } = await requireMembership();
 
-  const [{ data: org }, { data: locations }] = await Promise.all([
-    supabase.from("organizations").select("threat_intel_enabled").eq("id", member.organization_id).single(),
-    supabase.from("locations").select("id, name").eq("organization_id", member.organization_id).order("name"),
+  const [{ data: org }, { data: locations }, { data: reports }] = await Promise.all([
+    supabase
+      .from("organizations")
+      .select("threat_intel_enabled, threat_context")
+      .eq("id", member.organization_id)
+      .single(),
+    supabase
+      .from("locations")
+      .select("id, name, threat_context")
+      .eq("organization_id", member.organization_id)
+      .order("name"),
+    supabase
+      .from("threat_reports")
+      .select("id, generated_at, summary, status, reviewed_at")
+      .eq("organization_id", member.organization_id)
+      .order("generated_at", { ascending: false }),
   ]);
 
   const enabled = Boolean(org?.threat_intel_enabled);
-  const locationIds = (locations ?? []).map((location) => location.id);
-
-  const { data: reports } =
-    enabled && locationIds.length > 0
-      ? await supabase
-          .from("threat_reports")
-          .select("location_id, generated_at, status")
-          .in("location_id", locationIds)
-          .order("generated_at", { ascending: false })
-      : { data: [] };
-
-  const latestByLocation = new Map<string, { generated_at: string; status: string }>();
-  for (const report of reports ?? []) {
-    if (!latestByLocation.has(report.location_id)) {
-      latestByLocation.set(report.location_id, report);
-    }
-  }
+  const generating = isActivelyGenerating(reports?.[0]);
+  const nextEligibleAt = generating ? null : nextEligibleDate(reports?.[0]?.generated_at);
+  const visibleReports = (reports ?? []).filter((report) => report.status !== "generating");
 
   return (
     <>
@@ -51,7 +55,7 @@ export default async function ThreatIntelligenceIndexPage() {
       <main className={styles.appMain}>
         <div className={styles.pageHeading}>
           <h1 className={styles.pageTitle}>Threat Intelligence</h1>
-          <p className={styles.subtitle}>{organizationName}</p>
+          <p className={styles.subtitle}>{organizationName} · all locations combined</p>
         </div>
 
         {!enabled ? (
@@ -71,41 +75,44 @@ export default async function ThreatIntelligenceIndexPage() {
               )}
             </p>
           </div>
+        ) : !isAdmin ? (
+          <div className={styles.card}>
+            <p className={styles.helperText}>Threat Intelligence reports are visible to org admins only.</p>
+          </div>
         ) : (
           <>
             <p className={styles.disclaimer}>
-              Reports draw on this organization&apos;s own incident/watchlist records, plus public web search and
-              government advisories (DHS, FBI/CISA). They cannot access private social media — Facebook groups,
-              Instagram, or TikTok content is not searchable this way and will not appear in a report.
+              This report is AI-drafted from your organization&apos;s own incident/watchlist records across every
+              location, plus public web search and government advisories (DHS, FBI/CISA). Certain platforms —
+              including private Facebook groups, Instagram, and TikTok — cannot be monitored through an API in an
+              automated fashion, so activity there will not appear here. Treat this report as a starting point:
+              always combine it with your team&apos;s own human intelligence and local knowledge before acting on it,
+              never as a replacement for it.
             </p>
-            <div className={styles.card}>
-              {(locations ?? []).length === 0 && <p className={styles.helperText}>No locations yet.</p>}
-              <ul className={styles.list}>
-                {(locations ?? []).map((location) => {
-                  const latest = latestByLocation.get(location.id);
-                  const generating = isActivelyGenerating(latest);
-                  return (
-                    <li key={location.id} className={styles.listRow}>
-                      <div>
-                        <p className={styles.itemName}>{location.name}</p>
-                        <p className={styles.itemMeta}>
-                          {generating
-                            ? "Generating…"
-                            : latest
-                              ? `Last report: ${new Date(latest.generated_at).toLocaleDateString()} · ${
-                                  STATUS_LABEL[latest.status] ?? latest.status
-                                }`
-                              : "No reports yet"}
-                        </p>
-                      </div>
-                      <a href={`/locations/${location.id}/intelligence`} className={styles.link}>
-                        View reports
-                      </a>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
+
+            <ThreatContextForm
+              initialOrgContext={org?.threat_context ?? ""}
+              locations={(locations ?? []).map((location) => ({
+                id: location.id,
+                name: location.name,
+                threatContext: location.threat_context ?? "",
+              }))}
+            />
+
+            <GenerateReportButton
+              nextEligibleAt={nextEligibleAt ? nextEligibleAt.toISOString() : null}
+              generating={generating}
+            />
+
+            {visibleReports.length === 0 && (
+              <div className={styles.card}>
+                <p className={styles.helperText}>No reports yet.</p>
+              </div>
+            )}
+
+            {visibleReports.map((report) => (
+              <ReportCard key={report.id} report={report} canManage={isAdmin} memberId={member.id} />
+            ))}
           </>
         )}
       </main>

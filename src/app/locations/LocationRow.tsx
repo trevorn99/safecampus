@@ -123,9 +123,6 @@ export function LocationRow({ location, isAdmin }: { location: Location; isAdmin
         <a href={`/locations/${location.id}/map`} className={styles.link}>
           Map
         </a>
-        <a href={`/locations/${location.id}/intelligence`} className={styles.link}>
-          Intelligence
-        </a>
         {isAdmin && (
           <button type="button" className={styles.linkButton} onClick={() => setEditing(true)}>
             Edit

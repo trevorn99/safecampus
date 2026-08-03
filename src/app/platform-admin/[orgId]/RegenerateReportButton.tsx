@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import styles from "@/styles/ui.module.css";
 
-export function RegenerateReportButton({ locationId }: { locationId: string }) {
+export function RegenerateReportButton({ organizationId }: { organizationId: string }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -21,7 +21,7 @@ export function RegenerateReportButton({ locationId }: { locationId: string }) {
       response = await fetch("/api/platform-admin/regenerate-threat-report", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ locationId }),
+        body: JSON.stringify({ organizationId }),
       });
       data = await response.json();
     } catch {
@@ -47,7 +47,7 @@ export function RegenerateReportButton({ locationId }: { locationId: string }) {
         disabled={loading}
         onClick={handleClick}
       >
-        {loading ? "Generating…" : "Regenerate report"}
+        {loading ? "Generating…" : "Regenerate combined report"}
       </button>
       {done && <span className={styles.itemMeta}>Done.</span>}
       {error && (

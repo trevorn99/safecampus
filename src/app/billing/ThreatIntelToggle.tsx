@@ -52,12 +52,15 @@ export function ThreatIntelToggle({
       <div className={styles.cardHeader}>
         <h2 className={styles.cardTitle}>Threat Intelligence — $30/mo add-on</h2>
         <p className={styles.helperText}>
-          AI-drafted intelligence briefs for each location, refreshed weekly and available on demand — drawing
-          on incident history and watchlist activity, reviewed by your admins before release.
+          One AI-drafted intelligence brief covering your whole organization — every location combined — refreshed
+          weekly and available on demand, drawing on incident history and watchlist activity, reviewed by your
+          admins before release.
         </p>
         <p className={styles.helperText}>
-          Uses public web search and government advisories (DHS, FBI/CISA) — it cannot access private social media
-          (Facebook groups, Instagram, TikTok).
+          Uses public web search and government advisories (DHS, FBI/CISA). Certain platforms — including private
+          Facebook groups, Instagram, and TikTok — can&apos;t be monitored through an API in an automated fashion, so
+          this is always a starting point to combine with your team&apos;s own human intelligence, not a replacement
+          for it.
         </p>
       </div>
       {!hasSubscription ? (
@@ -76,7 +79,7 @@ export function ThreatIntelToggle({
       {justChanged && (
         <p className={styles.helperText}>
           {enabled
-            ? "Enabled — generate or review reports from each location's Intelligence page."
+            ? "Enabled — generate or review your combined report from the Threat Intelligence page."
             : "Disabled for this organization."}
         </p>
       )}

@@ -3,10 +3,11 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { generateThreatReport, getGenerationStatus } from "@/lib/threatIntelligence";
 
-// Lets a platform admin force a fresh report outside the normal one-per-week
-// cap — for troubleshooting a customer-reported problem, not routine use.
-// Gated the same way as the rest of the per-org support console: a live,
-// self-granted support_access_grants row for this exact org.
+// Lets a platform admin force a fresh combined report for an org outside
+// the normal one-per-week cap — for troubleshooting a customer-reported
+// problem, not routine use. Gated the same way as the rest of the per-org
+// support console: a live, self-granted support_access_grants row for this
+// exact org.
 export const maxDuration = 300;
 
 export async function POST(request: Request) {
@@ -23,41 +24,33 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const { locationId } = await request.json();
-  if (typeof locationId !== "string" || !locationId) {
-    return NextResponse.json({ error: "locationId is required" }, { status: 400 });
-  }
-
-  const admin = createAdminClient();
-  const { data: location } = await admin
-    .from("locations")
-    .select("organization_id")
-    .eq("id", locationId)
-    .maybeSingle();
-  if (!location) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const { organizationId } = await request.json();
+  if (typeof organizationId !== "string" || !organizationId) {
+    return NextResponse.json({ error: "organizationId is required" }, { status: 400 });
   }
 
   const { data: hasGrant } = await supabase.rpc("has_active_support_grant", {
-    target_org: location.organization_id,
+    target_org: organizationId,
   });
   if (!hasGrant) {
     return NextResponse.json({ error: "No active support access grant for this organization" }, { status: 403 });
   }
 
+  const admin = createAdminClient();
+
   // Bypasses the weekly cooldown intentionally (that's the point of this
-  // route) but still respects an in-progress generation for this location —
-  // a support override shouldn't be able to kick off a second concurrent
-  // run on top of one already happening.
-  const status = await getGenerationStatus(admin, locationId);
+  // route) but still respects an in-progress generation for this org — a
+  // support override shouldn't be able to kick off a second concurrent run
+  // on top of one already happening.
+  const status = await getGenerationStatus(admin, organizationId);
   if (status.state === "generating") {
     return NextResponse.json(
-      { error: "A report is already being generated for this location — check back in a few minutes." },
+      { error: "A report is already being generated for this organization — check back in a few minutes." },
       { status: 429 },
     );
   }
 
-  const report = await generateThreatReport(admin, locationId);
+  const report = await generateThreatReport(admin, organizationId);
 
   return NextResponse.json({ ok: true, report });
 }

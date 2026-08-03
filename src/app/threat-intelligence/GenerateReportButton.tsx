@@ -5,11 +5,9 @@ import { useRouter } from "next/navigation";
 import styles from "@/styles/ui.module.css";
 
 export function GenerateReportButton({
-  locationId,
   nextEligibleAt,
   generating,
 }: {
-  locationId: string;
   nextEligibleAt: string | null;
   generating: boolean;
 }) {
@@ -35,7 +33,7 @@ export function GenerateReportButton({
     let response: Response;
     let data: { error?: string } = {};
     try {
-      response = await fetch(`/api/locations/${locationId}/intelligence/generate`, { method: "POST" });
+      response = await fetch("/api/threat-intelligence/generate", { method: "POST" });
       data = await response.json();
     } catch {
       setLoading(false);
@@ -54,7 +52,10 @@ export function GenerateReportButton({
   if (generating) {
     return (
       <div className={styles.actions}>
-        <p className={styles.helperText}>A report is currently being generated for this location — this can take a few minutes. This page updates automatically.</p>
+        <p className={styles.helperText}>
+          A report is currently being generated for your organization — this can take a few minutes. This page
+          updates automatically.
+        </p>
       </div>
     );
   }

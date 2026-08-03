@@ -117,10 +117,20 @@ export default async function PlatformAdminOrgPage({
             {(locations ?? []).map((location) => (
               <li key={location.id} className={styles.listRow}>
                 <p className={styles.itemName}>{location.name}</p>
-                <RegenerateReportButton locationId={location.id} />
               </li>
             ))}
           </ul>
+        </div>
+
+        <div className={styles.card}>
+          <div className={styles.cardHeader}>
+            <h2 className={styles.cardTitle}>Threat Intelligence</h2>
+            <p className={styles.helperText}>
+              One combined report covers every location above. Force a fresh one outside the normal weekly cap for
+              troubleshooting.
+            </p>
+          </div>
+          <RegenerateReportButton organizationId={orgId} />
         </div>
 
         <div className={styles.card}>

@@ -3,14 +3,12 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { generateThreatReport, getGenerationStatus } from "@/lib/threatIntelligence";
 
-// Generation itself can take a while — Claude Opus 5 thinking, several web
-// searches for protest/advisory info, and possibly a few pause_turn resumes
-// — well past a default serverless timeout.
+// Generation itself can take a while — Claude Opus 5 thinking, a web search
+// per location plus DHS/FBI/CISA checks, and possibly a few pause_turn
+// resumes — well past a default serverless timeout.
 export const maxDuration = 300;
 
-export async function POST(request: Request, { params }: { params: Promise<{ locationId: string }> }) {
-  const { locationId } = await params;
-
+export async function POST() {
   const supabase = await createClient();
   const {
     data: { user },
@@ -28,19 +26,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ loc
     return NextResponse.json({ error: "No organization" }, { status: 403 });
   }
 
-  const { data: location } = await supabase
-    .from("locations")
-    .select("id")
-    .eq("id", locationId)
-    .eq("organization_id", member.organization_id)
-    .maybeSingle();
-  if (!location) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
-  }
-
-  const { data: canManage } = await supabase.rpc("is_location_manager", { target_location: locationId });
-  if (!canManage) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const { data: isAdmin } = await supabase.rpc("is_org_admin", { target_org: member.organization_id });
+  if (!isAdmin) {
+    return NextResponse.json({ error: "Org admin required" }, { status: 403 });
   }
 
   const { data: org } = await supabase
@@ -54,10 +42,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ loc
 
   const admin = createAdminClient();
 
-  const status = await getGenerationStatus(admin, locationId);
+  const status = await getGenerationStatus(admin, member.organization_id);
   if (status.state === "generating") {
     return NextResponse.json(
-      { error: "A report is already being generated for this location — check back in a few minutes." },
+      { error: "A report is already being generated for this organization — check back in a few minutes." },
       { status: 429 },
     );
   }
@@ -70,7 +58,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ loc
     );
   }
 
-  const report = await generateThreatReport(admin, locationId);
+  const report = await generateThreatReport(admin, member.organization_id);
 
   return NextResponse.json({ ok: true, report });
 }
