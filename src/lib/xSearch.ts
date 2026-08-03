@@ -98,6 +98,13 @@ export async function gatherXFindings(
   }
 
   const queries: { label: string; query: string }[] = [
+    // Official accounts, not general chatter — catches an advisory/alert
+    // post before it's been picked up and indexed by web search. One query,
+    // org-wide, regardless of location count.
+    {
+      label: "Official government accounts (DHS/FBI/CISA/FEMA)",
+      query: "(from:DHSgov OR from:FBI OR from:CISAgov OR from:fema) (advisory OR alert OR threat OR warning OR bulletin) -is:retweet",
+    },
     { label: orgName, query: `"${orgName}" (threat OR protest OR warning OR safety) -is:retweet lang:en` },
     ...locations
       .filter((location) => location.address)
