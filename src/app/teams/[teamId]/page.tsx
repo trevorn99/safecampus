@@ -7,6 +7,7 @@ import { EditTeamForm } from "./EditTeamForm";
 import { AddTeamMemberForm } from "./AddTeamMemberForm";
 import { RemoveTeamMemberButton } from "./RemoveTeamMemberButton";
 import { DeleteTeamButton } from "./DeleteTeamButton";
+import { TeamRequirements } from "./TeamRequirements";
 import styles from "@/styles/ui.module.css";
 
 const ROLE_LABEL: Record<string, string> = {
@@ -22,7 +23,7 @@ export default async function TeamDetailPage({
   const { teamId } = await params;
   const { supabase, member, organizationName, isAdmin, isPlatformAdmin } = await requireMembership();
 
-  const [{ data: team }, { data: locations }, { data: assignments }, { data: orgMembers }] =
+  const [{ data: team }, { data: locations }, { data: assignments }, { data: orgMembers }, { data: requirements }] =
     await Promise.all([
       supabase.from("teams").select("id, name, type, location_id").eq("id", teamId).maybeSingle(),
       supabase.from("locations").select("id, name").eq("organization_id", member.organization_id),
@@ -36,6 +37,7 @@ export default async function TeamDetailPage({
         .select("id, name, profile_picture_url")
         .eq("organization_id", member.organization_id)
         .order("name"),
+      supabase.from("team_requirements").select("id, kind, name").eq("team_id", teamId).order("name"),
     ]);
 
   if (!team) {
@@ -61,6 +63,24 @@ export default async function TeamDetailPage({
     (orgMembers ?? []).map((m) => m.profile_picture_url),
   );
 
+  // Compliance pills need every member's certifications, not just the
+  // viewer's own — certifications RLS only allows that for an org admin
+  // (see "read own certifications"), so this stays admin-only or the query
+  // would silently come back empty and every pill would misreport "missing".
+  const certRequirements = (requirements ?? []).filter((r) => r.kind === "certification");
+  const certTypesByMember = new Map<string, Set<string>>();
+  if (isAdmin && certRequirements.length > 0 && assignedMemberIds.size > 0) {
+    const { data: memberCerts } = await supabase
+      .from("certifications")
+      .select("member_id, type")
+      .in("member_id", [...assignedMemberIds]);
+    for (const cert of memberCerts ?? []) {
+      const set = certTypesByMember.get(cert.member_id) ?? new Set<string>();
+      set.add(cert.type.trim().toLowerCase());
+      certTypesByMember.set(cert.member_id, set);
+    }
+  }
+
   return (
     <>
       <AppHeader isAdmin={isAdmin} isPlatformAdmin={isPlatformAdmin} />
@@ -80,6 +100,8 @@ export default async function TeamDetailPage({
           </p>
         )}
 
+        {isAdmin && <TeamRequirements teamId={team.id} requirements={requirements ?? []} />}
+
         <div className={styles.card}>
           <div className={styles.cardHeader}>
             <h2 className={styles.cardTitle}>Team members</h2>
@@ -93,6 +115,7 @@ export default async function TeamDetailPage({
               const avatarUrl = rowMember?.profile_picture_url
                 ? (avatarUrls.get(rowMember.profile_picture_url) ?? null)
                 : null;
+              const heldCerts = certTypesByMember.get(row.member_id) ?? new Set<string>();
               return (
                 <li key={row.id} className={styles.listRow}>
                   <div className={styles.identityRow}>
@@ -102,12 +125,23 @@ export default async function TeamDetailPage({
                       <p className={styles.itemMeta}>{ROLE_LABEL[row.role] ?? row.role}</p>
                     </div>
                   </div>
-                  {isAdmin && (
-                    <RemoveTeamMemberButton
-                      assignmentId={row.id}
-                      memberName={rowMember?.name ?? "this member"}
-                    />
-                  )}
+                  <div className={styles.tagRow}>
+                    {isAdmin &&
+                      certRequirements.map((requirement) => {
+                        const has = heldCerts.has(requirement.name.trim().toLowerCase());
+                        return (
+                          <span key={requirement.id} className={has ? styles.pill : styles.pillDanger}>
+                            {has ? "✓" : "✗"} {requirement.name}
+                          </span>
+                        );
+                      })}
+                    {isAdmin && (
+                      <RemoveTeamMemberButton
+                        assignmentId={row.id}
+                        memberName={rowMember?.name ?? "this member"}
+                      />
+                    )}
+                  </div>
                 </li>
               );
             })}

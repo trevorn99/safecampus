@@ -650,6 +650,11 @@
   color: var(--muted);
   font-weight: 500;
 }
+.pillDanger {
+  composes: pill;
+  background: var(--danger-bg);
+  color: var(--danger);
+}
 
 .card {
   background: var(--surface);
