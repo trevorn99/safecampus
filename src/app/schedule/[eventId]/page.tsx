@@ -11,7 +11,7 @@ import { DeletePositionButton } from "./DeletePositionButton";
 import { PositionHeader } from "./PositionHeader";
 import { AttendanceCard } from "./AttendanceCard";
 import { formatEventTimeRange } from "@/lib/formatDateTime";
-import { EVENT_TYPE_LABEL } from "@/lib/eventTypes";
+import { eventTypeLabel } from "@/lib/eventTypes";
 import styles from "@/styles/ui.module.css";
 
 type AssignmentRow = { id: string; member_id: string; status: string; event_position_id: string };
@@ -109,7 +109,7 @@ export default async function EventDetailPage({
         <div className={styles.pageHeading}>
           <h1 className={styles.pageTitle}>{event.title}</h1>
           <p className={styles.subtitle}>
-            {organizationName} · {EVENT_TYPE_LABEL[event.type] ?? event.type} ·{" "}
+            {organizationName} · {eventTypeLabel(event.type)} ·{" "}
             {formatEventTimeRange(event.start_time, event.end_time)} ·{" "}
             {event.location_id ? (locationName.get(event.location_id) ?? "Unknown location") : "Org-wide"}
           </p>

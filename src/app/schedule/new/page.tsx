@@ -23,10 +23,11 @@ export default async function NewEventPage({
     redirect("/schedule");
   }
 
-  const [{ data: locations }, { data: teams }, { data: templates }] = await Promise.all([
+  const [{ data: locations }, { data: teams }, { data: templates }, { data: eventTypes }] = await Promise.all([
     supabase.from("locations").select("id, name").eq("organization_id", member.organization_id),
     supabase.from("teams").select("id, name").eq("organization_id", member.organization_id),
     supabase.from("event_templates").select("id, name").eq("organization_id", member.organization_id),
+    supabase.from("event_types").select("name").eq("organization_id", member.organization_id).order("name"),
   ]);
 
   const templateIds = (templates ?? []).map((t) => t.id);
@@ -62,6 +63,7 @@ export default async function NewEventPage({
       <main className={styles.appMain}>
         <NewEventForm
           organizationId={member.organization_id}
+          eventTypes={(eventTypes ?? []).map((t) => t.name)}
           locations={locations ?? []}
           teams={teams ?? []}
           templates={templates ?? []}

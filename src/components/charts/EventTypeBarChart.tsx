@@ -1,6 +1,6 @@
 import styles from "./charts.module.css";
 
-export type EventTypeCount = { type: string; label: string; count: number };
+export type EventTypeCount = { type: string; label: string; count: number; colorSlot: number | null };
 
 const BAR_HEIGHT = 20;
 const ROW_HEIGHT = 32;
@@ -52,7 +52,10 @@ export function EventTypeBarChart({ data }: { data: EventTypeCount[] }) {
                 {d.label}
               </text>
               {barWidth > 0 && (
-                <path d={roundedBarPath(LABEL_COL, y, barWidth, BAR_HEIGHT)} className={styles[`series${(i % 4) + 1}`]}>
+                <path
+                  d={roundedBarPath(LABEL_COL, y, barWidth, BAR_HEIGHT)}
+                  className={d.colorSlot === null ? styles.seriesOther : styles[`series${d.colorSlot + 1}`]}
+                >
                   <title>{`${d.label}: ${d.count}`}</title>
                 </path>
               )}

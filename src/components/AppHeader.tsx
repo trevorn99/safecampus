@@ -9,6 +9,7 @@ function buildNav(isAdmin: boolean, isPlatformAdmin: boolean): NavEntry[] {
       items: [
         { href: "/schedule", label: "Calendar" },
         { href: "/schedule/integrations", label: "Integrations" },
+        ...(isAdmin ? [{ href: "/schedule/event-types", label: "Event types" }] : []),
       ],
     },
     {

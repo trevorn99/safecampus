@@ -2,10 +2,10 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { WEEKDAYS, ORDINALS, buildWeeklyRule, buildMonthlyRule } from "@/lib/recurrence";
 import { DateTimeField } from "@/components/DateTimeField";
-import { EVENT_TYPES, EVENT_TYPE_LABEL } from "@/lib/eventTypes";
 import styles from "@/styles/ui.module.css";
 
 type Option = { id: string; name: string };
@@ -35,6 +35,7 @@ function emptyRow(): PositionRow {
 
 export function NewEventForm({
   organizationId,
+  eventTypes,
   locations,
   teams,
   templates,
@@ -42,6 +43,7 @@ export function NewEventForm({
   pcoCandidate,
 }: {
   organizationId: string;
+  eventTypes: string[];
   locations: Option[];
   teams: Option[];
   templates: Option[];
@@ -50,7 +52,7 @@ export function NewEventForm({
 }) {
   const router = useRouter();
   const [title, setTitle] = useState(pcoCandidate?.title ?? "");
-  const [type, setType] = useState("service");
+  const [type, setType] = useState(eventTypes[0] ?? "");
   const [locationId, setLocationId] = useState("");
   const [startTime, setStartTime] = useState(pcoCandidate?.startTime ?? "");
   const [endTime, setEndTime] = useState(pcoCandidate?.endTime ?? "");
@@ -255,12 +257,12 @@ export function NewEventForm({
         </div>
         <div className={styles.field}>
           <label className={styles.label} htmlFor="eventType">
-            Type
+            Type <span className={styles.hint}>(<Link href="/schedule/event-types" className={styles.link}>manage types</Link>)</span>
           </label>
           <select id="eventType" className={styles.select} value={type} onChange={(event) => setType(event.target.value)}>
-            {EVENT_TYPES.map((eventType) => (
+            {eventTypes.map((eventType) => (
               <option key={eventType} value={eventType}>
-                {EVENT_TYPE_LABEL[eventType]}
+                {eventType}
               </option>
             ))}
           </select>

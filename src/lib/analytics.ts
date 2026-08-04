@@ -1,8 +1,17 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { EVENT_TYPES, EVENT_TYPE_LABEL } from "@/lib/eventTypes";
+import { eventTypeLabel } from "@/lib/eventTypes";
 
-export type EventTypeCount = { type: string; label: string; count: number };
+// colorSlot indexes into the chart's 4 validated categorical hues; null
+// means "Other" — event types are org-customizable now (no fixed enum), so
+// a chart can't dedicate a hue to every possible one. The org's own
+// configured types (in their list order) get the first 4 colored slots;
+// anything past that — plus any legacy/removed type string still showing
+// up on an event — folds into a single muted "Other" bucket, per the
+// dataviz skill's guidance for open-ended categories.
+const MAX_COLOR_SLOTS = 4;
+
+export type EventTypeCount = { type: string; label: string; count: number; colorSlot: number | null };
 
 // RLS already scopes every table below to the caller's own org (or, for an
 // org admin, their org specifically) — see events/event_positions/
@@ -14,17 +23,37 @@ export async function getEventTypeBreakdown(
   organizationId: string,
   sinceIso: string,
 ): Promise<EventTypeCount[]> {
-  const { data } = await supabase
-    .from("events")
-    .select("type")
-    .eq("organization_id", organizationId)
-    .gte("start_time", sinceIso);
+  const [{ data: types }, { data: events }] = await Promise.all([
+    supabase.from("event_types").select("name").eq("organization_id", organizationId).order("name"),
+    supabase.from("events").select("type").eq("organization_id", organizationId).gte("start_time", sinceIso),
+  ]);
 
   const counts = new Map<string, number>();
-  for (const row of data ?? []) {
-    counts.set(row.type, (counts.get(row.type) ?? 0) + 1);
+  for (const row of events ?? []) {
+    const label = eventTypeLabel(row.type);
+    counts.set(label, (counts.get(label) ?? 0) + 1);
   }
-  return EVENT_TYPES.map((type) => ({ type, label: EVENT_TYPE_LABEL[type], count: counts.get(type) ?? 0 }));
+
+  const configuredLabels = (types ?? []).map((t) => t.name);
+  const orderedLabels = [
+    ...configuredLabels,
+    ...[...counts.keys()].filter((label) => !configuredLabels.includes(label)),
+  ];
+
+  const primary: EventTypeCount[] = orderedLabels.slice(0, MAX_COLOR_SLOTS).map((label, i) => ({
+    type: label,
+    label,
+    count: counts.get(label) ?? 0,
+    colorSlot: i,
+  }));
+
+  const overflowLabels = orderedLabels.slice(MAX_COLOR_SLOTS);
+  if (overflowLabels.length > 0) {
+    const overflowCount = overflowLabels.reduce((sum, label) => sum + (counts.get(label) ?? 0), 0);
+    primary.push({ type: "other", label: "Other", count: overflowCount, colorSlot: null });
+  }
+
+  return primary;
 }
 
 export type WeeklyFillRate = { weekStart: string; filled: number; total: number; rate: number };

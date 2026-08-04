@@ -3,7 +3,7 @@ import { requireMembership } from "@/lib/session";
 import { AppHeader } from "@/components/AppHeader";
 import { AssignmentStatusButtons } from "./AssignmentStatusButtons";
 import { formatEventTimeRange } from "@/lib/formatDateTime";
-import { EVENT_TYPE_LABEL } from "@/lib/eventTypes";
+import { eventTypeLabel } from "@/lib/eventTypes";
 import styles from "@/styles/ui.module.css";
 
 // Pulled out of the component body — react-hooks/purity flags impure calls
@@ -120,7 +120,7 @@ export default async function SchedulePage() {
                     {event.location_id ? (locationName.get(event.location_id) ?? "Unknown location") : "Org-wide"}
                   </p>
                 </div>
-                <span className={styles.pillMuted}>{EVENT_TYPE_LABEL[event.type] ?? event.type}</span>
+                <span className={styles.pillMuted}>{eventTypeLabel(event.type)}</span>
               </li>
             ))}
           </ul>
