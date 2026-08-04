@@ -5,12 +5,17 @@ const FEATURES = [
   {
     title: "Team rosters & scoped roles",
     description:
-      "Manage members across every campus and team, with roles that scale with your organization — org admin, location manager, team lead, or member — each scoped to exactly where they lead.",
+      "Manage members across every campus and team, with roles that scale with your organization — org admin, location manager, team lead, or member — each scoped to exactly where they lead. Add or remove someone from multiple teams right from the roster.",
   },
   {
     title: "Scheduling & recurring events",
     description:
-      "Build a position template once — who's needed, where, and when relative to the event — and reuse it for one-off events or recurring shifts (weekly, every 3rd week, however your schedule actually runs).",
+      "Build a position template once — who's needed, where, and when relative to the event — and reuse it for one-off events or recurring shifts (weekly, every 3rd week, however your schedule actually runs). Give events a start and end time, and define your own event types instead of a fixed list — services, drills, trainings, whatever your organization runs.",
+  },
+  {
+    title: "Training & attendance",
+    description:
+      "Schedule a training just like any other event, then track who actually showed up with a simple check-in/check-out on the day — no separate system to keep in sync with your roster.",
   },
   {
     title: "Planning Center integration",
@@ -20,7 +25,7 @@ const FEATURES = [
   {
     title: "Self-service certifications",
     description:
-      "Members upload their own certifications and supporting documents. Admins track expirations and compliance across the whole team from one place.",
+      "Members upload their own certifications and supporting documents. Admins track expirations and compliance across the whole team from one place — and can require specific certifications or trainings for a team, with each member's status visible at a glance.",
   },
   {
     title: "Location maps & position pins",
@@ -31,6 +36,11 @@ const FEATURES = [
     title: "Multi-campus support",
     description:
       "One organization, multiple locations, each with its own teams and leadership — without duplicating your setup for every campus.",
+  },
+  {
+    title: "Analytics",
+    description:
+      "A dashboard for org admins: scheduling fill rate over time, event activity by type, attendance counts, and upcoming certification expirations — a read on how your team's actually running, not just a calendar of what's next.",
   },
   {
     title: "Passwordless, secure sign-in",
@@ -52,6 +62,11 @@ const FEATURES = [
     title: "Threat Intelligence ($30/mo add-on)",
     description:
       "One AI-drafted intelligence brief covering your whole organization — every location combined — refreshing weekly and available on demand, drawing on incident history, watchlist activity, public web search, X/Twitter search, and government advisories (DHS, FBI/CISA), reviewed by your admins before release. Certain platforms (private Facebook groups, Instagram, TikTok) can't be monitored via API in an automated way — always pair this with your team's own human intelligence.",
+  },
+  {
+    title: "Identity Verification ($10/mo add-on)",
+    description:
+      "Require every member to verify their identity with a government-issued photo ID and a live selfie before they can use the app, through Stripe Identity's hosted flow — SafeCampus never sees or stores the document itself. Org admins are always exempt, so turning this on can never lock you out of your own organization.",
   },
 ];
 

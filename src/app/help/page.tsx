@@ -8,8 +8,11 @@ const SECTIONS = [
   { id: "scheduling", label: "Scheduling" },
   { id: "certifications", label: "Certifications" },
   { id: "locations", label: "Locations & maps" },
+  { id: "analytics", label: "Analytics" },
   { id: "account", label: "Account & security" },
   { id: "integrations", label: "Planning Center" },
+  { id: "threat-intelligence", label: "Threat Intelligence" },
+  { id: "identity-verification", label: "Identity verification" },
   { id: "billing", label: "Billing" },
   { id: "support", label: "Getting help" },
 ];
@@ -66,7 +69,15 @@ export default async function HelpPage() {
           </p>
           <p className={styles.docBody}>
             The team roster (<strong>Team</strong> in the nav) is organized by team, so you can see at a
-            glance who&apos;s on each one — anyone on more than one team shows up in each.
+            glance who&apos;s on each one — anyone on more than one team shows up in each. Admins can also add
+            or remove someone from any team directly from their row on the roster, via{" "}
+            <strong>Manage teams</strong> — no need to visit each team&apos;s own page.
+          </p>
+          <p className={styles.docBody}>
+            From a team&apos;s own page, an admin can set required certifications or trainings for that team
+            under <strong>Requirements</strong>. Certification requirements are checked automatically against
+            each member&apos;s certifications on file, so it&apos;s easy to see who&apos;s missing what right on
+            the team roster; training requirements are tracked as policy for now, without automatic checking.
           </p>
         </div>
 
@@ -97,6 +108,14 @@ export default async function HelpPage() {
             assignments at the top of <strong>Schedule</strong> and on the dashboard calendar, with buttons
             to confirm or decline.
           </p>
+          <p className={styles.docBody}>
+            Events have their own type — Service, Drill, Meeting, and Training by default — and an admin can
+            add, rename, or remove types from <strong>Schedule → Event types</strong> to match how your
+            organization actually runs. An event can also carry an end time alongside its start (for a
+            recurring series, this comes from the series&apos; duration instead). For a training, use the{" "}
+            <strong>Attendance</strong> section on that event&apos;s page to check members in and out — a
+            simple record of who actually showed up, separate from who was scheduled.
+          </p>
         </div>
 
         <div id="certifications" className={styles.card}>
@@ -106,7 +125,8 @@ export default async function HelpPage() {
           <p className={styles.docBody}>
             Members upload their own certifications from the <strong>Certifications</strong> page — type,
             issue/expiration dates, and an optional file. Admins can see and track everyone&apos;s across
-            the organization from the same page.
+            the organization from the same page. See <strong>Teams</strong> for how a team can require
+            specific certifications from its members.
           </p>
         </div>
 
@@ -121,6 +141,19 @@ export default async function HelpPage() {
           </p>
         </div>
 
+        {isAdmin && (
+          <div id="analytics" className={styles.card}>
+            <div className={styles.cardHeader}>
+              <h2 className={styles.cardTitle}>Analytics</h2>
+            </div>
+            <p className={styles.docBody}>
+              <strong>Analytics</strong> gives org admins a read on how the team&apos;s actually running: events
+              by type over the last 90 days, scheduling fill rate by week, attendance record counts, and
+              certifications expiring in the next 30 days.
+            </p>
+          </div>
+        )}
+
         <div id="account" className={styles.card}>
           <div className={styles.cardHeader}>
             <h2 className={styles.cardTitle}>Account & security</h2>
@@ -131,6 +164,11 @@ export default async function HelpPage() {
             Windows Hello, or a security key) — you can enroll both. At sign-in, checking &quot;don&apos;t
             ask again on this device for 30 days&quot; skips the prompt on that device going forward; it can
             be undone for all devices at once from the same Account page.
+          </p>
+          <p className={styles.docBody}>
+            From the same page, members can opt in to SMS shift reminders — a text 3 days and 24 hours before
+            an assigned shift — if your organization has turned them on. Org admins turn SMS reminders on or
+            off for the whole organization from <strong>Account → Security &amp; MFA</strong> as well.
           </p>
         </div>
 
@@ -145,6 +183,36 @@ export default async function HelpPage() {
             pulls in upcoming Planning Center calendar events as a list — nothing is added to your schedule
             automatically. Pick which ones actually need a safety team presence and create a SafeCampus event
             from each one you choose.
+          </p>
+        </div>
+
+        <div id="threat-intelligence" className={styles.card}>
+          <div className={styles.cardHeader}>
+            <h2 className={styles.cardTitle}>Threat Intelligence</h2>
+          </div>
+          <p className={styles.docBody}>
+            If your organization has the Threat Intelligence add-on enabled (see <strong>Billing</strong>),{" "}
+            <strong>Threat Intelligence</strong> in the nav shows one AI-drafted brief covering every location
+            combined — recent incident and watchlist activity, public web search, X/Twitter search, and
+            government advisories (DHS, FBI/CISA) — refreshed weekly or on demand, with your org context
+            factored in. A report moves through draft → reviewed → released; org admins can see it at every
+            stage, and team leads can see it once it&apos;s released. It&apos;s a starting point, not a
+            replacement for your team&apos;s own human intelligence — some platforms (private Facebook
+            groups, Instagram, TikTok) simply can&apos;t be monitored through an API.
+          </p>
+        </div>
+
+        <div id="identity-verification" className={styles.card}>
+          <div className={styles.cardHeader}>
+            <h2 className={styles.cardTitle}>Identity verification</h2>
+          </div>
+          <p className={styles.docBody}>
+            If your organization has the Identity Verification add-on enabled (see <strong>Billing</strong>),
+            every non-admin member must verify their identity — a government-issued photo ID plus a live
+            selfie, through Stripe&apos;s hosted flow — before they can use the rest of the app. Verify from{" "}
+            <strong>Account → Identity verification</strong>; SafeCampus never sees or stores the document
+            itself, and status updates automatically, usually within a few minutes. Org admins are exempt from
+            the requirement, so enabling it can never lock an admin out of turning it back off.
           </p>
         </div>
 
