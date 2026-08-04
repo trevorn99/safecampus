@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireMembership } from "@/lib/session";
 import { AppHeader } from "@/components/AppHeader";
 import { AssignmentStatusButtons } from "./AssignmentStatusButtons";
+import { formatEventTimeRange } from "@/lib/formatDateTime";
 import styles from "@/styles/ui.module.css";
 
 const TYPE_LABEL: Record<string, string> = {
@@ -37,7 +38,7 @@ export default async function SchedulePage() {
   const [{ data: events }, { data: locations }, { data: myAssignments }] = await Promise.all([
     supabase
       .from("events")
-      .select("id, title, start_time, type, location_id")
+      .select("id, title, start_time, end_time, type, location_id")
       .eq("organization_id", member.organization_id)
       .gte("start_time", nowIso())
       .order("start_time", { ascending: true })
@@ -120,7 +121,7 @@ export default async function SchedulePage() {
                     {event.title}
                   </Link>
                   <p className={styles.itemMeta}>
-                    {new Date(event.start_time).toLocaleString()} ·{" "}
+                    {formatEventTimeRange(event.start_time, event.end_time)} ·{" "}
                     {event.location_id ? (locationName.get(event.location_id) ?? "Unknown location") : "Org-wide"}
                   </p>
                 </div>

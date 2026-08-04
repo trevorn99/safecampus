@@ -9,6 +9,7 @@ import { AssignMemberForm } from "./AssignMemberForm";
 import { RemoveAssignmentButton } from "./RemoveAssignmentButton";
 import { DeletePositionButton } from "./DeletePositionButton";
 import { PositionHeader } from "./PositionHeader";
+import { formatEventTimeRange } from "@/lib/formatDateTime";
 import styles from "@/styles/ui.module.css";
 
 const TYPE_LABEL: Record<string, string> = {
@@ -31,7 +32,7 @@ export default async function EventDetailPage({
     await Promise.all([
       supabase
         .from("events")
-        .select("id, title, start_time, type, location_id, series_id")
+        .select("id, title, start_time, end_time, type, location_id, series_id")
         .eq("id", eventId)
         .maybeSingle(),
       supabase.from("locations").select("id, name").eq("organization_id", member.organization_id),
@@ -99,7 +100,7 @@ export default async function EventDetailPage({
           <h1 className={styles.pageTitle}>{event.title}</h1>
           <p className={styles.subtitle}>
             {organizationName} · {TYPE_LABEL[event.type] ?? event.type} ·{" "}
-            {new Date(event.start_time).toLocaleString()} ·{" "}
+            {formatEventTimeRange(event.start_time, event.end_time)} ·{" "}
             {event.location_id ? (locationName.get(event.location_id) ?? "Unknown location") : "Org-wide"}
           </p>
         </div>

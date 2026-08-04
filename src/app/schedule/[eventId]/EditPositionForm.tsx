@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { DateTimeField } from "@/components/DateTimeField";
 import styles from "@/styles/ui.module.css";
 
 type Option = { id: string; name: string };
@@ -140,31 +141,8 @@ export function EditPositionForm({
           ))}
         </select>
       </div>
-      <div className={styles.field}>
-        <label className={styles.label} htmlFor="editStart">
-          Start time
-        </label>
-        <input
-          id="editStart"
-          type="datetime-local"
-          className={styles.input}
-          required
-          value={startTime}
-          onChange={(event) => setStartTime(event.target.value)}
-        />
-      </div>
-      <div className={styles.field}>
-        <label className={styles.label} htmlFor="editEnd">
-          End time <span className={styles.hint}>(optional)</span>
-        </label>
-        <input
-          id="editEnd"
-          type="datetime-local"
-          className={styles.input}
-          value={endTime}
-          onChange={(event) => setEndTime(event.target.value)}
-        />
-      </div>
+      <DateTimeField label="Start time" defaultValue={startTime} onChange={setStartTime} required />
+      <DateTimeField label="End time" hint="(optional)" defaultValue={endTime} onChange={setEndTime} />
       <div className={styles.field}>
         <label className={styles.label} htmlFor="editSlots">
           People needed

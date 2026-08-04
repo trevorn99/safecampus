@@ -4,7 +4,8 @@ import { AppHeader } from "@/components/AppHeader";
 import { NewEventForm } from "./NewEventForm";
 import styles from "@/styles/ui.module.css";
 
-function toLocalInputValue(iso: string) {
+function toLocalInputValue(iso: string | null) {
+  if (!iso) return "";
   const date = new Date(iso);
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
@@ -37,16 +38,21 @@ export default async function NewEventPage({
           .in("template_id", templateIds)
       : { data: [] };
 
-  let pcoCandidate: { id: string; title: string; startTime: string } | null = null;
+  let pcoCandidate: { id: string; title: string; startTime: string; endTime: string } | null = null;
   if (fromPco) {
     const { data: candidate } = await supabase
       .from("pco_imported_events")
-      .select("id, title, starts_at")
+      .select("id, title, starts_at, ends_at")
       .eq("id", fromPco)
       .eq("organization_id", member.organization_id)
       .maybeSingle();
     if (candidate) {
-      pcoCandidate = { id: candidate.id, title: candidate.title, startTime: toLocalInputValue(candidate.starts_at) };
+      pcoCandidate = {
+        id: candidate.id,
+        title: candidate.title,
+        startTime: toLocalInputValue(candidate.starts_at),
+        endTime: toLocalInputValue(candidate.ends_at),
+      };
     }
   }
 

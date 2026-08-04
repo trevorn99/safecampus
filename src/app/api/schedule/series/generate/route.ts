@@ -23,7 +23,9 @@ export async function POST(request: Request) {
 
   const { data: series } = await supabase
     .from("event_series")
-    .select("id, organization_id, location_id, template_id, title, type, recurrence_rule, first_occurrence_at")
+    .select(
+      "id, organization_id, location_id, template_id, title, type, recurrence_rule, first_occurrence_at, duration_minutes",
+    )
     .eq("id", seriesId)
     .maybeSingle<EventSeriesRow>();
   if (!series) {

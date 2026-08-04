@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { WEEKDAYS, ORDINALS, buildWeeklyRule, buildMonthlyRule } from "@/lib/recurrence";
+import { DateTimeField } from "@/components/DateTimeField";
 import styles from "@/styles/ui.module.css";
 
 type Option = { id: string; name: string };
@@ -44,13 +45,14 @@ export function NewEventForm({
   teams: Option[];
   templates: Option[];
   templatePositions: TemplatePosition[];
-  pcoCandidate?: { id: string; title: string; startTime: string } | null;
+  pcoCandidate?: { id: string; title: string; startTime: string; endTime: string } | null;
 }) {
   const router = useRouter();
   const [title, setTitle] = useState(pcoCandidate?.title ?? "");
   const [type, setType] = useState("service");
   const [locationId, setLocationId] = useState("");
   const [startTime, setStartTime] = useState(pcoCandidate?.startTime ?? "");
+  const [endTime, setEndTime] = useState(pcoCandidate?.endTime ?? "");
   const [templateId, setTemplateId] = useState("");
   const [positions, setPositions] = useState<PositionRow[]>([]);
   const [saveAsTemplate, setSaveAsTemplate] = useState(false);
@@ -139,6 +141,7 @@ export function NewEventForm({
 
     const supabase = createClient();
     const startTimeIso = new Date(startTime).toISOString();
+    const endTimeIso = endTime ? new Date(endTime).toISOString() : null;
 
     try {
       let newTemplateId: string | null = null;
@@ -158,6 +161,7 @@ export function NewEventForm({
             title,
             type,
             start_time: startTimeIso,
+            end_time: endTimeIso,
             template_id: effectiveTemplateId,
           })
           .select("id")
@@ -276,19 +280,16 @@ export function NewEventForm({
             ))}
           </select>
         </div>
-        <div className={styles.field}>
-          <label className={styles.label} htmlFor="eventStart">
-            {repeats === "never" ? "Start time" : "First occurrence"}
-          </label>
-          <input
-            id="eventStart"
-            type="datetime-local"
-            className={styles.input}
-            required
-            value={startTime}
-            onChange={(event) => setStartTime(event.target.value)}
-          />
-        </div>
+        <DateTimeField
+          label={repeats === "never" ? "Start time" : "First occurrence"}
+          defaultValue={startTime}
+          onChange={setStartTime}
+          required
+        />
+
+        {repeats === "never" && (
+          <DateTimeField label="End time" hint="(optional)" defaultValue={endTime} onChange={setEndTime} />
+        )}
 
         <div className={styles.field}>
           <label className={styles.label} htmlFor="repeats">
@@ -310,7 +311,7 @@ export function NewEventForm({
           <>
             <div className={styles.field}>
               <label className={styles.label} htmlFor="durationMinutes">
-                Duration <span className={styles.hint}>minutes (informational)</span>
+                Duration <span className={styles.hint}>minutes — sets each occurrence&apos;s end time</span>
               </label>
               <input
                 id="durationMinutes"

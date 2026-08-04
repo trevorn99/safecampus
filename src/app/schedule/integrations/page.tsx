@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { requireMembership } from "@/lib/session";
 import { AppHeader } from "@/components/AppHeader";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { formatEventTimeRange } from "@/lib/formatDateTime";
 import { CredentialsForm } from "./CredentialsForm";
 import { ImportButton } from "./ImportButton";
 import { DisconnectButton } from "./DisconnectButton";
@@ -49,21 +50,28 @@ export default async function IntegrationsPage({
     .eq("organization_id", member.organization_id)
     .maybeSingle();
 
-  type Candidate = { id: string; title: string; starts_at: string };
-  type Promoted = { id: string; title: string; starts_at: string; promoted_event_id: string; events: { title: string } | { title: string }[] | null };
+  type Candidate = { id: string; title: string; starts_at: string; ends_at: string | null };
+  type Promoted = {
+    id: string;
+    title: string;
+    starts_at: string;
+    ends_at: string | null;
+    promoted_event_id: string;
+    events: { title: string } | { title: string }[] | null;
+  };
 
   const [{ data: candidates }, { data: promoted }] = org?.pco_connected
     ? await Promise.all([
         supabase
           .from("pco_imported_events")
-          .select("id, title, starts_at")
+          .select("id, title, starts_at, ends_at")
           .eq("organization_id", member.organization_id)
           .is("promoted_event_id", null)
           .order("starts_at")
           .returns<Candidate[]>(),
         supabase
           .from("pco_imported_events")
-          .select("id, title, starts_at, promoted_event_id, events(title)")
+          .select("id, title, starts_at, ends_at, promoted_event_id, events(title)")
           .eq("organization_id", member.organization_id)
           .not("promoted_event_id", "is", null)
           .order("starts_at")
@@ -153,7 +161,7 @@ export default async function IntegrationsPage({
                 <li key={candidate.id} className={styles.listRow}>
                   <div>
                     <p className={styles.itemName}>{candidate.title}</p>
-                    <p className={styles.itemMeta}>{new Date(candidate.starts_at).toLocaleString()}</p>
+                    <p className={styles.itemMeta}>{formatEventTimeRange(candidate.starts_at, candidate.ends_at)}</p>
                   </div>
                   <Link
                     href={`/schedule/new?fromPco=${candidate.id}`}
@@ -179,7 +187,7 @@ export default async function IntegrationsPage({
                   <li key={row.id} className={styles.listRow}>
                     <div>
                       <p className={styles.itemName}>{eventTitle ?? row.title}</p>
-                      <p className={styles.itemMeta}>{new Date(row.starts_at).toLocaleString()}</p>
+                      <p className={styles.itemMeta}>{formatEventTimeRange(row.starts_at, row.ends_at)}</p>
                     </div>
                     <Link href={`/schedule/${row.promoted_event_id}`} className={styles.link}>
                       View event

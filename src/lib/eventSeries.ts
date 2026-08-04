@@ -46,6 +46,7 @@ export type EventSeriesRow = {
   type: string;
   recurrence_rule: string;
   first_occurrence_at: string;
+  duration_minutes: number;
 };
 
 async function resolveTimeZone(
@@ -125,6 +126,7 @@ export async function generateSeriesOccurrences(
         title: series.title,
         type: series.type,
         start_time: occurrence.toISOString(),
+        end_time: new Date(occurrence.getTime() + series.duration_minutes * 60_000).toISOString(),
         series_id: series.id,
         template_id: series.template_id,
       })

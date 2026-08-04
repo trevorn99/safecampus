@@ -449,6 +449,15 @@
   gap: 0.4rem;
 }
 
+.dateTimeRow {
+  display: flex;
+  gap: 0.5rem;
+}
+.dateTimeRow > input {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
 /* Pairs an Avatar with a name/meta block in list rows */
 .identityRow {
   display: flex;
