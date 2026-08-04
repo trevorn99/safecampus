@@ -3,13 +3,8 @@ import { requireMembership } from "@/lib/session";
 import { AppHeader } from "@/components/AppHeader";
 import { AssignmentStatusButtons } from "./AssignmentStatusButtons";
 import { formatEventTimeRange } from "@/lib/formatDateTime";
+import { EVENT_TYPE_LABEL } from "@/lib/eventTypes";
 import styles from "@/styles/ui.module.css";
-
-const TYPE_LABEL: Record<string, string> = {
-  service: "Service",
-  drill: "Drill",
-  meeting: "Meeting",
-};
 
 // Pulled out of the component body — react-hooks/purity flags impure calls
 // (Date construction with no args) made directly during render.
@@ -125,7 +120,7 @@ export default async function SchedulePage() {
                     {event.location_id ? (locationName.get(event.location_id) ?? "Unknown location") : "Org-wide"}
                   </p>
                 </div>
-                <span className={styles.pillMuted}>{TYPE_LABEL[event.type] ?? event.type}</span>
+                <span className={styles.pillMuted}>{EVENT_TYPE_LABEL[event.type] ?? event.type}</span>
               </li>
             ))}
           </ul>

@@ -661,6 +661,32 @@
   flex-direction: column;
   gap: 1.25rem;
 }
+
+.statGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: 1rem;
+}
+.statTile {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 1.1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.statLabel {
+  font-size: 0.8rem;
+  color: var(--muted);
+  font-weight: 500;
+}
+.statValue {
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: var(--ink);
+  font-variant-numeric: proportional-nums;
+}
 .cardHeader {
   display: flex;
   flex-direction: column;

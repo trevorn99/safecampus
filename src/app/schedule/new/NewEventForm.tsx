@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { WEEKDAYS, ORDINALS, buildWeeklyRule, buildMonthlyRule } from "@/lib/recurrence";
 import { DateTimeField } from "@/components/DateTimeField";
+import { EVENT_TYPES, EVENT_TYPE_LABEL } from "@/lib/eventTypes";
 import styles from "@/styles/ui.module.css";
 
 type Option = { id: string; name: string };
@@ -257,9 +258,11 @@ export function NewEventForm({
             Type
           </label>
           <select id="eventType" className={styles.select} value={type} onChange={(event) => setType(event.target.value)}>
-            <option value="service">Service</option>
-            <option value="drill">Drill</option>
-            <option value="meeting">Meeting</option>
+            {EVENT_TYPES.map((eventType) => (
+              <option key={eventType} value={eventType}>
+                {EVENT_TYPE_LABEL[eventType]}
+              </option>
+            ))}
           </select>
         </div>
         <div className={styles.field}>

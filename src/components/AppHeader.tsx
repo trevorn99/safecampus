@@ -25,6 +25,7 @@ function buildNav(isAdmin: boolean, isPlatformAdmin: boolean): NavEntry[] {
       ],
     },
     { href: "/threat-intelligence", label: "Threat Intelligence" },
+    ...(isAdmin ? [{ href: "/analytics", label: "Analytics" }] : []),
     isAdmin
       ? {
           label: "Account",

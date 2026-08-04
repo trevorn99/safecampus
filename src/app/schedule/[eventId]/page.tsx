@@ -9,14 +9,10 @@ import { AssignMemberForm } from "./AssignMemberForm";
 import { RemoveAssignmentButton } from "./RemoveAssignmentButton";
 import { DeletePositionButton } from "./DeletePositionButton";
 import { PositionHeader } from "./PositionHeader";
+import { AttendanceCard } from "./AttendanceCard";
 import { formatEventTimeRange } from "@/lib/formatDateTime";
+import { EVENT_TYPE_LABEL } from "@/lib/eventTypes";
 import styles from "@/styles/ui.module.css";
-
-const TYPE_LABEL: Record<string, string> = {
-  service: "Service",
-  drill: "Drill",
-  meeting: "Meeting",
-};
 
 type AssignmentRow = { id: string; member_id: string; status: string; event_position_id: string };
 
@@ -28,27 +24,35 @@ export default async function EventDetailPage({
   const { eventId } = await params;
   const { supabase, member, organizationName, isAdmin, isPlatformAdmin } = await requireMembership();
 
-  const [{ data: event }, { data: locations }, { data: teams }, { data: positions }, { data: orgMembers }, { data: teamAssignments }] =
-    await Promise.all([
-      supabase
-        .from("events")
-        .select("id, title, start_time, end_time, type, location_id, series_id")
-        .eq("id", eventId)
-        .maybeSingle(),
-      supabase.from("locations").select("id, name").eq("organization_id", member.organization_id),
-      supabase.from("teams").select("id, name").eq("organization_id", member.organization_id),
-      supabase
-        .from("event_positions")
-        .select("id, title, team_id, location_id, start_time, end_time, slots, template_position_id")
-        .eq("event_id", eventId)
-        .order("start_time"),
-      supabase
-        .from("members")
-        .select("id, name, profile_picture_url")
-        .eq("organization_id", member.organization_id)
-        .order("name"),
-      supabase.from("role_assignments").select("member_id, scope_id").eq("scope_type", "team"),
-    ]);
+  const [
+    { data: event },
+    { data: locations },
+    { data: teams },
+    { data: positions },
+    { data: orgMembers },
+    { data: teamAssignments },
+    { data: attendanceRows },
+  ] = await Promise.all([
+    supabase
+      .from("events")
+      .select("id, title, start_time, end_time, type, location_id, series_id")
+      .eq("id", eventId)
+      .maybeSingle(),
+    supabase.from("locations").select("id, name").eq("organization_id", member.organization_id),
+    supabase.from("teams").select("id, name").eq("organization_id", member.organization_id),
+    supabase
+      .from("event_positions")
+      .select("id, title, team_id, location_id, start_time, end_time, slots, template_position_id")
+      .eq("event_id", eventId)
+      .order("start_time"),
+    supabase
+      .from("members")
+      .select("id, name, profile_picture_url")
+      .eq("organization_id", member.organization_id)
+      .order("name"),
+    supabase.from("role_assignments").select("member_id, scope_id").eq("scope_type", "team"),
+    supabase.from("attendance").select("id, member_id, checked_in_at, checked_out_at").eq("event_id", eventId),
+  ]);
 
   if (!event) {
     return (
@@ -92,6 +96,12 @@ export default async function EventDetailPage({
     assignmentsByPosition.set(assignment.event_position_id, list);
   }
 
+  const attendanceMembers = (orgMembers ?? []).map((m) => ({
+    id: m.id,
+    name: m.name,
+    avatarUrl: m.profile_picture_url ? (avatarUrls.get(m.profile_picture_url) ?? null) : null,
+  }));
+
   return (
     <>
       <AppHeader isAdmin={isAdmin} isPlatformAdmin={isPlatformAdmin} />
@@ -99,7 +109,7 @@ export default async function EventDetailPage({
         <div className={styles.pageHeading}>
           <h1 className={styles.pageTitle}>{event.title}</h1>
           <p className={styles.subtitle}>
-            {organizationName} · {TYPE_LABEL[event.type] ?? event.type} ·{" "}
+            {organizationName} · {EVENT_TYPE_LABEL[event.type] ?? event.type} ·{" "}
             {formatEventTimeRange(event.start_time, event.end_time)} ·{" "}
             {event.location_id ? (locationName.get(event.location_id) ?? "Unknown location") : "Org-wide"}
           </p>
@@ -183,6 +193,15 @@ export default async function EventDetailPage({
             </div>
           );
         })}
+
+        {isAdmin && (
+          <AttendanceCard
+            eventId={event.id}
+            locationId={event.location_id}
+            members={attendanceMembers}
+            initialAttendance={attendanceRows ?? []}
+          />
+        )}
 
         {isAdmin && (
           <div className={styles.card}>
