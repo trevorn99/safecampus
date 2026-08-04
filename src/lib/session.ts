@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { isTrustedDeviceRequest } from "@/lib/trustedDevice";
 
-export async function requireMembership(options?: { allowUnpaid?: boolean }) {
+export async function requireMembership(options?: { allowUnpaid?: boolean; allowUnverified?: boolean }) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -27,7 +27,7 @@ export async function requireMembership(options?: { allowUnpaid?: boolean }) {
 
   const { data: member } = await supabase
     .from("members")
-    .select("id, name, organization_id")
+    .select("id, name, organization_id, identity_verification_status")
     .eq("user_id", user.id)
     .maybeSingle();
 
@@ -43,7 +43,11 @@ export async function requireMembership(options?: { allowUnpaid?: boolean }) {
     { data: isPlatformAdmin },
   ] = await Promise.all([
     supabase.rpc("is_org_admin", { target_org: member.organization_id }),
-    supabase.from("organizations").select("name").eq("id", member.organization_id).single(),
+    supabase
+      .from("organizations")
+      .select("name, identity_verification_enabled")
+      .eq("id", member.organization_id)
+      .single(),
     supabase
       .from("role_assignments")
       .select("id")
@@ -71,6 +75,18 @@ export async function requireMembership(options?: { allowUnpaid?: boolean }) {
     if (!factors?.totp?.length && !factors?.webauthn?.length) {
       redirect("/account/mfa");
     }
+  }
+
+  // Org admins are deliberately exempt: if they weren't, an admin who
+  // enables this before verifying themselves would lock themselves out of
+  // billing/settings too, with no way to turn it back off.
+  if (
+    organization?.identity_verification_enabled &&
+    !isAdmin &&
+    member.identity_verification_status !== "verified" &&
+    !options?.allowUnverified
+  ) {
+    redirect("/account/identity");
   }
 
   return {

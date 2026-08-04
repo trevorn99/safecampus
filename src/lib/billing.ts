@@ -7,6 +7,7 @@ import {
   priceIdToTier,
   TIER_PRICE_IDS,
   THREAT_INTEL_PRICE_ID,
+  IDENTITY_VERIFICATION_PRICE_ID,
 } from "@/lib/stripe";
 
 // Stripe subscription statuses collapsed onto organizations.subscription_status.
@@ -35,6 +36,7 @@ export async function syncSubscriptionFromStripe(subscription: Stripe.Subscripti
   const items = subscription.items.data;
   const tier = priceIdToTier(items.find((item) => priceIdToTier(item.price.id))?.price.id);
   const threatIntelEnabled = items.some((item) => item.price.id === THREAT_INTEL_PRICE_ID);
+  const identityVerificationEnabled = items.some((item) => item.price.id === IDENTITY_VERIFICATION_PRICE_ID);
 
   const admin = createAdminClient();
   await admin
@@ -43,6 +45,7 @@ export async function syncSubscriptionFromStripe(subscription: Stripe.Subscripti
       stripe_subscription_id: subscription.id,
       subscription_status: STATUS_MAP[subscription.status] ?? "incomplete",
       threat_intel_enabled: threatIntelEnabled,
+      identity_verification_enabled: identityVerificationEnabled,
       ...(tier ? { plan_tier: tier } : {}),
     })
     .eq("id", organizationId);

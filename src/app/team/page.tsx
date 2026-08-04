@@ -13,6 +13,13 @@ const ROLE_LABEL: Record<string, string> = {
   member: "Member",
 };
 
+const VERIFICATION_LABEL: Record<string, string> = {
+  verified: "✓ Verified",
+  pending: "Verification pending",
+  failed: "✗ Verification failed",
+  unverified: "Not verified",
+};
+
 type RoleAssignment = { id: string; member_id: string; scope_type: string; scope_id: string; role: string };
 type Member = {
   id: string;
@@ -20,21 +27,23 @@ type Member = {
   email: string | null;
   status: string;
   profile_picture_url: string | null;
+  identity_verification_status: string;
 };
 
 export default async function TeamPage() {
   const { supabase, member, organizationName, isAdmin, isPlatformAdmin } = await requireMembership();
 
-  const [{ data: members }, { data: roleAssignments }, { data: locations }, { data: teams }] =
+  const [{ data: members }, { data: roleAssignments }, { data: locations }, { data: teams }, { data: org }] =
     await Promise.all([
       supabase
         .from("members")
-        .select("id, name, email, status, profile_picture_url")
+        .select("id, name, email, status, profile_picture_url, identity_verification_status")
         .eq("organization_id", member.organization_id)
         .order("name"),
       supabase.from("role_assignments").select("id, member_id, scope_type, scope_id, role"),
       supabase.from("locations").select("id, name").eq("organization_id", member.organization_id),
       supabase.from("teams").select("id, name").eq("organization_id", member.organization_id).order("name"),
+      supabase.from("organizations").select("identity_verification_enabled").eq("id", member.organization_id).single(),
     ]);
 
   const avatarUrls = await getAvatarUrlMap(
@@ -107,6 +116,19 @@ export default async function TeamPage() {
             </span>
           ))}
           {teamMember.status === "pending" && <span className={styles.pillMuted}>Pending</span>}
+          {isAdmin && org?.identity_verification_enabled && (
+            <span
+              className={
+                teamMember.identity_verification_status === "verified"
+                  ? styles.pill
+                  : teamMember.identity_verification_status === "failed"
+                    ? styles.pillDanger
+                    : styles.pillMuted
+              }
+            >
+              {VERIFICATION_LABEL[teamMember.identity_verification_status] ?? teamMember.identity_verification_status}
+            </span>
+          )}
           {isAdmin && teamMember.status === "pending" && (
             <CancelInviteButton memberId={teamMember.id} name={teamMember.name} />
           )}

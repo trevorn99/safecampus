@@ -2,14 +2,27 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import type { AddonKey } from "@/lib/stripe";
 import styles from "@/styles/ui.module.css";
 
-export function ThreatIntelToggle({
+export function AddonToggle({
+  addon,
+  title,
+  description,
+  checkboxLabel,
   initialEnabled,
   hasSubscription,
+  enabledMessage,
+  disabledMessage,
 }: {
+  addon: AddonKey;
+  title: string;
+  description: string[];
+  checkboxLabel: string;
   initialEnabled: boolean;
   hasSubscription: boolean;
+  enabledMessage: string;
+  disabledMessage: string;
 }) {
   const router = useRouter();
   const [enabled, setEnabled] = useState(initialEnabled);
@@ -28,7 +41,7 @@ export function ThreatIntelToggle({
       response = await fetch("/api/billing/toggle-addon", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ enabled: next }),
+        body: JSON.stringify({ enabled: next, addon }),
       });
       data = await response.json();
     } catch {
@@ -50,18 +63,12 @@ export function ThreatIntelToggle({
   return (
     <div className={styles.card}>
       <div className={styles.cardHeader}>
-        <h2 className={styles.cardTitle}>Threat Intelligence — $30/mo add-on</h2>
-        <p className={styles.helperText}>
-          One AI-drafted intelligence brief covering your whole organization — every location combined — refreshed
-          weekly and available on demand, drawing on incident history and watchlist activity, reviewed by your
-          admins before release.
-        </p>
-        <p className={styles.helperText}>
-          Uses public web search, X/Twitter search, and government advisories (DHS, FBI/CISA). Certain platforms —
-          including private Facebook groups, Instagram, and TikTok — can&apos;t be monitored through an API in an
-          automated fashion, so this is always a starting point to combine with your team&apos;s own human
-          intelligence, not a replacement for it.
-        </p>
+        <h2 className={styles.cardTitle}>{title}</h2>
+        {description.map((paragraph, index) => (
+          <p key={index} className={styles.helperText}>
+            {paragraph}
+          </p>
+        ))}
       </div>
       {!hasSubscription ? (
         <p className={styles.helperText}>Subscribe to a plan before enabling add-ons.</p>
@@ -73,16 +80,10 @@ export function ThreatIntelToggle({
             onChange={(event) => handleToggle(event.target.checked)}
             disabled={loading}
           />
-          {loading ? "Saving…" : "Enable Threat Intelligence for this organization"}
+          {loading ? "Saving…" : checkboxLabel}
         </label>
       )}
-      {justChanged && (
-        <p className={styles.helperText}>
-          {enabled
-            ? "Enabled — generate or review your combined report from the Threat Intelligence page."
-            : "Disabled for this organization."}
-        </p>
-      )}
+      {justChanged && <p className={styles.helperText}>{enabled ? enabledMessage : disabledMessage}</p>}
       {error && (
         <p className={styles.errorText} role="alert">
           {error}
