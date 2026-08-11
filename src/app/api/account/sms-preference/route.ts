@@ -45,7 +45,7 @@ export async function POST(request: Request) {
   if (newlyOptingIn) {
     const result = await sendSms(
       trimmedPhone,
-      "You're subscribed to SafeCampus SMS shift reminders. Msg & data rates may apply. Reply STOP to unsubscribe.",
+      "SafeCampus: You're subscribed to shift reminder texts (up to 2/shift). Msg & data rates may apply. Reply HELP for help, STOP to cancel.",
     );
     const admin = createAdminClient();
     await admin.from("notifications").insert({
