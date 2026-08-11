@@ -196,6 +196,87 @@
   color: var(--ink);
   line-height: 1.5;
 }
+/* Renders react-markdown output (Threat Intelligence reports) with the
+   same voice as .docBody, plus real heading/list/emphasis styling instead
+   of raw markdown syntax showing up as literal asterisks/hashes. */
+.reportMarkdown > *:first-child {
+  margin-top: 0;
+}
+.reportMarkdown > *:last-child {
+  margin-bottom: 0;
+}
+.reportMarkdown p {
+  margin: 0 0 1rem;
+}
+.reportMarkdown h1,
+.reportMarkdown h2,
+.reportMarkdown h3 {
+  font-weight: 700;
+  color: var(--ink);
+  margin: 1.25rem 0 0.5rem;
+}
+.reportMarkdown h1 {
+  font-size: 1.1rem;
+}
+.reportMarkdown h2 {
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--accent-strong);
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border);
+}
+.reportMarkdown h2:first-child {
+  padding-top: 0;
+  border-top: none;
+}
+/* The prompt always emits "Coverage Note" as the final section — a
+   methodology footnote, not a finding, so it reads quieter than the rest. */
+.reportMarkdown h2:last-of-type {
+  color: var(--muted);
+  font-weight: 600;
+}
+.reportMarkdown h3 {
+  font-size: 0.96rem;
+}
+.reportMarkdown ul,
+.reportMarkdown ol {
+  margin: 0 0 1rem;
+  padding-left: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.reportMarkdown li {
+  line-height: 1.55;
+}
+.reportMarkdown strong {
+  font-weight: 700;
+  color: var(--ink);
+}
+.reportMarkdown a {
+  color: var(--accent-strong);
+  font-weight: 600;
+}
+.reportMarkdown a:hover {
+  text-decoration: underline;
+}
+.reportMarkdown blockquote {
+  margin: 0 0 1rem;
+  padding-left: 0.9rem;
+  border-left: 2px solid var(--border);
+  color: var(--muted);
+}
+.disclaimer {
+  font-size: 0.85rem;
+  color: var(--muted);
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.75rem 1rem;
+  line-height: 1.5;
+}
 .errorText {
   font-size: 0.85rem;
   color: var(--danger);
@@ -213,6 +294,16 @@
 .link:hover {
   text-decoration: underline;
 }
+/* Same look as .link, but for a <button> — resets browser button chrome
+   (font-family specifically, since buttons don't inherit it by default) */
+.linkButton {
+  composes: link;
+  font-family: inherit;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
 
 /* Authenticated app shell (dashboard, team pages) */
 .appHeader {
@@ -220,7 +311,7 @@
   background: var(--surface);
 }
 .appHeaderInner {
-  max-width: 840px;
+  max-width: 1200px;
   margin: 0 auto;
   padding: 1rem 1.5rem;
   display: flex;
@@ -246,6 +337,7 @@
   border: none;
   cursor: pointer;
   padding: 0;
+  white-space: nowrap;
 }
 .navLink:hover {
   color: var(--ink);
@@ -292,19 +384,16 @@
 }
 .appMain {
   flex: 1;
-  max-width: 840px;
+  /* Matches .appHeaderInner so the header bar and page content share the
+     same edges — was 840px, which left most of a wide monitor as empty
+     margin since cards/lists stretch to fill this container's width. */
+  max-width: 1200px;
   margin: 0 auto;
   padding: 2.5rem 1.5rem;
   width: 100%;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
-}
-/* Wider variant for content that needs the room on large screens (the
-   dashboard's calendar grid feels cramped at the standard 840px). */
-.appMainWide {
-  composes: appMain;
-  max-width: 1200px;
 }
 
 .pageHeading {
@@ -358,6 +447,15 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0.4rem;
+}
+
+.dateTimeRow {
+  display: flex;
+  gap: 0.5rem;
+}
+.dateTimeRow > input {
+  flex: 1 1 0;
+  min-width: 0;
 }
 
 /* Pairs an Avatar with a name/meta block in list rows */
@@ -552,6 +650,11 @@
   color: var(--muted);
   font-weight: 500;
 }
+.pillDanger {
+  composes: pill;
+  background: var(--danger-bg);
+  color: var(--danger);
+}
 
 .card {
   background: var(--surface);
@@ -562,6 +665,32 @@
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
+}
+
+.statGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: 1rem;
+}
+.statTile {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 1.1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.statLabel {
+  font-size: 0.8rem;
+  color: var(--muted);
+  font-weight: 500;
+}
+.statValue {
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: var(--ink);
+  font-variant-numeric: proportional-nums;
 }
 .cardHeader {
   display: flex;
@@ -690,6 +819,34 @@
     align-items: center;
     text-align: center;
   }
+}
+
+/* Homepage key-features preview (reuses .featureGrid/.featureCard below) */
+.homeFeaturesSection {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 0 1.5rem 6rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2.5rem;
+}
+.homeFeaturesHeading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  text-align: center;
+  max-width: 46ch;
+}
+.homeFeaturesTitle {
+  font-size: 1.85rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+.homeFeaturesSection .featureGrid {
+  width: 100%;
 }
 
 /* Feature grid (features page) */

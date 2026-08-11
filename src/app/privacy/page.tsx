@@ -111,7 +111,7 @@ export default function PrivacyPage() {
           <li><strong>Vercel</strong> — application hosting.</li>
           <li><strong>Stripe</strong> — payment processing.</li>
           <li><strong>SendGrid</strong> — transactional email delivery.</li>
-          <li><strong>Twilio</strong> — SMS delivery, where your organization enables it.</li>
+          <li><strong>SignalWire</strong> — SMS delivery, where your organization enables it.</li>
         </ul>
         <p>
           <strong>Planning Center.</strong> If your organization connects its own Planning Center

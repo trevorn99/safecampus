@@ -1,0 +1,65 @@
+.chartFigure {
+  margin: 0;
+  width: 100%;
+  overflow-x: auto;
+}
+.chartSvg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.chartLabel {
+  font-size: 11px;
+  fill: var(--muted);
+}
+.chartValue {
+  font-size: 12px;
+  font-weight: 600;
+  fill: var(--ink);
+}
+.chartBaseline {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+/* Validated categorical palette (dataviz skill reference palette, slots 1-4:
+   blue/orange/aqua/yellow) — passes CVD + normal-vision separation on the
+   adjacent pairlist in both light and dark against this app's surfaces. */
+.series1 {
+  fill: #2a78d6;
+}
+.series2 {
+  fill: #eb6834;
+}
+.series3 {
+  fill: #1baf7a;
+}
+.series4 {
+  fill: #eda100;
+}
+@media (prefers-color-scheme: dark) {
+  .series1 {
+    fill: #3987e5;
+  }
+  .series2 {
+    fill: #d95926;
+  }
+  .series3 {
+    fill: #199e70;
+  }
+  .series4 {
+    fill: #c98500;
+  }
+}
+
+/* Single-series charts use the app's own brand accent, not the categorical set. */
+.seriesAccent {
+  fill: var(--accent);
+}
+
+/* Overflow bucket for event types past the 4 colored slots — deliberately
+   colorless so it never competes with the real categorical hues. */
+.seriesOther {
+  fill: var(--muted);
+}

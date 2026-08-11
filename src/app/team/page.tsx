@@ -3,6 +3,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { Avatar } from "@/components/Avatar";
 import { getAvatarUrlMap } from "@/lib/avatars";
 import { CancelInviteButton } from "./CancelInviteButton";
+import { TeamMembershipManager } from "./TeamMembershipManager";
 import styles from "@/styles/ui.module.css";
 
 const ROLE_LABEL: Record<string, string> = {
@@ -12,28 +13,37 @@ const ROLE_LABEL: Record<string, string> = {
   member: "Member",
 };
 
-type RoleAssignment = { member_id: string; scope_type: string; scope_id: string; role: string };
+const VERIFICATION_LABEL: Record<string, string> = {
+  verified: "✓ Verified",
+  pending: "Verification pending",
+  failed: "✗ Verification failed",
+  unverified: "Not verified",
+};
+
+type RoleAssignment = { id: string; member_id: string; scope_type: string; scope_id: string; role: string };
 type Member = {
   id: string;
   name: string;
   email: string | null;
   status: string;
   profile_picture_url: string | null;
+  identity_verification_status: string;
 };
 
 export default async function TeamPage() {
   const { supabase, member, organizationName, isAdmin, isPlatformAdmin } = await requireMembership();
 
-  const [{ data: members }, { data: roleAssignments }, { data: locations }, { data: teams }] =
+  const [{ data: members }, { data: roleAssignments }, { data: locations }, { data: teams }, { data: org }] =
     await Promise.all([
       supabase
         .from("members")
-        .select("id, name, email, status, profile_picture_url")
+        .select("id, name, email, status, profile_picture_url, identity_verification_status")
         .eq("organization_id", member.organization_id)
         .order("name"),
-      supabase.from("role_assignments").select("member_id, scope_type, scope_id, role"),
+      supabase.from("role_assignments").select("id, member_id, scope_type, scope_id, role"),
       supabase.from("locations").select("id, name").eq("organization_id", member.organization_id),
       supabase.from("teams").select("id, name").eq("organization_id", member.organization_id).order("name"),
+      supabase.from("organizations").select("identity_verification_enabled").eq("id", member.organization_id).single(),
     ]);
 
   const avatarUrls = await getAvatarUrlMap(
@@ -71,6 +81,18 @@ export default async function TeamPage() {
   }
   const unassignedMembers = (members ?? []).filter((m) => !memberIdsInAnyTeam.has(m.id));
 
+  // memberId -> teamId -> that member's role_assignments row id(s) for that
+  // team, so TeamMembershipManager can toggle membership without a lookup.
+  const teamAssignmentsByMember = new Map<string, Map<string, string[]>>();
+  for (const row of (roleAssignments ?? []) as RoleAssignment[]) {
+    if (row.scope_type !== "team") continue;
+    const byTeam = teamAssignmentsByMember.get(row.member_id) ?? new Map<string, string[]>();
+    const ids = byTeam.get(row.scope_id) ?? [];
+    ids.push(row.id);
+    byTeam.set(row.scope_id, ids);
+    teamAssignmentsByMember.set(row.member_id, byTeam);
+  }
+
   function renderMemberRow(teamMember: Member) {
     return (
       <li key={teamMember.id} className={styles.listRow}>
@@ -94,10 +116,30 @@ export default async function TeamPage() {
             </span>
           ))}
           {teamMember.status === "pending" && <span className={styles.pillMuted}>Pending</span>}
+          {isAdmin && org?.identity_verification_enabled && (
+            <span
+              className={
+                teamMember.identity_verification_status === "verified"
+                  ? styles.pill
+                  : teamMember.identity_verification_status === "failed"
+                    ? styles.pillDanger
+                    : styles.pillMuted
+              }
+            >
+              {VERIFICATION_LABEL[teamMember.identity_verification_status] ?? teamMember.identity_verification_status}
+            </span>
+          )}
           {isAdmin && teamMember.status === "pending" && (
             <CancelInviteButton memberId={teamMember.id} name={teamMember.name} />
           )}
         </div>
+        {isAdmin && (
+          <TeamMembershipManager
+            memberId={teamMember.id}
+            allTeams={teams ?? []}
+            assignmentIdsByTeam={teamAssignmentsByMember.get(teamMember.id) ?? new Map()}
+          />
+        )}
       </li>
     );
   }

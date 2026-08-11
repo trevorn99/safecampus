@@ -16,6 +16,23 @@ export const TIER_PRICE_IDS = {
 
 export type PlanTier = keyof typeof TIER_PRICE_IDS;
 
+// Threat Intelligence add-on: $30/mo, added as a second item on an org's
+// existing subscription rather than a separate plan or Checkout session.
+export const THREAT_INTEL_PRICE_ID = process.env.STRIPE_THREAT_INTEL_PRICE_ID!;
+
+// Identity Verification add-on: $10/mo, same pattern — a second item on the
+// org's existing subscription. The actual verification work happens
+// through the separate Stripe Identity API (src/app/api/identity/*), not
+// this billing price; this just gates whether the org has paid for it.
+export const IDENTITY_VERIFICATION_PRICE_ID = process.env.STRIPE_IDENTITY_VERIFICATION_PRICE_ID!;
+
+export const ADDONS = {
+  threat_intel: { priceId: THREAT_INTEL_PRICE_ID, column: "threat_intel_enabled" },
+  identity_verification: { priceId: IDENTITY_VERIFICATION_PRICE_ID, column: "identity_verification_enabled" },
+} as const;
+
+export type AddonKey = keyof typeof ADDONS;
+
 export const SEAT_CAPS: Record<PlanTier, number> = {
   tier_10: 10,
   tier_30: 30,

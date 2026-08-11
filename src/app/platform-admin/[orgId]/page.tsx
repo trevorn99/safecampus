@@ -3,6 +3,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { AppHeader } from "@/components/AppHeader";
+import { RegenerateReportButton } from "./RegenerateReportButton";
 import styles from "@/styles/ui.module.css";
 
 const ROLE_LABEL: Record<string, string> = {
@@ -79,7 +80,7 @@ export default async function PlatformAdminOrgPage({
       <main className={styles.appMain}>
         <div className={styles.pageHeading}>
           <h1 className={styles.pageTitle}>{organization?.name ?? "Organization"}</h1>
-          <p className={styles.subtitle}>Read-only support view</p>
+          <p className={styles.subtitle}>Support view — mostly read-only, with a few limited support actions</p>
         </div>
 
         <div className={styles.card}>
@@ -119,6 +120,17 @@ export default async function PlatformAdminOrgPage({
               </li>
             ))}
           </ul>
+        </div>
+
+        <div className={styles.card}>
+          <div className={styles.cardHeader}>
+            <h2 className={styles.cardTitle}>Threat Intelligence</h2>
+            <p className={styles.helperText}>
+              One combined report covers every location above. Force a fresh one outside the normal weekly cap for
+              troubleshooting.
+            </p>
+          </div>
+          <RegenerateReportButton organizationId={orgId} />
         </div>
 
         <div className={styles.card}>

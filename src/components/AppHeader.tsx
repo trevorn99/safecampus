@@ -9,6 +9,7 @@ function buildNav(isAdmin: boolean, isPlatformAdmin: boolean): NavEntry[] {
       items: [
         { href: "/schedule", label: "Calendar" },
         { href: "/schedule/integrations", label: "Integrations" },
+        ...(isAdmin ? [{ href: "/schedule/event-types", label: "Event types" }] : []),
       ],
     },
     {
@@ -24,6 +25,8 @@ function buildNav(isAdmin: boolean, isPlatformAdmin: boolean): NavEntry[] {
           : []),
       ],
     },
+    { href: "/threat-intelligence", label: "Threat Intelligence" },
+    ...(isAdmin ? [{ href: "/analytics", label: "Analytics" }] : []),
     isAdmin
       ? {
           label: "Account",

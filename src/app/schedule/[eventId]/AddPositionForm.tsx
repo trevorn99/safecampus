@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { DateTimeField } from "@/components/DateTimeField";
 import styles from "@/styles/ui.module.css";
 
 type Option = { id: string; name: string };
@@ -30,6 +31,7 @@ export function AddPositionForm({
   const [locationId, setLocationId] = useState("");
   const [startTime, setStartTime] = useState(toLocalInputValue(eventStartTime));
   const [endTime, setEndTime] = useState("");
+  const [endTimeResetKey, setEndTimeResetKey] = useState(0);
   const [slots, setSlots] = useState("1");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -59,6 +61,7 @@ export function AddPositionForm({
     setTeamId("");
     setLocationId("");
     setEndTime("");
+    setEndTimeResetKey((key) => key + 1);
     setSlots("1");
     router.refresh();
   }
@@ -114,31 +117,14 @@ export function AddPositionForm({
           ))}
         </select>
       </div>
-      <div className={styles.field}>
-        <label className={styles.label} htmlFor="positionStart">
-          Start time
-        </label>
-        <input
-          id="positionStart"
-          type="datetime-local"
-          className={styles.input}
-          required
-          value={startTime}
-          onChange={(event) => setStartTime(event.target.value)}
-        />
-      </div>
-      <div className={styles.field}>
-        <label className={styles.label} htmlFor="positionEnd">
-          End time <span className={styles.hint}>(optional)</span>
-        </label>
-        <input
-          id="positionEnd"
-          type="datetime-local"
-          className={styles.input}
-          value={endTime}
-          onChange={(event) => setEndTime(event.target.value)}
-        />
-      </div>
+      <DateTimeField label="Start time" defaultValue={startTime} onChange={setStartTime} required />
+      <DateTimeField
+        key={endTimeResetKey}
+        label="End time"
+        hint="(optional)"
+        defaultValue={endTime}
+        onChange={setEndTime}
+      />
       <div className={styles.field}>
         <label className={styles.label} htmlFor="positionSlots">
           People needed

@@ -1,6 +1,7 @@
 import { requireMembership } from "@/lib/session";
 import { AppHeader } from "@/components/AppHeader";
 import { BillingActions } from "./BillingActions";
+import { AddonToggle } from "./AddonToggle";
 import { SEAT_CAPS, TIER_LABEL, tierForSeatCount, createStripeClient, type PlanTier } from "@/lib/stripe";
 import styles from "@/styles/ui.module.css";
 
@@ -27,7 +28,9 @@ export default async function BillingPage() {
   const [{ data: org }, { count: seatCount }] = await Promise.all([
     supabase
       .from("organizations")
-      .select("subscription_status, trial_ends_at, stripe_customer_id, paywall_exempt, plan_tier")
+      .select(
+        "subscription_status, trial_ends_at, stripe_customer_id, paywall_exempt, plan_tier, threat_intel_enabled, identity_verification_enabled",
+      )
       .eq("id", member.organization_id)
       .single(),
     supabase
@@ -46,6 +49,7 @@ export default async function BillingPage() {
 
   const currentTier = (org?.plan_tier as PlanTier | null) ?? tierForSeatCount(seatCount ?? 1);
   const overCap = !tierForSeatCount(seatCount ?? 1);
+  const hasSubscription = org?.subscription_status === "active" || org?.subscription_status === "past_due";
 
   const invoices =
     isAdmin && org?.stripe_customer_id
@@ -91,14 +95,41 @@ export default async function BillingPage() {
           )}
 
           {isAdmin && !org?.paywall_exempt && !overCap && (
-            <BillingActions
-              hasStripeCustomer={Boolean(org?.stripe_customer_id)}
-              hasSubscription={
-                org?.subscription_status === "active" || org?.subscription_status === "past_due"
-              }
-            />
+            <BillingActions hasStripeCustomer={Boolean(org?.stripe_customer_id)} hasSubscription={hasSubscription} />
           )}
         </div>
+
+        {isAdmin && !org?.paywall_exempt && (
+          <AddonToggle
+            addon="threat_intel"
+            title="Threat Intelligence — $30/mo add-on"
+            checkboxLabel="Enable Threat Intelligence for this organization"
+            initialEnabled={Boolean(org?.threat_intel_enabled)}
+            hasSubscription={hasSubscription}
+            enabledMessage="Enabled — generate or review your combined report from the Threat Intelligence page."
+            disabledMessage="Disabled for this organization."
+            description={[
+              "One AI-drafted intelligence brief covering your whole organization — every location combined — refreshed weekly and available on demand, drawing on incident history and watchlist activity, reviewed by your admins before release.",
+              "Uses public web search, X/Twitter search, and government advisories (DHS, FBI/CISA). Certain platforms — including private Facebook groups, Instagram, and TikTok — can't be monitored through an API in an automated fashion, so this is always a starting point to combine with your team's own human intelligence, not a replacement for it.",
+            ]}
+          />
+        )}
+
+        {isAdmin && !org?.paywall_exempt && (
+          <AddonToggle
+            addon="identity_verification"
+            title="Identity Verification — $10/mo add-on"
+            checkboxLabel="Require identity verification for this organization"
+            initialEnabled={Boolean(org?.identity_verification_enabled)}
+            hasSubscription={hasSubscription}
+            enabledMessage="Enabled — every non-admin member must verify their identity (photo ID + selfie, via Stripe) before they can use the app. Members not yet verified will be prompted the next time they sign in."
+            disabledMessage="Disabled for this organization. Members are no longer required to verify."
+            description={[
+              "Requires every member to verify their identity with a government-issued photo ID and a live selfie, handled by Stripe Identity's hosted flow — SafeCampus never sees or stores the document itself.",
+              "Org admins are exempt from the requirement so enabling this can never lock you out of your own organization.",
+            ]}
+          />
+        )}
 
         {isAdmin && invoices.length > 0 && (
           <div className={styles.card}>

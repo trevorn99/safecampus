@@ -107,7 +107,7 @@ async function getValidAccessToken(organizationId: string): Promise<string | nul
 // before writing this, not assumed). Each instance carries its own `name`
 // too, so no extra lookup back to the parent Event is needed.
 type PcoEventInstancesResponse = {
-  data: Array<{ id: string; attributes: { name: string; starts_at: string } }>;
+  data: Array<{ id: string; attributes: { name: string; starts_at: string; ends_at: string | null } }>;
   links?: { next?: string };
 };
 
@@ -145,6 +145,7 @@ export async function importPcoEvents(organizationId: string): Promise<{ importe
           pco_event_id: instance.id,
           title: instance.attributes.name,
           starts_at: instance.attributes.starts_at,
+          ends_at: instance.attributes.ends_at,
         })),
         { onConflict: "organization_id,pco_event_id" },
       );

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { requireMembership } from "@/lib/session";
 import { AppHeader } from "@/components/AppHeader";
 import { describeRecurrenceRule } from "@/lib/recurrence";
+import { formatEventTimeRange } from "@/lib/formatDateTime";
 import { ActiveToggle } from "./ActiveToggle";
 import { GenerateNowButton } from "./GenerateNowButton";
 import { DeleteSeriesButton } from "./DeleteSeriesButton";
@@ -42,7 +43,7 @@ export default async function SeriesDetailPage({
 
   const { data: generatedEvents } = await supabase
     .from("events")
-    .select("id, title, start_time")
+    .select("id, title, start_time, end_time")
     .eq("series_id", series.id)
     .order("start_time", { ascending: false })
     .limit(20);
@@ -85,7 +86,7 @@ export default async function SeriesDetailPage({
                 <Link href={`/schedule/${event.id}`} className={styles.itemName}>
                   {event.title}
                 </Link>
-                <p className={styles.itemMeta}>{new Date(event.start_time).toLocaleString()}</p>
+                <p className={styles.itemMeta}>{formatEventTimeRange(event.start_time, event.end_time)}</p>
               </li>
             ))}
           </ul>
