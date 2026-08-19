@@ -47,6 +47,12 @@ export async function POST(request: Request) {
       trimmedPhone,
       "SafeCampus: You're subscribed to shift reminder texts (up to 2/shift). Msg & data rates may apply. Reply HELP for help, STOP to cancel.",
     );
+    // TEMPORARY: diagnosing a report of no text arriving despite a 200
+    // response — this route never surfaced sendSms's own error detail
+    // anywhere. Remove once confirmed working.
+    if (!result.ok) {
+      console.error("sms-preference: sendSms failed", result.error);
+    }
     const admin = createAdminClient();
     await admin.from("notifications").insert({
       organization_id: member.organization_id,
