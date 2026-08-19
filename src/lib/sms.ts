@@ -1,6 +1,19 @@
 import "server-only";
 import crypto from "crypto";
 
+// SignalWire's REST API (like Twilio's) rejects anything that isn't strict
+// E.164 (error 21217, "To invalid format") — a plain <input type="tel">
+// lets someone type "555-123-4567" or "(555) 123-4567", which fails
+// silently since sendSms's caller doesn't always surface its error. US/CA
+// only for now: 10 digits assumes a US area code, matching the "+1
+// 555 555 5555" placeholder already shown on the opt-in form.
+export function toE164(phone: string): string | null {
+  const digits = phone.replace(/\D/g, "");
+  if (digits.length === 10) return `+1${digits}`;
+  if (digits.length === 11 && digits.startsWith("1")) return `+${digits}`;
+  return null;
+}
+
 // Shared platform-wide SignalWire account (same model as SendGrid) — not
 // per-org credentials. SignalWire's Compatibility API mirrors Twilio's REST
 // API almost exactly (same Messages.json shape, same Basic Auth pattern
