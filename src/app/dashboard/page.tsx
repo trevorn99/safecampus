@@ -1,25 +1,34 @@
+import Link from "next/link";
 import { requireMembership } from "@/lib/session";
 import { AppHeader } from "@/components/AppHeader";
 import { Avatar } from "@/components/Avatar";
 import { EventCalendar } from "@/components/EventCalendar";
 import { getAvatarUrlMap } from "@/lib/avatars";
+import { calendarWindow } from "@/lib/calendarWindow";
 import styles from "@/styles/ui.module.css";
 
+// A report older than this reads as "just part of the page" rather than
+// an actual update worth calling out — roughly the weekly refresh cadence
+// (see MIN_DAYS_BETWEEN_REPORTS in threatIntelligence.ts).
+const RECENT_REPORT_WINDOW_DAYS = 7;
+
+const REPORT_STATUS_LABEL: Record<string, string> = {
+  draft: "Draft",
+  reviewed: "Reviewed",
+  released: "Released",
+};
+
+function formatGeneratedAt(iso: string): string {
+  const date = new Date(iso);
+  const day = date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+  const time = date.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+  return `${day} · ${time}`;
+}
+
 // Pulled out of the component body — react-hooks/purity flags impure calls
-// (Date construction with no args) made directly during render.
-function calendarWindow() {
-  const now = new Date();
-  const todayIso = now.toISOString();
-  const minMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  const maxMonth = new Date(now.getFullYear(), now.getMonth() + 2, 1);
-  const rangeEndExclusive = new Date(now.getFullYear(), now.getMonth() + 3, 1);
-  return {
-    todayIso,
-    minMonthIso: minMonth.toISOString(),
-    maxMonthIso: maxMonth.toISOString(),
-    rangeStartIso: minMonth.toISOString(),
-    rangeEndExclusiveIso: rangeEndExclusive.toISOString(),
-  };
+// (Date.now()) made directly during render, same as calendarWindow() above.
+function isWithinRecentWindow(iso: string): boolean {
+  return Date.now() - new Date(iso).getTime() < RECENT_REPORT_WINDOW_DAYS * 24 * 60 * 60 * 1000;
 }
 
 export default async function DashboardPage() {
@@ -27,21 +36,34 @@ export default async function DashboardPage() {
 
   const { todayIso, minMonthIso, maxMonthIso, rangeStartIso, rangeEndExclusiveIso } = calendarWindow();
 
-  const [{ data: memberRow }, { data: events }] = await Promise.all([
+  const [{ data: memberRow }, { data: events }, { data: latestReport }] = await Promise.all([
     supabase.from("members").select("profile_picture_url").eq("id", member.id).single(),
     supabase
       .from("events")
-      .select("id, title, start_time")
+      .select("id, title, start_time, type")
       .eq("organization_id", member.organization_id)
       .gte("start_time", rangeStartIso)
       .lt("start_time", rangeEndExclusiveIso)
       .order("start_time"),
+    // RLS already scopes which statuses come back — org admins see every
+    // status, team leads see released only, everyone else sees nothing —
+    // same rule the Threat Intelligence page itself enforces.
+    supabase
+      .from("threat_reports")
+      .select("id, status, generated_at")
+      .eq("organization_id", member.organization_id)
+      .neq("status", "generating")
+      .order("generated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
   ]);
 
   const avatarUrls = await getAvatarUrlMap(supabase, [memberRow?.profile_picture_url]);
   const avatarUrl = memberRow?.profile_picture_url
     ? (avatarUrls.get(memberRow.profile_picture_url) ?? null)
     : null;
+
+  const isRecentReport = latestReport && isWithinRecentWindow(latestReport.generated_at);
 
   return (
     <>
@@ -68,11 +90,32 @@ export default async function DashboardPage() {
           </div>
         </div>
 
+        {isRecentReport && latestReport && (
+          <div className={styles.card}>
+            <div className={styles.cardHeader}>
+              <h2 className={styles.cardTitle}>Threat Intelligence updated</h2>
+              <p className={styles.helperText}>
+                {REPORT_STATUS_LABEL[latestReport.status] ?? latestReport.status} ·{" "}
+                {formatGeneratedAt(latestReport.generated_at)}
+              </p>
+            </div>
+            <Link href="/threat-intelligence" className={`${styles.button} ${styles.buttonSecondary}`}>
+              View report
+            </Link>
+          </div>
+        )}
+
         <div className={styles.card}>
           <div className={styles.cardHeader}>
             <h2 className={styles.cardTitle}>Upcoming events</h2>
           </div>
-          <EventCalendar events={events ?? []} today={todayIso} minMonth={minMonthIso} maxMonth={maxMonthIso} />
+          <EventCalendar
+            events={events ?? []}
+            today={todayIso}
+            minMonth={minMonthIso}
+            maxMonth={maxMonthIso}
+            canCreateEvents={isAdmin}
+          />
         </div>
       </main>
     </>
