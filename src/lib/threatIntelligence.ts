@@ -164,6 +164,8 @@ Write each paragraph as full, flowing prose — multiple sentences joined togeth
 
 Do not write a "Prepared:" date or a "Status:" line anywhere in the brief (e.g. no "Status: Draft for admin review"). The app displays the actual generation date and current review status (draft/reviewed/released) alongside this report, and anything you write here would go stale the moment that status changes — start directly with a title heading, then go straight into the sections below.
 
+Do not narrate your plan before or between searches (e.g. no "I'll run the required searches now, then draft the brief."). Run the searches silently; the only text you produce should be the brief itself, starting with the title heading.
+
 Format the brief in markdown with exactly these five "## " section headings, in this order, each with 1-3 short paragraphs (use a bullet list only where you're listing several distinct items, e.g. multiple sources, multiple locations, or precautions — not as a substitute for prose):
 ## Recent Activity
 Summary of recent activity and any patterns from the incident/watchlist data above, across all locations — note which campus each item involves.
@@ -279,10 +281,19 @@ export async function generateThreatReport(admin: SupabaseClient, organizationId
     // paragraph break at every fragment boundary put a spurious blank line
     // after whatever word or punctuation happened to precede a search call.
     // Each block already carries whatever whitespace the model intended.
-    const summary = response.content
+    const rawSummary = response.content
       .filter((block): block is Anthropic.Messages.TextBlock => block.type === "text")
       .map((block) => block.text)
       .join("");
+
+    // Defensive guard alongside the prompt instruction above: the model
+    // occasionally still emits a short narration sentence as its own text
+    // block before its first tool call (e.g. "I'll run the required
+    // searches now, then draft the brief."), which join() above can't tell
+    // apart from real content. The report always starts with a heading
+    // (title, then the first "## " section), so trim anything before it.
+    const firstHeadingIndex = rawSummary.search(/^#{1,2} /m);
+    const summary = firstHeadingIndex > 0 ? rawSummary.slice(firstHeadingIndex) : rawSummary;
 
     const { data: report, error } = await admin
       .from("threat_reports")
