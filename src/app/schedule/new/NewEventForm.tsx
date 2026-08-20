@@ -41,6 +41,7 @@ export function NewEventForm({
   templates,
   templatePositions,
   pcoCandidate,
+  defaultDate,
 }: {
   organizationId: string;
   eventTypes: string[];
@@ -49,12 +50,13 @@ export function NewEventForm({
   templates: Option[];
   templatePositions: TemplatePosition[];
   pcoCandidate?: { id: string; title: string; startTime: string; endTime: string } | null;
+  defaultDate?: string;
 }) {
   const router = useRouter();
   const [title, setTitle] = useState(pcoCandidate?.title ?? "");
   const [type, setType] = useState(eventTypes[0] ?? "");
   const [locationId, setLocationId] = useState("");
-  const [startTime, setStartTime] = useState(pcoCandidate?.startTime ?? "");
+  const [startTime, setStartTime] = useState(pcoCandidate?.startTime ?? (defaultDate ? `${defaultDate}T09:00` : ""));
   const [endTime, setEndTime] = useState(pcoCandidate?.endTime ?? "");
   const [templateId, setTemplateId] = useState("");
   const [positions, setPositions] = useState<PositionRow[]>([]);

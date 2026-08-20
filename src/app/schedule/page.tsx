@@ -2,15 +2,9 @@ import Link from "next/link";
 import { requireMembership } from "@/lib/session";
 import { AppHeader } from "@/components/AppHeader";
 import { AssignmentStatusButtons } from "./AssignmentStatusButtons";
-import { formatEventTimeRange } from "@/lib/formatDateTime";
-import { eventTypeLabel } from "@/lib/eventTypes";
+import { EventCalendar } from "@/components/EventCalendar";
+import { calendarWindow } from "@/lib/calendarWindow";
 import styles from "@/styles/ui.module.css";
-
-// Pulled out of the component body — react-hooks/purity flags impure calls
-// (Date construction with no args) made directly during render.
-function nowIso(): string {
-  return new Date().toISOString();
-}
 
 type MyAssignment = {
   id: string;
@@ -30,23 +24,22 @@ function firstOf<T>(value: T | T[] | null | undefined): T | null {
 export default async function SchedulePage() {
   const { supabase, member, organizationName, isAdmin, isPlatformAdmin } = await requireMembership();
 
-  const [{ data: events }, { data: locations }, { data: myAssignments }] = await Promise.all([
+  const { todayIso, minMonthIso, maxMonthIso, rangeStartIso, rangeEndExclusiveIso } = calendarWindow();
+
+  const [{ data: events }, { data: myAssignments }] = await Promise.all([
     supabase
       .from("events")
-      .select("id, title, start_time, end_time, type, location_id")
+      .select("id, title, start_time, type")
       .eq("organization_id", member.organization_id)
-      .gte("start_time", nowIso())
-      .order("start_time", { ascending: true })
-      .limit(100),
-    supabase.from("locations").select("id, name").eq("organization_id", member.organization_id),
+      .gte("start_time", rangeStartIso)
+      .lt("start_time", rangeEndExclusiveIso)
+      .order("start_time"),
     supabase
       .from("assignments")
       .select("id, status, event_positions(id, title, start_time, events(title))")
       .eq("member_id", member.id)
       .returns<MyAssignment[]>(),
   ]);
-
-  const locationName = new Map((locations ?? []).map((l) => [l.id, l.name]));
 
   const upcomingAssignments = (myAssignments ?? [])
     .filter((a) => a.event_positions && new Date(a.event_positions.start_time) >= new Date())
@@ -105,25 +98,15 @@ export default async function SchedulePage() {
 
         <div className={styles.card}>
           <div className={styles.cardHeader}>
-            <h2 className={styles.cardTitle}>Upcoming events</h2>
+            <h2 className={styles.cardTitle}>Events</h2>
           </div>
-          {(events ?? []).length === 0 && <p className={styles.helperText}>No upcoming events yet.</p>}
-          <ul className={styles.list}>
-            {(events ?? []).map((event) => (
-              <li key={event.id} className={styles.listRow}>
-                <div>
-                  <Link href={`/schedule/${event.id}`} className={styles.itemName}>
-                    {event.title}
-                  </Link>
-                  <p className={styles.itemMeta}>
-                    {formatEventTimeRange(event.start_time, event.end_time)} ·{" "}
-                    {event.location_id ? (locationName.get(event.location_id) ?? "Unknown location") : "Org-wide"}
-                  </p>
-                </div>
-                <span className={styles.pillMuted}>{eventTypeLabel(event.type)}</span>
-              </li>
-            ))}
-          </ul>
+          <EventCalendar
+            events={events ?? []}
+            today={todayIso}
+            minMonth={minMonthIso}
+            maxMonth={maxMonthIso}
+            canCreateEvents={isAdmin}
+          />
         </div>
       </main>
     </>

@@ -19,17 +19,19 @@ export function SmsPreferencesForm({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [confirmed, setConfirmed] = useState(false);
+  const [warning, setWarning] = useState("");
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     setLoading(true);
     setError("");
     setConfirmed(false);
+    setWarning("");
 
     const wasOptedIn = currentOptIn;
 
     let response: Response;
-    let data: { error?: string } = {};
+    let data: { error?: string; warning?: string } = {};
     try {
       response = await fetch("/api/account/sms-preference", {
         method: "POST",
@@ -50,7 +52,11 @@ export function SmsPreferencesForm({
     }
 
     if (smsOptIn && !wasOptedIn) {
-      setConfirmed(true);
+      if (data.warning) {
+        setWarning(data.warning);
+      } else {
+        setConfirmed(true);
+      }
     }
     router.refresh();
   }
@@ -110,6 +116,11 @@ export function SmsPreferencesForm({
         )}
         {confirmed && (
           <p className={styles.helperText}>You&apos;re subscribed — we just sent a confirmation text.</p>
+        )}
+        {warning && (
+          <p className={styles.errorText} role="alert">
+            {warning}
+          </p>
         )}
 
         <button type="submit" className={`${styles.button} ${styles.buttonPrimary}`} disabled={loading}>

@@ -14,9 +14,10 @@ function toLocalInputValue(iso: string | null) {
 export default async function NewEventPage({
   searchParams,
 }: {
-  searchParams: Promise<{ fromPco?: string }>;
+  searchParams: Promise<{ fromPco?: string; date?: string }>;
 }) {
-  const { fromPco } = await searchParams;
+  const { fromPco, date } = await searchParams;
+  const defaultDate = date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : undefined;
   const { supabase, member, isAdmin, isPlatformAdmin } = await requireMembership();
 
   if (!isAdmin) {
@@ -69,6 +70,7 @@ export default async function NewEventPage({
           templates={templates ?? []}
           templatePositions={templatePositions ?? []}
           pcoCandidate={pcoCandidate}
+          defaultDate={defaultDate}
         />
       </main>
     </>

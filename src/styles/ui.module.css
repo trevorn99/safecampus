@@ -596,6 +596,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+  cursor: pointer;
 }
 .calendarDayOutside {
   composes: calendarDay;
@@ -608,9 +609,25 @@
   composes: calendarDay;
   box-shadow: inset 0 0 0 2px var(--accent);
 }
+.calendarDaySelected {
+  background: var(--surface-muted);
+}
 .calendarDayNumber {
+  align-self: flex-start;
   font-size: 0.78rem;
   font-weight: 600;
+  color: inherit;
+  background: transparent;
+  border: none;
+  border-radius: 999px;
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  cursor: pointer;
+}
+.calendarDayNumber:hover,
+.calendarDayNumber:focus-visible {
+  background: var(--border);
 }
 .calendarEvent {
   font-size: 0.72rem;
@@ -630,6 +647,25 @@
 .calendarMore {
   font-size: 0.68rem;
   color: var(--muted);
+}
+
+.calendarDayPanel {
+  border-top: 1px solid var(--border);
+  padding-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.calendarDayPanelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+.calendarDayPanelTitle {
+  font-size: 1rem;
+  font-weight: 700;
 }
 
 .pill {

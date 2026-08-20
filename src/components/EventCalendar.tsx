@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { eventTypeLabel } from "@/lib/eventTypes";
 import styles from "@/styles/ui.module.css";
 
-type CalendarEvent = { id: string; title: string; start_time: string };
+type CalendarEvent = { id: string; title: string; start_time: string; type?: string };
 
 const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MAX_VISIBLE_PER_DAY = 3;
@@ -25,6 +26,14 @@ function dayKey(date: Date) {
   return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
 }
 
+// YYYY-MM-DD, for the ?date= param the New Event page reads to pre-fill a
+// start time — distinct from dayKey() above, which isn't zero-padded and
+// isn't meant to round-trip through a URL.
+function toDateInputValue(date: Date) {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
 function buildGrid(monthStart: Date): Date[] {
   const gridStart = new Date(monthStart);
   gridStart.setDate(1 - monthStart.getDay());
@@ -40,14 +49,17 @@ export function EventCalendar({
   today,
   minMonth,
   maxMonth,
+  canCreateEvents = false,
 }: {
   events: CalendarEvent[];
   today: string;
   minMonth: string;
   maxMonth: string;
+  canCreateEvents?: boolean;
 }) {
   const todayDate = new Date(today);
   const [monthStart, setMonthStart] = useState(startOfMonth(todayDate));
+  const [selectedDay, setSelectedDay] = useState(todayDate);
 
   const min = startOfMonth(new Date(minMonth));
   const max = startOfMonth(new Date(maxMonth));
@@ -62,6 +74,15 @@ export function EventCalendar({
 
   const days = buildGrid(monthStart);
   const monthLabel = monthStart.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+
+  const selectedDayEvents = (eventsByDay.get(dayKey(selectedDay)) ?? [])
+    .slice()
+    .sort((a, b) => a.start_time.localeCompare(b.start_time));
+  const selectedDayLabel = selectedDay.toLocaleDateString(undefined, {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  });
 
   return (
     <div className={styles.calendar}>
@@ -94,19 +115,36 @@ export function EventCalendar({
           const key = dayKey(day);
           const dayEvents = eventsByDay.get(key) ?? [];
           const outside = day.getMonth() !== monthStart.getMonth();
-          const cellClass = outside
-            ? styles.calendarDayOutside
-            : isSameDay(day, todayDate)
-              ? styles.calendarDayToday
-              : styles.calendarDay;
+          const cellClass = [
+            outside ? styles.calendarDayOutside : styles.calendarDay,
+            isSameDay(day, todayDate) && styles.calendarDayToday,
+            isSameDay(day, selectedDay) && styles.calendarDaySelected,
+          ]
+            .filter(Boolean)
+            .join(" ");
           const visible = dayEvents.slice(0, MAX_VISIBLE_PER_DAY);
           const extra = dayEvents.length - visible.length;
 
           return (
-            <div key={key} className={cellClass}>
-              <span className={styles.calendarDayNumber}>{day.getDate()}</span>
+            <div key={key} className={cellClass} onClick={() => setSelectedDay(day)}>
+              <button
+                type="button"
+                className={styles.calendarDayNumber}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setSelectedDay(day);
+                }}
+                aria-label={`View events for ${day.toLocaleDateString(undefined, { month: "long", day: "numeric" })}`}
+              >
+                {day.getDate()}
+              </button>
               {visible.map((event) => (
-                <Link key={event.id} href={`/schedule/${event.id}`} className={styles.calendarEvent}>
+                <Link
+                  key={event.id}
+                  href={`/schedule/${event.id}`}
+                  className={styles.calendarEvent}
+                  onClick={(e) => e.stopPropagation()}
+                >
                   {event.title}
                 </Link>
               ))}
@@ -114,6 +152,36 @@ export function EventCalendar({
             </div>
           );
         })}
+      </div>
+
+      <div className={styles.calendarDayPanel}>
+        <div className={styles.calendarDayPanelHeader}>
+          <h3 className={styles.calendarDayPanelTitle}>{selectedDayLabel}</h3>
+          {canCreateEvents && (
+            <Link
+              href={`/schedule/new?date=${toDateInputValue(selectedDay)}`}
+              className={`${styles.button} ${styles.buttonSecondary}`}
+            >
+              + New event
+            </Link>
+          )}
+        </div>
+        {selectedDayEvents.length === 0 && <p className={styles.helperText}>No events on this day.</p>}
+        <ul className={styles.list}>
+          {selectedDayEvents.map((event) => (
+            <li key={event.id} className={styles.listRow}>
+              <Link href={`/schedule/${event.id}`} className={styles.itemName}>
+                {event.title}
+              </Link>
+              <div className={styles.tagRow}>
+                {event.type && <span className={styles.pillMuted}>{eventTypeLabel(event.type)}</span>}
+                <span className={styles.itemMeta}>
+                  {new Date(event.start_time).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
+                </span>
+              </div>
+            </li>
+          ))}
+        </ul>
       </div>
     </div>
   );
