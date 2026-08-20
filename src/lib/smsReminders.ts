@@ -3,6 +3,15 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { utcToZonedWallTime } from "@/lib/timezone";
 import { sendSms } from "@/lib/sms";
 
+// SignalWire currently throttles this account to 1 message/second —
+// pace sends a bit under that rather than racing the exact boundary,
+// where network jitter would occasionally trip the limit anyway.
+const SEND_INTERVAL_MS = 1100;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 // Reminders are calendar-day based, not exact-hour based: a daily cron
 // checks "is this position's local calendar date exactly N days ahead of
 // today's local calendar date", rather than trying to hit a precise
@@ -142,6 +151,7 @@ export async function sendShiftReminders(admin: SupabaseClient, now: Date = new 
       sent_at: result.ok ? new Date().toISOString() : null,
     });
     if (result.ok) sent += 1;
+    await sleep(SEND_INTERVAL_MS);
   }
 
   return { checked: positions?.length ?? 0, sent };
