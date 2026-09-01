@@ -140,6 +140,10 @@ export function NewEventForm({
       setError("Name the template you're saving, or remove the positions.");
       return;
     }
+    if (repeats === "never" && endTime && new Date(endTime) <= new Date(startTime)) {
+      setError("End time must be after the start time.");
+      return;
+    }
 
     setLoading(true);
     setError("");

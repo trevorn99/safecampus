@@ -52,8 +52,14 @@ export function EditPositionForm({
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    setLoading(true);
     setError("");
+
+    if (endTime && new Date(endTime) <= new Date(startTime)) {
+      setError("End time must be after the start time.");
+      return;
+    }
+
+    setLoading(true);
 
     const supabase = createClient();
     const shared = {
