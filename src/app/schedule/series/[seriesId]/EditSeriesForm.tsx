@@ -4,22 +4,36 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { WEEKDAYS, ORDINALS, buildWeeklyRule, buildMonthlyRule, parseRecurrenceRule } from "@/lib/recurrence";
+import { utcToZonedWallTime, zonedWallTimeToUtc } from "@/lib/timezone";
 import { DateTimeField } from "@/components/DateTimeField";
 import styles from "@/styles/ui.module.css";
 
 type Option = { id: string; name: string };
 type Repeats = "weekly" | "monthly";
 
-function toLocalInputValue(iso: string) {
-  const date = new Date(iso);
+// A series' stored times are wall-clock times in the org/location's
+// timezone (see src/lib/eventSeries.ts), not the admin's browser timezone —
+// so this form must convert through that timezone, not through plain Date
+// getters/setters, or the displayed time drifts from what actually gets
+// generated.
+function toZonedInputValue(iso: string, timeZone: string) {
+  const wall = utcToZonedWallTime(new Date(iso), timeZone);
   const pad = (n: number) => String(n).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  return `${wall.year}-${pad(wall.month)}-${pad(wall.day)}T${pad(wall.hour)}:${pad(wall.minute)}`;
+}
+
+function fromZonedInputValue(value: string, timeZone: string): Date {
+  const [datePart, timePart] = value.split("T");
+  const [year, month, day] = datePart.split("-").map(Number);
+  const [hour, minute] = timePart.split(":").map(Number);
+  return zonedWallTimeToUtc({ year, month, day, hour, minute, second: 0 }, timeZone);
 }
 
 export function EditSeriesForm({
   series,
   eventTypes,
   locations,
+  timeZone,
   onDone,
 }: {
   series: {
@@ -33,6 +47,7 @@ export function EditSeriesForm({
   };
   eventTypes: string[];
   locations: Option[];
+  timeZone: string;
   onDone: () => void;
 }) {
   const router = useRouter();
@@ -41,7 +56,7 @@ export function EditSeriesForm({
   const [title, setTitle] = useState(series.title);
   const [type, setType] = useState(series.type);
   const [locationId, setLocationId] = useState(series.location_id ?? "");
-  const [firstOccurrence, setFirstOccurrence] = useState(toLocalInputValue(series.first_occurrence_at));
+  const [firstOccurrence, setFirstOccurrence] = useState(toZonedInputValue(series.first_occurrence_at, timeZone));
   const [durationMinutes, setDurationMinutes] = useState(String(series.duration_minutes));
   const [repeats, setRepeats] = useState<Repeats>(parsed?.freq === "MONTHLY" ? "monthly" : "weekly");
   const [interval, setInterval] = useState(String(parsed?.freq === "WEEKLY" ? parsed.interval : 1));
@@ -77,7 +92,7 @@ export function EditSeriesForm({
         title,
         type,
         location_id: locationId || null,
-        first_occurrence_at: new Date(firstOccurrence).toISOString(),
+        first_occurrence_at: fromZonedInputValue(firstOccurrence, timeZone).toISOString(),
         duration_minutes: Number(durationMinutes),
         recurrence_rule: recurrenceRule,
       })
@@ -101,8 +116,8 @@ export function EditSeriesForm({
         .gte("start_time", new Date().toISOString());
 
       for (const futureEvent of futureEvents ?? []) {
-        const start = new Date(futureEvent.start_time);
-        start.setHours(newHour, newMinute, 0, 0);
+        const wall = utcToZonedWallTime(new Date(futureEvent.start_time), timeZone);
+        const start = zonedWallTimeToUtc({ ...wall, hour: newHour, minute: newMinute, second: 0 }, timeZone);
         const end = new Date(start.getTime() + durationMs);
         await supabase
           .from("events")
