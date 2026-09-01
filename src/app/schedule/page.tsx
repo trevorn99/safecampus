@@ -4,6 +4,8 @@ import { AppHeader } from "@/components/AppHeader";
 import { AssignmentStatusButtons } from "./AssignmentStatusButtons";
 import { EventCalendar } from "@/components/EventCalendar";
 import { calendarWindow } from "@/lib/calendarWindow";
+import { resolveTimeZone } from "@/lib/resolveTimeZone";
+import { formatEventTimeRange } from "@/lib/formatDateTime";
 import styles from "@/styles/ui.module.css";
 
 type MyAssignment = {
@@ -26,7 +28,7 @@ export default async function SchedulePage() {
 
   const { todayIso, minMonthIso, maxMonthIso, rangeStartIso, rangeEndExclusiveIso } = calendarWindow();
 
-  const [{ data: events }, { data: myAssignments }] = await Promise.all([
+  const [{ data: events }, { data: myAssignments }, timeZone] = await Promise.all([
     supabase
       .from("events")
       .select("id, title, start_time, type")
@@ -39,6 +41,7 @@ export default async function SchedulePage() {
       .select("id, status, event_positions(id, title, start_time, events(title))")
       .eq("member_id", member.id)
       .returns<MyAssignment[]>(),
+    resolveTimeZone(supabase, member.organization_id, null),
   ]);
 
   const upcomingAssignments = (myAssignments ?? [])
@@ -69,7 +72,7 @@ export default async function SchedulePage() {
                       <p className={styles.itemName}>
                         {position.title} · {eventTitle}
                       </p>
-                      <p className={styles.itemMeta}>{new Date(position.start_time).toLocaleString()}</p>
+                      <p className={styles.itemMeta}>{formatEventTimeRange(position.start_time, null, timeZone)}</p>
                     </div>
                     <AssignmentStatusButtons assignmentId={assignment.id} status={assignment.status} />
                   </li>
@@ -105,6 +108,7 @@ export default async function SchedulePage() {
             today={todayIso}
             minMonth={minMonthIso}
             maxMonth={maxMonthIso}
+            timeZone={timeZone}
             canCreateEvents={isAdmin}
           />
         </div>

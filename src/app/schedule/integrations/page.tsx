@@ -5,6 +5,7 @@ import { requireMembership } from "@/lib/session";
 import { AppHeader } from "@/components/AppHeader";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { formatEventTimeRange } from "@/lib/formatDateTime";
+import { resolveTimeZone } from "@/lib/resolveTimeZone";
 import { CredentialsForm } from "./CredentialsForm";
 import { ImportButton } from "./ImportButton";
 import { DisconnectButton } from "./DisconnectButton";
@@ -39,6 +40,8 @@ export default async function IntegrationsPage({
     .select("pco_connected")
     .eq("id", member.organization_id)
     .single();
+
+  const timeZone = await resolveTimeZone(supabase, member.organization_id, null);
 
   // pco_app_credentials has zero client RLS policies by design (the secret
   // must never be reachable from the browser) — this read only ever runs
@@ -161,7 +164,7 @@ export default async function IntegrationsPage({
                 <li key={candidate.id} className={styles.listRow}>
                   <div>
                     <p className={styles.itemName}>{candidate.title}</p>
-                    <p className={styles.itemMeta}>{formatEventTimeRange(candidate.starts_at, candidate.ends_at)}</p>
+                    <p className={styles.itemMeta}>{formatEventTimeRange(candidate.starts_at, candidate.ends_at, timeZone)}</p>
                   </div>
                   <Link
                     href={`/schedule/new?fromPco=${candidate.id}`}
@@ -187,7 +190,7 @@ export default async function IntegrationsPage({
                   <li key={row.id} className={styles.listRow}>
                     <div>
                       <p className={styles.itemName}>{eventTitle ?? row.title}</p>
-                      <p className={styles.itemMeta}>{formatEventTimeRange(row.starts_at, row.ends_at)}</p>
+                      <p className={styles.itemMeta}>{formatEventTimeRange(row.starts_at, row.ends_at, timeZone)}</p>
                     </div>
                     <Link href={`/schedule/${row.promoted_event_id}`} className={styles.link}>
                       View event

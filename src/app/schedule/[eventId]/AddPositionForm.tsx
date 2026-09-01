@@ -3,15 +3,25 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { utcToZonedWallTime, zonedWallTimeToUtc } from "@/lib/timezone";
 import { DateTimeField } from "@/components/DateTimeField";
 import styles from "@/styles/ui.module.css";
 
 type Option = { id: string; name: string };
 
-function toLocalInputValue(iso: string) {
-  const date = new Date(iso);
+// Position times are wall-clock times in the event's location/org timezone
+// (see src/lib/eventSeries.ts), not the admin's browser timezone.
+function toZonedInputValue(iso: string, timeZone: string) {
+  const wall = utcToZonedWallTime(new Date(iso), timeZone);
   const pad = (n: number) => String(n).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  return `${wall.year}-${pad(wall.month)}-${pad(wall.day)}T${pad(wall.hour)}:${pad(wall.minute)}`;
+}
+
+function fromZonedInputValue(value: string, timeZone: string): Date {
+  const [datePart, timePart] = value.split("T");
+  const [year, month, day] = datePart.split("-").map(Number);
+  const [hour, minute] = timePart.split(":").map(Number);
+  return zonedWallTimeToUtc({ year, month, day, hour, minute, second: 0 }, timeZone);
 }
 
 export function AddPositionForm({
@@ -19,17 +29,19 @@ export function AddPositionForm({
   eventStartTime,
   teams,
   locations,
+  timeZone,
 }: {
   eventId: string;
   eventStartTime: string;
   teams: Option[];
   locations: Option[];
+  timeZone: string;
 }) {
   const router = useRouter();
   const [title, setTitle] = useState("");
   const [teamId, setTeamId] = useState("");
   const [locationId, setLocationId] = useState("");
-  const [startTime, setStartTime] = useState(toLocalInputValue(eventStartTime));
+  const [startTime, setStartTime] = useState(toZonedInputValue(eventStartTime, timeZone));
   const [endTime, setEndTime] = useState("");
   const [endTimeResetKey, setEndTimeResetKey] = useState(0);
   const [slots, setSlots] = useState("1");
@@ -53,8 +65,8 @@ export function AddPositionForm({
       title,
       team_id: teamId || null,
       location_id: locationId || null,
-      start_time: new Date(startTime).toISOString(),
-      end_time: endTime ? new Date(endTime).toISOString() : null,
+      start_time: fromZonedInputValue(startTime, timeZone).toISOString(),
+      end_time: endTime ? fromZonedInputValue(endTime, timeZone).toISOString() : null,
       slots: Number(slots),
     });
 

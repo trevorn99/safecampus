@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { eventTypeLabel } from "@/lib/eventTypes";
+import { utcToZonedWallTime } from "@/lib/timezone";
 import styles from "@/styles/ui.module.css";
 
 type CalendarEvent = { id: string; title: string; start_time: string; type?: string };
@@ -22,8 +23,20 @@ function isSameDay(a: Date, b: Date) {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }
 
+// Grid cells are plain calendar dates (no timezone involved), so this stays
+// a simple browser-local key. Events are real UTC instants, though — see
+// eventDayKey below, which is what actually needs the org/location timezone.
 function dayKey(date: Date) {
   return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+}
+
+// Which grid day an event's start_time falls on, and what time-of-day to
+// show for it, has to go through the org/location timezone — otherwise an
+// event lands on the wrong day (or shows the wrong hour) whenever the
+// viewer's browser isn't in that timezone.
+function eventDayKey(iso: string, timeZone: string) {
+  const wall = utcToZonedWallTime(new Date(iso), timeZone);
+  return `${wall.year}-${wall.month - 1}-${wall.day}`;
 }
 
 // YYYY-MM-DD, for the ?date= param the New Event page reads to pre-fill a
@@ -49,12 +62,14 @@ export function EventCalendar({
   today,
   minMonth,
   maxMonth,
+  timeZone,
   canCreateEvents = false,
 }: {
   events: CalendarEvent[];
   today: string;
   minMonth: string;
   maxMonth: string;
+  timeZone: string;
   canCreateEvents?: boolean;
 }) {
   const todayDate = new Date(today);
@@ -66,7 +81,7 @@ export function EventCalendar({
 
   const eventsByDay = new Map<string, CalendarEvent[]>();
   for (const event of events) {
-    const key = dayKey(new Date(event.start_time));
+    const key = eventDayKey(event.start_time, timeZone);
     const list = eventsByDay.get(key) ?? [];
     list.push(event);
     eventsByDay.set(key, list);
@@ -176,7 +191,7 @@ export function EventCalendar({
               <div className={styles.tagRow}>
                 {event.type && <span className={styles.pillMuted}>{eventTypeLabel(event.type)}</span>}
                 <span className={styles.itemMeta}>
-                  {new Date(event.start_time).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
+                  {new Date(event.start_time).toLocaleTimeString([], { hour: "numeric", minute: "2-digit", timeZone })}
                 </span>
               </div>
             </li>

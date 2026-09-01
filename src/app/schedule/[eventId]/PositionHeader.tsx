@@ -12,6 +12,7 @@ export function PositionHeader({
   teams,
   locations,
   seriesId,
+  timeZone,
 }: {
   position: {
     id: string;
@@ -27,6 +28,7 @@ export function PositionHeader({
   teams: Option[];
   locations: Option[];
   seriesId: string | null;
+  timeZone: string;
 }) {
   const [editing, setEditing] = useState(false);
 
@@ -39,6 +41,7 @@ export function PositionHeader({
           teams={teams}
           locations={locations}
           seriesId={seriesId}
+          timeZone={timeZone}
           onDone={() => setEditing(false)}
         />
       </div>

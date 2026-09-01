@@ -2,6 +2,7 @@ import "server-only";
 import { rrulestr } from "rrule";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { utcToZonedWallTime, zonedWallTimeToUtc, type WallTime } from "@/lib/timezone";
+import { resolveTimeZone } from "@/lib/resolveTimeZone";
 
 // How far ahead a single generation pass creates events. The daily cron
 // re-runs this for every active series, so occurrences just beyond this
@@ -48,27 +49,6 @@ export type EventSeriesRow = {
   first_occurrence_at: string;
   duration_minutes: number;
 };
-
-async function resolveTimeZone(
-  supabase: SupabaseClient,
-  organizationId: string,
-  locationId: string | null,
-): Promise<string> {
-  if (locationId) {
-    const { data: location } = await supabase
-      .from("locations")
-      .select("timezone")
-      .eq("id", locationId)
-      .maybeSingle();
-    if (location?.timezone) return location.timezone;
-  }
-  const { data: organization } = await supabase
-    .from("organizations")
-    .select("timezone")
-    .eq("id", organizationId)
-    .single();
-  return organization?.timezone ?? "UTC";
-}
 
 export async function generateSeriesOccurrences(
   supabase: SupabaseClient,

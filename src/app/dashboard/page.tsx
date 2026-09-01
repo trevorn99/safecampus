@@ -5,6 +5,7 @@ import { Avatar } from "@/components/Avatar";
 import { EventCalendar } from "@/components/EventCalendar";
 import { getAvatarUrlMap } from "@/lib/avatars";
 import { calendarWindow } from "@/lib/calendarWindow";
+import { resolveTimeZone } from "@/lib/resolveTimeZone";
 import styles from "@/styles/ui.module.css";
 
 // A report older than this reads as "just part of the page" rather than
@@ -36,7 +37,7 @@ export default async function DashboardPage() {
 
   const { todayIso, minMonthIso, maxMonthIso, rangeStartIso, rangeEndExclusiveIso } = calendarWindow();
 
-  const [{ data: memberRow }, { data: events }, { data: latestReport }] = await Promise.all([
+  const [{ data: memberRow }, { data: events }, { data: latestReport }, timeZone] = await Promise.all([
     supabase.from("members").select("profile_picture_url").eq("id", member.id).single(),
     supabase
       .from("events")
@@ -56,6 +57,7 @@ export default async function DashboardPage() {
       .order("generated_at", { ascending: false })
       .limit(1)
       .maybeSingle(),
+    resolveTimeZone(supabase, member.organization_id, null),
   ]);
 
   const avatarUrls = await getAvatarUrlMap(supabase, [memberRow?.profile_picture_url]);
@@ -114,6 +116,7 @@ export default async function DashboardPage() {
             today={todayIso}
             minMonth={minMonthIso}
             maxMonth={maxMonthIso}
+            timeZone={timeZone}
             canCreateEvents={isAdmin}
           />
         </div>

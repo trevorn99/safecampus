@@ -11,6 +11,7 @@ import { DeletePositionButton } from "./DeletePositionButton";
 import { PositionHeader } from "./PositionHeader";
 import { AttendanceCard } from "./AttendanceCard";
 import { formatEventTimeRange } from "@/lib/formatDateTime";
+import { resolveTimeZone } from "@/lib/resolveTimeZone";
 import { eventTypeLabel } from "@/lib/eventTypes";
 import styles from "@/styles/ui.module.css";
 
@@ -68,6 +69,8 @@ export default async function EventDetailPage({
     );
   }
 
+  const timeZone = await resolveTimeZone(supabase, member.organization_id, event.location_id);
+
   const positionIds = (positions ?? []).map((p) => p.id);
   let assignments: AssignmentRow[] = [];
   if (positionIds.length > 0) {
@@ -110,7 +113,7 @@ export default async function EventDetailPage({
           <h1 className={styles.pageTitle}>{event.title}</h1>
           <p className={styles.subtitle}>
             {organizationName} · {eventTypeLabel(event.type)} ·{" "}
-            {formatEventTimeRange(event.start_time, event.end_time)} ·{" "}
+            {formatEventTimeRange(event.start_time, event.end_time, timeZone)} ·{" "}
             {event.location_id ? (locationName.get(event.location_id) ?? "Unknown location") : "Org-wide"}
           </p>
         </div>
@@ -128,9 +131,9 @@ export default async function EventDetailPage({
           const eligibleMembers = eligiblePool.filter((m) => !assignedMemberIds.has(m.id));
 
           const metaText = [
-            new Date(position.start_time).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) +
+            new Date(position.start_time).toLocaleTimeString([], { hour: "numeric", minute: "2-digit", timeZone }) +
               (position.end_time
-                ? ` – ${new Date(position.end_time).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`
+                ? ` – ${new Date(position.end_time).toLocaleTimeString([], { hour: "numeric", minute: "2-digit", timeZone })}`
                 : ""),
             position.team_id ? (teams?.find((t) => t.id === position.team_id)?.name ?? "Unknown team") : null,
             position.location_id ? (locationName.get(position.location_id) ?? "Unknown location") : null,
@@ -148,6 +151,7 @@ export default async function EventDetailPage({
                   teams={teams ?? []}
                   locations={locations ?? []}
                   seriesId={event.series_id}
+                  timeZone={timeZone}
                 />
               ) : (
                 <div className={styles.cardHeader}>
@@ -213,6 +217,7 @@ export default async function EventDetailPage({
               eventStartTime={event.start_time}
               teams={teams ?? []}
               locations={locations ?? []}
+              timeZone={timeZone}
             />
           </div>
         )}
