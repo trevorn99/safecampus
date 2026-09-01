@@ -39,16 +39,26 @@ export default async function SeriesDetailPage({
     );
   }
 
-  const [{ data: generatedEvents }, { data: locations }, { data: eventTypes }] = await Promise.all([
-    supabase
-      .from("events")
-      .select("id, title, start_time, end_time")
-      .eq("series_id", series.id)
-      .order("start_time", { ascending: false })
-      .limit(20),
-    supabase.from("locations").select("id, name").eq("organization_id", member.organization_id),
-    supabase.from("event_types").select("name").eq("organization_id", member.organization_id).order("name"),
-  ]);
+  const [{ data: generatedEvents }, { data: locations }, { data: eventTypes }, { data: organization }] =
+    await Promise.all([
+      supabase
+        .from("events")
+        .select("id, title, start_time, end_time")
+        .eq("series_id", series.id)
+        .order("start_time", { ascending: false })
+        .limit(20),
+      supabase.from("locations").select("id, name, timezone").eq("organization_id", member.organization_id),
+      supabase.from("event_types").select("name").eq("organization_id", member.organization_id).order("name"),
+      supabase.from("organizations").select("timezone").eq("id", member.organization_id).single(),
+    ]);
+
+  // Matches resolveTimeZone in src/lib/eventSeries.ts — the series' location
+  // timezone if set, else the org's — since first_occurrence_at is a
+  // wall-clock time in that zone, not the admin's browser timezone.
+  const timeZone =
+    (series.location_id && locations?.find((l) => l.id === series.location_id)?.timezone) ||
+    organization?.timezone ||
+    "UTC";
 
   return (
     <>
@@ -61,7 +71,12 @@ export default async function SeriesDetailPage({
           </p>
         </div>
 
-        <SeriesHeader series={series} eventTypes={(eventTypes ?? []).map((t) => t.name)} locations={locations ?? []} />
+        <SeriesHeader
+          series={series}
+          eventTypes={(eventTypes ?? []).map((t) => t.name)}
+          locations={locations ?? []}
+          timeZone={timeZone}
+        />
 
         <div className={styles.card}>
           <div className={styles.cardHeader}>

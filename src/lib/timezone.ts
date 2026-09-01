@@ -1,4 +1,7 @@
-import "server-only";
+// Pure Intl.DateTimeFormat math — no server-only APIs — so this is safe to
+// import from client components too (see EditSeriesForm, which needs it to
+// show/edit a series' wall-clock time in the org's timezone rather than the
+// admin's browser timezone).
 
 export type WallTime = {
   year: number;

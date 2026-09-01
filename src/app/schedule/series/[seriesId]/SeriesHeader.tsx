@@ -13,6 +13,7 @@ export function SeriesHeader({
   series,
   eventTypes,
   locations,
+  timeZone,
 }: {
   series: {
     id: string;
@@ -26,6 +27,7 @@ export function SeriesHeader({
   };
   eventTypes: string[];
   locations: Option[];
+  timeZone: string;
 }) {
   const [editing, setEditing] = useState(false);
 
@@ -35,7 +37,13 @@ export function SeriesHeader({
         <div className={styles.cardHeader}>
           <h2 className={styles.cardTitle}>Edit series</h2>
         </div>
-        <EditSeriesForm series={series} eventTypes={eventTypes} locations={locations} onDone={() => setEditing(false)} />
+        <EditSeriesForm
+          series={series}
+          eventTypes={eventTypes}
+          locations={locations}
+          timeZone={timeZone}
+          onDone={() => setEditing(false)}
+        />
       </div>
     );
   }
@@ -43,7 +51,8 @@ export function SeriesHeader({
   return (
     <div className={styles.card}>
       <p className={styles.itemMeta}>
-        First occurrence {new Date(series.first_occurrence_at).toLocaleString()} · {series.duration_minutes} minutes
+        First occurrence {new Date(series.first_occurrence_at).toLocaleString(undefined, { timeZone })} ·{" "}
+        {series.duration_minutes} minutes
       </p>
       <div className={styles.actions}>
         <button type="button" className={`${styles.button} ${styles.buttonSecondary}`} onClick={() => setEditing(true)}>
