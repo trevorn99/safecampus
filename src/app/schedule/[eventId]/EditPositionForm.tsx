@@ -3,16 +3,26 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { utcToZonedWallTime, zonedWallTimeToUtc } from "@/lib/timezone";
 import { DateTimeField } from "@/components/DateTimeField";
 import styles from "@/styles/ui.module.css";
 
 type Option = { id: string; name: string };
 
-function toLocalInputValue(iso: string | null) {
+// Position times are wall-clock times in the event's location/org timezone
+// (see src/lib/eventSeries.ts), not the admin's browser timezone.
+function toZonedInputValue(iso: string | null, timeZone: string) {
   if (!iso) return "";
-  const date = new Date(iso);
+  const wall = utcToZonedWallTime(new Date(iso), timeZone);
   const pad = (n: number) => String(n).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  return `${wall.year}-${pad(wall.month)}-${pad(wall.day)}T${pad(wall.hour)}:${pad(wall.minute)}`;
+}
+
+function fromZonedInputValue(value: string, timeZone: string): Date {
+  const [datePart, timePart] = value.split("T");
+  const [year, month, day] = datePart.split("-").map(Number);
+  const [hour, minute] = timePart.split(":").map(Number);
+  return zonedWallTimeToUtc({ year, month, day, hour, minute, second: 0 }, timeZone);
 }
 
 export function EditPositionForm({
@@ -20,6 +30,7 @@ export function EditPositionForm({
   teams,
   locations,
   seriesId,
+  timeZone,
   onDone,
 }: {
   position: {
@@ -35,14 +46,15 @@ export function EditPositionForm({
   teams: Option[];
   locations: Option[];
   seriesId: string | null;
+  timeZone: string;
   onDone: () => void;
 }) {
   const router = useRouter();
   const [title, setTitle] = useState(position.title);
   const [teamId, setTeamId] = useState(position.team_id ?? "");
   const [locationId, setLocationId] = useState(position.location_id ?? "");
-  const [startTime, setStartTime] = useState(toLocalInputValue(position.start_time));
-  const [endTime, setEndTime] = useState(toLocalInputValue(position.end_time));
+  const [startTime, setStartTime] = useState(toZonedInputValue(position.start_time, timeZone));
+  const [endTime, setEndTime] = useState(toZonedInputValue(position.end_time, timeZone));
   const [slots, setSlots] = useState(String(position.slots));
   const [applyToSeries, setApplyToSeries] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -73,8 +85,8 @@ export function EditPositionForm({
       .from("event_positions")
       .update({
         ...shared,
-        start_time: new Date(startTime).toISOString(),
-        end_time: endTime ? new Date(endTime).toISOString() : null,
+        start_time: fromZonedInputValue(startTime, timeZone).toISOString(),
+        end_time: endTime ? fromZonedInputValue(endTime, timeZone).toISOString() : null,
       })
       .eq("id", position.id);
 

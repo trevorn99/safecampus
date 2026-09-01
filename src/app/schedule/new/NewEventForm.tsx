@@ -5,10 +5,20 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { WEEKDAYS, ORDINALS, buildWeeklyRule, buildMonthlyRule } from "@/lib/recurrence";
+import { zonedWallTimeToUtc } from "@/lib/timezone";
 import { DateTimeField } from "@/components/DateTimeField";
 import styles from "@/styles/ui.module.css";
 
 type Option = { id: string; name: string };
+type LocationOption = { id: string; name: string; timezone: string | null };
+
+function fromZonedInputValue(value: string, timeZone: string): Date {
+  const [datePart, timePart] = value.split("T");
+  const [year, month, day] = datePart.split("-").map(Number);
+  const [hour, minute] = timePart.split(":").map(Number);
+  return zonedWallTimeToUtc({ year, month, day, hour, minute, second: 0 }, timeZone);
+}
+
 type TemplatePosition = {
   id: string;
   template_id: string;
@@ -37,6 +47,7 @@ export function NewEventForm({
   organizationId,
   eventTypes,
   locations,
+  orgTimeZone,
   teams,
   templates,
   templatePositions,
@@ -45,7 +56,8 @@ export function NewEventForm({
 }: {
   organizationId: string;
   eventTypes: string[];
-  locations: Option[];
+  locations: LocationOption[];
+  orgTimeZone: string;
   teams: Option[];
   templates: Option[];
   templatePositions: TemplatePosition[];
@@ -58,6 +70,7 @@ export function NewEventForm({
   const [locationId, setLocationId] = useState("");
   const [startTime, setStartTime] = useState(pcoCandidate?.startTime ?? (defaultDate ? `${defaultDate}T09:00` : ""));
   const [endTime, setEndTime] = useState(pcoCandidate?.endTime ?? "");
+  const timeZone = locations.find((l) => l.id === locationId)?.timezone || orgTimeZone;
   const [templateId, setTemplateId] = useState("");
   const [positions, setPositions] = useState<PositionRow[]>([]);
   const [saveAsTemplate, setSaveAsTemplate] = useState(false);
@@ -149,8 +162,8 @@ export function NewEventForm({
     setError("");
 
     const supabase = createClient();
-    const startTimeIso = new Date(startTime).toISOString();
-    const endTimeIso = endTime ? new Date(endTime).toISOString() : null;
+    const startTimeIso = fromZonedInputValue(startTime, timeZone).toISOString();
+    const endTimeIso = endTime ? fromZonedInputValue(endTime, timeZone).toISOString() : null;
 
     try {
       let newTemplateId: string | null = null;

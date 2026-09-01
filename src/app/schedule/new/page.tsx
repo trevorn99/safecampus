@@ -1,14 +1,16 @@
 import { redirect } from "next/navigation";
 import { requireMembership } from "@/lib/session";
 import { AppHeader } from "@/components/AppHeader";
+import { utcToZonedWallTime } from "@/lib/timezone";
+import { resolveTimeZone } from "@/lib/resolveTimeZone";
 import { NewEventForm } from "./NewEventForm";
 import styles from "@/styles/ui.module.css";
 
-function toLocalInputValue(iso: string | null) {
+function toZonedInputValue(iso: string | null, timeZone: string) {
   if (!iso) return "";
-  const date = new Date(iso);
+  const wall = utcToZonedWallTime(new Date(iso), timeZone);
   const pad = (n: number) => String(n).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  return `${wall.year}-${pad(wall.month)}-${pad(wall.day)}T${pad(wall.hour)}:${pad(wall.minute)}`;
 }
 
 export default async function NewEventPage({
@@ -24,12 +26,14 @@ export default async function NewEventPage({
     redirect("/schedule");
   }
 
-  const [{ data: locations }, { data: teams }, { data: templates }, { data: eventTypes }] = await Promise.all([
-    supabase.from("locations").select("id, name").eq("organization_id", member.organization_id),
-    supabase.from("teams").select("id, name").eq("organization_id", member.organization_id),
-    supabase.from("event_templates").select("id, name").eq("organization_id", member.organization_id),
-    supabase.from("event_types").select("name").eq("organization_id", member.organization_id).order("name"),
-  ]);
+  const [{ data: locations }, { data: teams }, { data: templates }, { data: eventTypes }, orgTimeZone] =
+    await Promise.all([
+      supabase.from("locations").select("id, name, timezone").eq("organization_id", member.organization_id),
+      supabase.from("teams").select("id, name").eq("organization_id", member.organization_id),
+      supabase.from("event_templates").select("id, name").eq("organization_id", member.organization_id),
+      supabase.from("event_types").select("name").eq("organization_id", member.organization_id).order("name"),
+      resolveTimeZone(supabase, member.organization_id, null),
+    ]);
 
   const templateIds = (templates ?? []).map((t) => t.id);
   const { data: templatePositions } =
@@ -52,8 +56,8 @@ export default async function NewEventPage({
       pcoCandidate = {
         id: candidate.id,
         title: candidate.title,
-        startTime: toLocalInputValue(candidate.starts_at),
-        endTime: toLocalInputValue(candidate.ends_at),
+        startTime: toZonedInputValue(candidate.starts_at, orgTimeZone),
+        endTime: toZonedInputValue(candidate.ends_at, orgTimeZone),
       };
     }
   }
@@ -66,6 +70,7 @@ export default async function NewEventPage({
           organizationId={member.organization_id}
           eventTypes={(eventTypes ?? []).map((t) => t.name)}
           locations={locations ?? []}
+          orgTimeZone={orgTimeZone}
           teams={teams ?? []}
           templates={templates ?? []}
           templatePositions={templatePositions ?? []}
