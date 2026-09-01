@@ -448,6 +448,15 @@
   flex-wrap: wrap;
   gap: 0.4rem;
 }
+/* A <select> directly in a tagRow (e.g. "assign someone" next to its
+   button) shouldn't claim the row's full width the way .select normally
+   does standalone — that forces it onto its own line and strands the
+   button below it. */
+.tagRow > .select {
+  width: auto;
+  flex: 1 1 auto;
+  min-width: 0;
+}
 
 .dateTimeRow {
   display: flex;

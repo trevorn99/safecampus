@@ -118,6 +118,8 @@ export default async function EventDetailPage({
           </p>
         </div>
 
+        <h2 className={styles.cardTitle}>Positions</h2>
+
         {(positions ?? []).length === 0 && (
           <p className={styles.helperText}>No positions have been added to this event yet.</p>
         )}
@@ -193,19 +195,14 @@ export default async function EventDetailPage({
               {isAdmin && positionAssignments.length < position.slots && (
                 <AssignMemberForm positionId={position.id} eligibleMembers={eligibleMembers} />
               )}
-              {isAdmin && <DeletePositionButton positionId={position.id} title={position.title} />}
+              {isAdmin && (
+                <div className={styles.actions}>
+                  <DeletePositionButton positionId={position.id} title={position.title} />
+                </div>
+              )}
             </div>
           );
         })}
-
-        {isAdmin && (
-          <AttendanceCard
-            eventId={event.id}
-            locationId={event.location_id}
-            members={attendanceMembers}
-            initialAttendance={attendanceRows ?? []}
-          />
-        )}
 
         {isAdmin && (
           <div className={styles.card}>
@@ -220,6 +217,15 @@ export default async function EventDetailPage({
               timeZone={timeZone}
             />
           </div>
+        )}
+
+        {isAdmin && (
+          <AttendanceCard
+            eventId={event.id}
+            locationId={event.location_id}
+            members={attendanceMembers}
+            initialAttendance={attendanceRows ?? []}
+          />
         )}
 
         <Link href="/schedule" className={styles.link}>
