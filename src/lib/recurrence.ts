@@ -33,6 +33,35 @@ export function buildMonthlyRule(ordinal: string, day: string): string {
   return `FREQ=MONTHLY;BYDAY=${ordinal}${day}`;
 }
 
+export type ParsedRecurrenceRule =
+  | { freq: "WEEKLY"; interval: number; days: string[] }
+  | { freq: "MONTHLY"; ordinal: string; day: string };
+
+// Inverse of buildWeeklyRule/buildMonthlyRule, for pre-filling an edit form
+// from a stored rule. Returns null for anything outside that subset.
+export function parseRecurrenceRule(rule: string): ParsedRecurrenceRule | null {
+  const parts = Object.fromEntries(
+    rule.split(";").map((part) => part.split("=") as [string, string]),
+  );
+
+  if (parts.FREQ === "WEEKLY") {
+    return {
+      freq: "WEEKLY",
+      interval: parts.INTERVAL ? Number(parts.INTERVAL) : 1,
+      days: (parts.BYDAY ?? "").split(",").filter(Boolean),
+    };
+  }
+
+  if (parts.FREQ === "MONTHLY") {
+    const match = (parts.BYDAY ?? "").match(/^(-?\d+)([A-Z]{2})$/);
+    if (match) {
+      return { freq: "MONTHLY", ordinal: match[1], day: match[2] };
+    }
+  }
+
+  return null;
+}
+
 export function describeRecurrenceRule(rule: string): string {
   const parts = Object.fromEntries(
     rule.split(";").map((part) => part.split("=") as [string, string]),

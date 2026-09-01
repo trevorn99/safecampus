@@ -4,9 +4,7 @@ import { requireMembership } from "@/lib/session";
 import { AppHeader } from "@/components/AppHeader";
 import { describeRecurrenceRule } from "@/lib/recurrence";
 import { formatEventTimeRange } from "@/lib/formatDateTime";
-import { ActiveToggle } from "./ActiveToggle";
-import { GenerateNowButton } from "./GenerateNowButton";
-import { DeleteSeriesButton } from "./DeleteSeriesButton";
+import { SeriesHeader } from "./SeriesHeader";
 import styles from "@/styles/ui.module.css";
 
 export default async function SeriesDetailPage({
@@ -15,7 +13,7 @@ export default async function SeriesDetailPage({
   params: Promise<{ seriesId: string }>;
 }) {
   const { seriesId } = await params;
-  const { supabase, organizationName, isAdmin, isPlatformAdmin } = await requireMembership();
+  const { supabase, member, organizationName, isAdmin, isPlatformAdmin } = await requireMembership();
 
   if (!isAdmin) {
     redirect("/schedule");
@@ -23,7 +21,7 @@ export default async function SeriesDetailPage({
 
   const { data: series } = await supabase
     .from("event_series")
-    .select("id, title, recurrence_rule, first_occurrence_at, duration_minutes, active, location_id")
+    .select("id, title, type, recurrence_rule, first_occurrence_at, duration_minutes, active, location_id")
     .eq("id", seriesId)
     .maybeSingle();
 
@@ -41,12 +39,16 @@ export default async function SeriesDetailPage({
     );
   }
 
-  const { data: generatedEvents } = await supabase
-    .from("events")
-    .select("id, title, start_time, end_time")
-    .eq("series_id", series.id)
-    .order("start_time", { ascending: false })
-    .limit(20);
+  const [{ data: generatedEvents }, { data: locations }, { data: eventTypes }] = await Promise.all([
+    supabase
+      .from("events")
+      .select("id, title, start_time, end_time")
+      .eq("series_id", series.id)
+      .order("start_time", { ascending: false })
+      .limit(20),
+    supabase.from("locations").select("id, name").eq("organization_id", member.organization_id),
+    supabase.from("event_types").select("name").eq("organization_id", member.organization_id).order("name"),
+  ]);
 
   return (
     <>
@@ -59,17 +61,7 @@ export default async function SeriesDetailPage({
           </p>
         </div>
 
-        <div className={styles.card}>
-          <p className={styles.itemMeta}>
-            First occurrence {new Date(series.first_occurrence_at).toLocaleString()} · {series.duration_minutes}{" "}
-            minutes
-          </p>
-          <div className={styles.actions}>
-            <ActiveToggle seriesId={series.id} active={series.active} />
-            <DeleteSeriesButton seriesId={series.id} title={series.title} />
-          </div>
-          <GenerateNowButton seriesId={series.id} />
-        </div>
+        <SeriesHeader series={series} eventTypes={(eventTypes ?? []).map((t) => t.name)} locations={locations ?? []} />
 
         <div className={styles.card}>
           <div className={styles.cardHeader}>

@@ -27,16 +27,19 @@ function buildNav(isAdmin: boolean, isPlatformAdmin: boolean): NavEntry[] {
     },
     { href: "/threat-intelligence", label: "Threat Intelligence" },
     ...(isAdmin ? [{ href: "/analytics", label: "Analytics" }] : []),
-    isAdmin
-      ? {
-          label: "Account",
-          items: [
-            { href: "/account/mfa", label: "Security & MFA" },
-            { href: "/billing", label: "Billing" },
-            { href: "/audit-log", label: "Audit log" },
-          ],
-        }
-      : { href: "/account/mfa", label: "Account" },
+    { href: "/account/mfa", label: "Account" },
+    ...(isAdmin
+      ? [
+          {
+            label: "Organization",
+            items: [
+              { href: "/organization", label: "Settings" },
+              { href: "/billing", label: "Billing" },
+              { href: "/audit-log", label: "Audit log" },
+            ],
+          },
+        ]
+      : []),
     {
       label: "Support",
       items: [

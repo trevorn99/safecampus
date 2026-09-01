@@ -733,6 +733,16 @@
   flex-direction: column;
   gap: 0.3rem;
 }
+/* cardHeader's 0.3rem gap is right for a title-to-subtitle pair, but too
+   tight once there's more than one paragraph of body copy underneath —
+   this gives those paragraphs real breathing room and a readable line
+   height, without changing the tighter title/subtitle spacing elsewhere. */
+.cardDescription {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  line-height: 1.5;
+}
 .cardTitle {
   font-size: 1.15rem;
   font-weight: 700;

@@ -64,11 +64,13 @@ export function AddonToggle({
     <div className={styles.card}>
       <div className={styles.cardHeader}>
         <h2 className={styles.cardTitle}>{title}</h2>
-        {description.map((paragraph, index) => (
-          <p key={index} className={styles.helperText}>
-            {paragraph}
-          </p>
-        ))}
+        <div className={styles.cardDescription}>
+          {description.map((paragraph, index) => (
+            <p key={index} className={styles.helperText}>
+              {paragraph}
+            </p>
+          ))}
+        </div>
       </div>
       {!hasSubscription ? (
         <p className={styles.helperText}>Subscribe to a plan before enabling add-ons.</p>
