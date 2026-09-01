@@ -48,6 +48,7 @@ export function EditSeriesForm({
   const [weekDays, setWeekDays] = useState<string[]>(parsed?.freq === "WEEKLY" ? parsed.days : []);
   const [ordinal, setOrdinal] = useState(parsed?.freq === "MONTHLY" ? parsed.ordinal : "1");
   const [monthDay, setMonthDay] = useState(parsed?.freq === "MONTHLY" ? parsed.day : "SU");
+  const [applyToEvents, setApplyToEvents] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -82,11 +83,41 @@ export function EditSeriesForm({
       })
       .eq("id", series.id);
 
-    setLoading(false);
     if (updateError) {
+      setLoading(false);
       setError(updateError.message);
       return;
     }
+
+    if (applyToEvents) {
+      const [, newTime] = firstOccurrence.split("T");
+      const [newHour, newMinute] = newTime.split(":").map(Number);
+      const durationMs = Number(durationMinutes) * 60_000;
+
+      const { data: futureEvents } = await supabase
+        .from("events")
+        .select("id, start_time")
+        .eq("series_id", series.id)
+        .gte("start_time", new Date().toISOString());
+
+      for (const futureEvent of futureEvents ?? []) {
+        const start = new Date(futureEvent.start_time);
+        start.setHours(newHour, newMinute, 0, 0);
+        const end = new Date(start.getTime() + durationMs);
+        await supabase
+          .from("events")
+          .update({
+            title,
+            type,
+            location_id: locationId || null,
+            start_time: start.toISOString(),
+            end_time: end.toISOString(),
+          })
+          .eq("id", futureEvent.id);
+      }
+    }
+
+    setLoading(false);
     onDone();
     router.refresh();
   }
@@ -226,9 +257,19 @@ export function EditSeriesForm({
         </div>
       )}
 
+      <label className={styles.checkboxRow}>
+        <input
+          type="checkbox"
+          checked={applyToEvents}
+          onChange={(event) => setApplyToEvents(event.target.checked)}
+        />
+        Also update this series&apos; upcoming events to match
+        <span className={styles.hint}>(title, time of day, and location — dates and positions stay as they are)</span>
+      </label>
       <p className={styles.hint}>
-        Changes apply to newly generated occurrences. Events already generated for future dates keep their current
-        title, time, and location — edit those individually if needed.
+        {applyToEvents
+          ? "Every upcoming event in this series will be updated to the title, time, and location above. Past events are left alone."
+          : "Changes apply to newly generated occurrences. Events already generated for future dates keep their current title, time, and location — edit those individually, or check the box above to update them all at once."}
       </p>
 
       <div className={styles.actions}>
