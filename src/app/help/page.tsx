@@ -10,6 +10,7 @@ const SECTIONS = [
   { id: "locations", label: "Locations & maps" },
   { id: "analytics", label: "Analytics" },
   { id: "account", label: "Account & security" },
+  { id: "organization", label: "Organization" },
   { id: "integrations", label: "Planning Center" },
   { id: "threat-intelligence", label: "Threat Intelligence" },
   { id: "identity-verification", label: "Identity verification" },
@@ -167,10 +168,24 @@ export default async function HelpPage() {
           </p>
           <p className={styles.docBody}>
             From the same page, members can opt in to SMS shift reminders — a text 3 days and 24 hours before
-            an assigned shift — if your organization has turned them on. Org admins turn SMS reminders on or
-            off for the whole organization from <strong>Account → Security &amp; MFA</strong> as well.
+            an assigned shift — if your organization has turned them on.
           </p>
         </div>
+
+        {isAdmin && (
+          <div id="organization" className={styles.card}>
+            <div className={styles.cardHeader}>
+              <h2 className={styles.cardTitle}>Organization</h2>
+            </div>
+            <p className={styles.docBody}>
+              Org admins manage organization-wide settings from <strong>Organization</strong> in the nav,
+              separate from personal <strong>Account</strong> settings: the organization&apos;s name, and the
+              master switch for SMS reminders (turning it off stops all shift-reminder texts org-wide, even for
+              members who&apos;ve opted in). <strong>Billing</strong> and the <strong>Audit log</strong> live
+              in that same nav group.
+            </p>
+          </div>
+        )}
 
         <div id="integrations" className={styles.card}>
           <div className={styles.cardHeader}>
