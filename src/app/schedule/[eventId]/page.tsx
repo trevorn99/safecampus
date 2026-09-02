@@ -9,6 +9,7 @@ import { AssignMemberForm } from "./AssignMemberForm";
 import { RemoveAssignmentButton } from "./RemoveAssignmentButton";
 import { DeletePositionButton } from "./DeletePositionButton";
 import { PositionHeader } from "./PositionHeader";
+import { SelfAssignButton } from "./SelfAssignButton";
 import { AttendanceCard } from "./AttendanceCard";
 import { formatEventTimeRange } from "@/lib/formatDateTime";
 import { resolveTimeZone } from "@/lib/resolveTimeZone";
@@ -131,6 +132,13 @@ export default async function EventDetailPage({
             ? (orgMembers ?? []).filter((m) => teamMemberIds.get(position.team_id!)?.has(m.id))
             : (orgMembers ?? []);
           const eligibleMembers = eligiblePool.filter((m) => !assignedMemberIds.has(m.id));
+          const requiredTeamName = position.team_id
+            ? (teams?.find((t) => t.id === position.team_id)?.name ?? "Unknown team")
+            : null;
+          const selfEligible =
+            (!position.team_id || teamMemberIds.get(position.team_id)?.has(member.id)) &&
+            !assignedMemberIds.has(member.id) &&
+            positionAssignments.length < position.slots;
 
           const metaText = [
             new Date(position.start_time).toLocaleTimeString([], { hour: "numeric", minute: "2-digit", timeZone }) +
@@ -193,8 +201,25 @@ export default async function EventDetailPage({
               </ul>
 
               {isAdmin && positionAssignments.length < position.slots && (
-                <AssignMemberForm positionId={position.id} eligibleMembers={eligibleMembers} />
+                <AssignMemberForm
+                  positionId={position.id}
+                  eligibleMembers={eligibleMembers}
+                  poolSize={eligiblePool.length}
+                  requiredTeamName={requiredTeamName}
+                  seriesId={event.series_id}
+                  templatePositionId={position.template_position_id}
+                />
               )}
+
+              {!isAdmin && selfEligible && (
+                <SelfAssignButton
+                  positionId={position.id}
+                  memberId={member.id}
+                  seriesId={event.series_id}
+                  templatePositionId={position.template_position_id}
+                />
+              )}
+
               {isAdmin && (
                 <div className={styles.actions}>
                   <DeletePositionButton positionId={position.id} title={position.title} />
