@@ -10,9 +10,13 @@ type Option = { id: string; name: string };
 export function AssignMemberForm({
   positionId,
   eligibleMembers,
+  poolSize,
+  requiredTeamName,
 }: {
   positionId: string;
   eligibleMembers: Option[];
+  poolSize: number;
+  requiredTeamName: string | null;
 }) {
   const router = useRouter();
   const [memberId, setMemberId] = useState("");
@@ -41,6 +45,14 @@ export function AssignMemberForm({
   }
 
   if (eligibleMembers.length === 0) {
+    if (poolSize === 0 && requiredTeamName) {
+      return (
+        <p className={styles.hint}>
+          No one is on the &quot;{requiredTeamName}&quot; team yet — add members to that team before you can assign
+          this position.
+        </p>
+      );
+    }
     return <p className={styles.hint}>Everyone eligible for this position is already assigned.</p>;
   }
 

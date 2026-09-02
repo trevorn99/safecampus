@@ -131,6 +131,9 @@ export default async function EventDetailPage({
             ? (orgMembers ?? []).filter((m) => teamMemberIds.get(position.team_id!)?.has(m.id))
             : (orgMembers ?? []);
           const eligibleMembers = eligiblePool.filter((m) => !assignedMemberIds.has(m.id));
+          const requiredTeamName = position.team_id
+            ? (teams?.find((t) => t.id === position.team_id)?.name ?? "Unknown team")
+            : null;
 
           const metaText = [
             new Date(position.start_time).toLocaleTimeString([], { hour: "numeric", minute: "2-digit", timeZone }) +
@@ -193,7 +196,12 @@ export default async function EventDetailPage({
               </ul>
 
               {isAdmin && positionAssignments.length < position.slots && (
-                <AssignMemberForm positionId={position.id} eligibleMembers={eligibleMembers} />
+                <AssignMemberForm
+                  positionId={position.id}
+                  eligibleMembers={eligibleMembers}
+                  poolSize={eligiblePool.length}
+                  requiredTeamName={requiredTeamName}
+                />
               )}
               {isAdmin && (
                 <div className={styles.actions}>
