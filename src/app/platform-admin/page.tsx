@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { AppHeader } from "@/components/AppHeader";
 import { ExemptionToggle } from "./ExemptionToggle";
+import { ExtendTrialForm } from "./ExtendTrialForm";
 import { SupportAccessControls } from "./SupportAccessControls";
 import { TIER_LABEL, type PlanTier } from "@/lib/stripe";
 import styles from "@/styles/ui.module.css";
@@ -114,6 +115,12 @@ export default async function PlatformAdminPage() {
                       <span className={styles.controlLabel}>Billing</span>
                       <ExemptionToggle organizationId={org.id} exempt={org.paywall_exempt} />
                     </div>
+                    {org.subscription_status === "trialing" && (
+                      <div className={styles.controlGroup}>
+                        <span className={styles.controlLabel}>Trial</span>
+                        <ExtendTrialForm organizationId={org.id} />
+                      </div>
+                    )}
                     <div className={styles.controlGroup}>
                       <span className={styles.controlLabel}>Support access</span>
                       <SupportAccessControls
