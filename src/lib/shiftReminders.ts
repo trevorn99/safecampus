@@ -2,7 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { utcToZonedWallTime } from "@/lib/timezone";
 import { sendSms } from "@/lib/sms";
-import { escapeHtml, sendEmail, unsubscribeUrlFor } from "@/lib/email";
+import { escapeHtml, renderBrandedEmail, sendEmail, unsubscribeUrlFor } from "@/lib/email";
 
 // SignalWire currently throttles this account to 1 message/second —
 // pace sends a bit under that rather than racing the exact boundary,
@@ -131,64 +131,21 @@ export function buildReminderEmail(due: DueReminder, origin: string, unsubscribe
     `Unsubscribe from shift reminders: ${unsubscribeUrl}`,
   ].join("\n");
 
-  // Table layout with inline styles throughout, because that is what email
-  // clients actually support — Outlook renders through Word, which has no
-  // flexbox or grid, and Gmail strips <style> blocks and external CSS
-  // entirely. Nothing here can be shared with ui.module.css for the same
-  // reason. 600px is the conventional safe width for the desktop preview
-  // pane; the width:100% on the outer table is what lets it shrink on a
-  // phone.
-  //
-  // The logo is referenced by URL rather than embedded: Gmail discards
-  // data: URIs in <img>, and most clients block remote images by default
-  // anyway, so the wordmark next to it is text and carries the brand on its
-  // own when the image never loads.
-  const html = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f4f6f4;padding:24px 12px;font-family:system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif">
-  <tr>
-    <td align="center">
-      <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;background:#ffffff;border:1px solid #dfe4df;border-radius:12px;overflow:hidden">
-        <tr>
-          <td style="padding:20px 28px;border-bottom:1px solid #dfe4df">
-            <table role="presentation" cellpadding="0" cellspacing="0" border="0">
-              <tr>
-                <td style="padding-right:10px" valign="middle">
-                  <img src="${escapeHtml(origin)}/images/logo-mark.png" width="28" height="28" alt="" style="display:block;border:0;width:28px;height:28px" />
-                </td>
-                <td valign="middle" style="font-size:17px;font-weight:700;color:#1c2430;letter-spacing:-0.01em">
-                  Safe<span style="color:#0f7568">Campus</span>
-                </td>
-              </tr>
-            </table>
-            <div style="margin-top:8px;font-size:13px;color:#5b6670">${escapeHtml(due.orgName)}</div>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding:28px">
-            <p style="margin:0 0 18px;font-size:16px;line-height:1.5;color:#1c2430">${escapeHtml(lead)}</p>
+  const html = renderBrandedEmail({
+    origin,
+    eyebrow: due.orgName,
+    bodyHtml: `<p style="margin:0 0 18px;font-size:16px;line-height:1.5;color:#1c2430">${escapeHtml(lead)}</p>
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f4f6f4;border-radius:8px;margin-bottom:22px">
               <tr><td style="padding:14px 16px;font-size:14px;line-height:1.7;color:#1c2430">
                 <strong style="color:#5b6670;font-weight:600">Position</strong>&nbsp;&nbsp;${escapeHtml(due.positionTitle)}<br />
                 <strong style="color:#5b6670;font-weight:600">Event</strong>&nbsp;&nbsp;${escapeHtml(due.eventTitle)}<br />
                 <strong style="color:#5b6670;font-weight:600">When</strong>&nbsp;&nbsp;${escapeHtml(due.when)}
               </td></tr>
-            </table>
-            <table role="presentation" cellpadding="0" cellspacing="0" border="0">
-              <tr><td style="background:#0f7568;border-radius:8px">
-                <a href="${escapeHtml(eventUrl)}" style="display:inline-block;padding:11px 20px;font-size:14px;font-weight:600;color:#ffffff;text-decoration:none">View the event</a>
-              </td></tr>
-            </table>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding:16px 28px 22px;border-top:1px solid #dfe4df;font-size:12px;line-height:1.6;color:#5b6670">
-            You&rsquo;re getting this because you&rsquo;re on the schedule at ${escapeHtml(due.orgName)}.
-            <a href="${escapeHtml(unsubscribeUrl)}" style="color:#5b6670;text-decoration:underline">Unsubscribe from shift reminders</a>.
-          </td>
-        </tr>
-      </table>
-    </td>
-  </tr>
-</table>`;
+            </table>`,
+    cta: { label: "View the event", url: eventUrl },
+    footerHtml: `You&rsquo;re getting this because you&rsquo;re on the schedule at ${escapeHtml(due.orgName)}.
+            <a href="${escapeHtml(unsubscribeUrl)}" style="color:#5b6670;text-decoration:underline">Unsubscribe from shift reminders</a>.`,
+  });
 
   return { subject, text, html };
 }
