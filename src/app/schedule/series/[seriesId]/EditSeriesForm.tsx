@@ -67,6 +67,14 @@ export function EditSeriesForm({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  // Editing the series only changes what future generation produces —
+  // events already on the calendar are updated solely by the checkbox
+  // below. Changing duration or start time and leaving it unticked looks
+  // exactly like the save didn't work, so say so before they submit.
+  const originalFirstOccurrence = toZonedInputValue(series.first_occurrence_at, timeZone);
+  const scheduleChanged =
+    Number(durationMinutes) !== series.duration_minutes || firstOccurrence !== originalFirstOccurrence;
+
   function toggleWeekDay(day: string) {
     setWeekDays((prev) => (prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]));
   }
@@ -115,20 +123,34 @@ export function EditSeriesForm({
         .eq("series_id", series.id)
         .gte("start_time", new Date().toISOString());
 
-      for (const futureEvent of futureEvents ?? []) {
-        const wall = utcToZonedWallTime(new Date(futureEvent.start_time), timeZone);
-        const start = zonedWallTimeToUtc({ ...wall, hour: newHour, minute: newMinute, second: 0 }, timeZone);
-        const end = new Date(start.getTime() + durationMs);
-        await supabase
-          .from("events")
-          .update({
-            title,
-            type,
-            location_id: locationId || null,
-            start_time: start.toISOString(),
-            end_time: end.toISOString(),
-          })
-          .eq("id", futureEvent.id);
+      // Previously a sequential loop that ignored every update's error, so
+      // an RLS rejection or a bad row failed silently and still reported
+      // success — indistinguishable from the change not applying at all.
+      const results = await Promise.all(
+        (futureEvents ?? []).map((futureEvent) => {
+          const wall = utcToZonedWallTime(new Date(futureEvent.start_time), timeZone);
+          const start = zonedWallTimeToUtc({ ...wall, hour: newHour, minute: newMinute, second: 0 }, timeZone);
+          const end = new Date(start.getTime() + durationMs);
+          return supabase
+            .from("events")
+            .update({
+              title,
+              type,
+              location_id: locationId || null,
+              start_time: start.toISOString(),
+              end_time: end.toISOString(),
+            })
+            .eq("id", futureEvent.id);
+        }),
+      );
+
+      const failed = results.filter((result) => result.error);
+      if (failed.length > 0) {
+        setLoading(false);
+        setError(
+          `The series was saved, but ${failed.length} of ${results.length} upcoming events couldn't be updated: ${failed[0].error?.message}`,
+        );
+        return;
       }
     }
 
@@ -279,12 +301,21 @@ export function EditSeriesForm({
           onChange={(event) => setApplyToEvents(event.target.checked)}
         />
         Also update this series&apos; upcoming events to match
-        <span className={styles.hint}>(title, time of day, and location — dates and positions stay as they are)</span>
+        <span className={styles.hint}>
+          (title, type, start time, duration, and location — dates and positions stay as they are)
+        </span>
       </label>
+      {scheduleChanged && !applyToEvents && (
+        <p className={styles.errorText} role="alert">
+          You changed the {Number(durationMinutes) !== series.duration_minutes ? "duration" : "start time"}. Events
+          already on the calendar keep their current times unless you tick the box above — only newly generated
+          occurrences will use the new value.
+        </p>
+      )}
       <p className={styles.hint}>
         {applyToEvents
-          ? "Every upcoming event in this series will be updated to the title, time, and location above. Past events are left alone."
-          : "Changes apply to newly generated occurrences. Events already generated for future dates keep their current title, time, and location — edit those individually, or check the box above to update them all at once."}
+          ? "Every upcoming event in this series will be updated to the title, type, start time, duration, and location above. Past events, and events that already started, are left alone."
+          : "Changes apply to newly generated occurrences. Events already generated for future dates keep their current title, time, duration, and location — edit those individually, or check the box above to update them all at once."}
       </p>
 
       <div className={styles.actions}>
