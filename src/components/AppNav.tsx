@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import styles from "@/styles/ui.module.css";
 
@@ -50,22 +51,22 @@ export function AppNav({ items }: { items: NavEntry[] }) {
             {openLabel === entry.label && (
               <div className={styles.navDropdown}>
                 {entry.items.map((item) => (
-                  <a
+                  <Link
                     key={item.href}
                     href={item.href}
                     className={styles.navDropdownLink}
                     onClick={() => setOpenLabel(null)}
                   >
                     {item.label}
-                  </a>
+                  </Link>
                 ))}
               </div>
             )}
           </div>
         ) : (
-          <a key={entry.href} href={entry.href} className={styles.navLink}>
+          <Link key={entry.href} href={entry.href} className={styles.navLink}>
             {entry.label}
-          </a>
+          </Link>
         ),
       )}
     </nav>

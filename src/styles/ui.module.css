@@ -1083,3 +1083,100 @@
     align-self: flex-start;
   }
 }
+
+/* --- Locked-out banner (billing) --------------------------------------- */
+/* When has_active_access() is false, requireMembership() redirects every
+   other page here — so the person arrives having clicked something that
+   looked like it did nothing. This is the explanation for that, and it has
+   to outweigh the page's own heading, which is why it's a full block rather
+   than another line of .itemMeta. */
+.lockoutBanner {
+  border: 1px solid var(--danger);
+  border-left-width: 4px;
+  background: var(--danger-bg);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.lockoutTitle {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--danger);
+}
+.lockoutBody {
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: var(--ink);
+  max-width: 62ch;
+}
+
+/* --- Certifications grouped by member ---------------------------------- */
+/* Each member gets their own <ul>, so .listRow's first/last padding and
+   divider rules resolve per person rather than across the whole card. */
+.certGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.certGroupName {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--ink);
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.certGroupCount {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+/* --- Route loading skeleton (app/loading.tsx) -------------------------- */
+/* AppHeader is rendered by each page rather than by a layout, so the
+   Suspense fallback replaces the header along with the content. The bar
+   below stands in for it, otherwise the whole chrome collapses and snaps
+   back on every navigation. */
+.skeletonHeader {
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  height: 61px;
+}
+.skeletonBlock {
+  background: var(--surface-muted);
+  border-radius: var(--radius-sm);
+  animation: skeletonPulse 1.4s ease-in-out infinite;
+}
+.skeletonTitle {
+  composes: skeletonBlock;
+  height: 1.6rem;
+  width: 14rem;
+}
+.skeletonSubtitle {
+  composes: skeletonBlock;
+  height: 0.9rem;
+  width: 9rem;
+  margin-top: 0.6rem;
+}
+.skeletonCard {
+  composes: skeletonBlock;
+  height: 8rem;
+  border-radius: var(--radius-lg);
+}
+@keyframes skeletonPulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeletonBlock {
+    animation: none;
+  }
+}

@@ -42,10 +42,28 @@ export default async function BillingPage() {
 
   const trialEndsAt = org?.trial_ends_at ? new Date(org.trial_ends_at) : null;
   const trialExpired = isPastTrial(trialEndsAt);
+  // Exactly the negation of has_active_access() in SQL — including the null
+  // case: there, `trial_ends_at > now()` on a null is NULL, not true, so an
+  // org marked "trialing" with no end date is locked out. Without the
+  // explicit null check here that org would be redirected to this page and
+  // shown no banner explaining why.
   const needsSubscription =
     !org?.paywall_exempt &&
     org?.subscription_status !== "active" &&
-    !(org?.subscription_status === "trialing" && !trialExpired);
+    !(org?.subscription_status === "trialing" && trialEndsAt !== null && !trialExpired);
+
+  // Says which of has_active_access()'s conditions failed, in the words
+  // someone who just got bounced here would use. Ordered most specific
+  // first: an expired trial and a failed payment are different problems
+  // with different fixes.
+  const lockoutReason =
+    org?.subscription_status === "trialing" && trialExpired && trialEndsAt
+      ? `Your free trial ended on ${trialEndsAt.toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" })}.`
+      : org?.subscription_status === "past_due"
+        ? "Your last payment didn't go through, so the subscription is past due."
+        : org?.subscription_status === "canceled"
+          ? "Your subscription was canceled."
+          : "Your organization doesn't have an active subscription.";
 
   const currentTier = (org?.plan_tier as PlanTier | null) ?? tierForSeatCount(seatCount ?? 1);
   const overCap = !tierForSeatCount(seatCount ?? 1);
@@ -65,6 +83,24 @@ export default async function BillingPage() {
           <p className={styles.subtitle}>{organizationName}</p>
         </div>
 
+        {/* Above everything else on purpose. Someone seeing this has almost
+            certainly just clicked a nav link and been redirected back here
+            without being told why — the previous version of this message was
+            one line of muted meta text inside the card below, which reads as
+            a status label rather than an explanation. */}
+        {needsSubscription && (
+          <div className={styles.lockoutBanner} role="alert">
+            <p className={styles.lockoutTitle}>SafeCampus is locked for your organization</p>
+            <p className={styles.lockoutBody}>
+              {lockoutReason} Until it&apos;s resolved, this page and Help are the only ones available — the
+              schedule, roster, certifications, and everything else will send you back here.{" "}
+              {isAdmin
+                ? "Choose a plan below to restore access for everyone."
+                : "Ask an org admin to subscribe, and access is restored for everyone right away."}
+            </p>
+          </div>
+        )}
+
         <div className={styles.card}>
           <div className={styles.cardHeader}>
             <h2 className={styles.cardTitle}>
@@ -73,7 +109,7 @@ export default async function BillingPage() {
             {org?.subscription_status === "trialing" && !org.paywall_exempt && trialEndsAt && (
               <p className={styles.itemMeta}>
                 {trialExpired
-                  ? "Your trial has ended."
+                  ? `Trial ended ${trialEndsAt.toLocaleDateString()}.`
                   : `Trial ends ${trialEndsAt.toLocaleDateString()}.`}
               </p>
             )}
@@ -87,12 +123,6 @@ export default async function BillingPage() {
               </p>
             )}
           </div>
-
-          {!isAdmin && needsSubscription && (
-            <p className={styles.helperText}>
-              Your organization needs an active subscription. Ask an org admin to subscribe.
-            </p>
-          )}
 
           {isAdmin && !org?.paywall_exempt && !overCap && (
             <BillingActions hasStripeCustomer={Boolean(org?.stripe_customer_id)} hasSubscription={hasSubscription} />

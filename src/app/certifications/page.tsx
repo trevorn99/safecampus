@@ -54,14 +54,30 @@ export default async function CertificationsPage() {
     if (data?.signedUrl) signedUrls.set(doc.id, data.signedUrl);
   }
 
-  function renderCert(cert: Cert, showName: boolean) {
+  // Grouped by person rather than one flat expiry-ordered list: the admin
+  // question is almost always "what does this member have on file", and a
+  // single list of everyone's records interleaved by expiry date can't
+  // answer it without scanning the whole card. Ordering within a group is
+  // untouched — still soonest expiry first, from the query.
+  const certsByMember = new Map<string, Cert[]>();
+  for (const cert of allCerts) {
+    const list = certsByMember.get(cert.member_id) ?? [];
+    list.push(cert);
+    certsByMember.set(cert.member_id, list);
+  }
+  const certGroups = [...certsByMember.entries()]
+    .map(([memberId, certs]) => ({
+      memberId,
+      name: memberNames.get(memberId) ?? "Unknown member",
+      certs,
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  function renderCert(cert: Cert) {
     return (
       <li key={cert.id} className={styles.listRow}>
         <div>
-          <p className={styles.itemName}>
-            {showName ? `${memberNames.get(cert.member_id) ?? "Unknown"} — ` : ""}
-            {cert.type}
-          </p>
+          <p className={styles.itemName}>{cert.type}</p>
           <p className={styles.itemMeta}>
             {cert.issued_at ? `Issued ${cert.issued_at}` : "Issue date not set"}
             {cert.expires_at ? ` · Expires ${cert.expires_at}` : ""}
@@ -97,7 +113,7 @@ export default async function CertificationsPage() {
           {(ownCerts ?? []).length === 0 && (
             <p className={styles.helperText}>Nothing on file yet.</p>
           )}
-          <ul className={styles.list}>{(ownCerts ?? []).map((cert) => renderCert(cert, false))}</ul>
+          <ul className={styles.list}>{(ownCerts ?? []).map((cert) => renderCert(cert))}</ul>
         </div>
 
         <UploadCertificationForm memberId={member.id} organizationId={member.organization_id} />
@@ -108,8 +124,18 @@ export default async function CertificationsPage() {
               <h2 className={styles.cardTitle}>All team certifications</h2>
               <p className={styles.subtitle}>Admin view — every member&apos;s records.</p>
             </div>
-            {allCerts.length === 0 && <p className={styles.helperText}>No certifications on file yet.</p>}
-            <ul className={styles.list}>{allCerts.map((cert) => renderCert(cert, true))}</ul>
+            {certGroups.length === 0 && <p className={styles.helperText}>No certifications on file yet.</p>}
+            {certGroups.map((group) => (
+              <div key={group.memberId} className={styles.certGroup}>
+                <h3 className={styles.certGroupName}>
+                  {group.name}
+                  <span className={styles.certGroupCount}>
+                    {group.certs.length} certification{group.certs.length === 1 ? "" : "s"}
+                  </span>
+                </h3>
+                <ul className={styles.list}>{group.certs.map((cert) => renderCert(cert))}</ul>
+              </div>
+            ))}
           </div>
         )}
       </main>
