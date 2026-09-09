@@ -59,7 +59,7 @@ type AssignmentRow = {
 // everything both channels need. Which channels it actually goes out on is
 // decided per member: the two opt-ins are independent, so a member with
 // both on gets the text and the email.
-type DueReminder = {
+export type DueReminder = {
   assignmentId: string;
   memberId: string;
   organizationId: string;
@@ -95,7 +95,10 @@ function smsBody(due: DueReminder): string {
     : `SafeCampus reminder: you're on ${due.positionTitle} for ${due.eventTitle} tomorrow, ${due.when}. Reply STOP to opt out.`;
 }
 
-function emailContent(due: DueReminder, origin: string, unsubscribeUrl: string) {
+// Exported so /api/email/test sends the genuine article rather than a
+// lookalike — a test that renders its own copy of the template proves
+// nothing about the one that actually goes out.
+export function buildReminderEmail(due: DueReminder, origin: string, unsubscribeUrl: string) {
   const subject =
     due.daysAhead === 3
       ? `Shift reminder: ${due.positionTitle} on ${due.when}`
@@ -249,7 +252,7 @@ export async function sendShiftReminders(admin: SupabaseClient, origin: string, 
     if (emailSentKeys.has(`${due.assignmentId}:${due.template}`)) continue;
 
     const unsubscribe = unsubscribeUrlFor(origin, due.memberId);
-    const { subject, text, html } = emailContent(due, origin, unsubscribe.url);
+    const { subject, text, html } = buildReminderEmail(due, origin, unsubscribe.url);
     const result = await sendEmail({
       to: due.email!,
       subject,
