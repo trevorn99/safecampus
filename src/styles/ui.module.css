@@ -199,6 +199,14 @@
 /* Renders react-markdown output (Threat Intelligence reports) with the
    same voice as .docBody, plus real heading/list/emphasis styling instead
    of raw markdown syntax showing up as literal asterisks/hashes. */
+/* .appMain is 1200px wide so cards and rosters fill a monitor, which for a
+   page of prose means roughly 150 characters a line — about double what's
+   comfortable to read. Constrain the measure here rather than narrowing the
+   card, so the status row and action buttons still use the full width. */
+.reportMarkdown {
+  max-width: 68ch;
+  font-size: 0.98rem;
+}
 .reportMarkdown > *:first-child {
   margin-top: 0;
 }
@@ -1005,4 +1013,73 @@
 }
 .siteFooterLinks a:hover {
   color: var(--ink);
+}
+
+/* --- Printable report (/threat-intelligence/[reportId]/print) ---------- */
+/* Narrower than .appMain: this page is only ever a page of prose, and the
+   same measure that reads well on screen is what a sheet of paper wants. */
+.printDoc {
+  max-width: 46rem;
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem 3rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+.printHeader {
+  border-bottom: 2px solid var(--ink);
+  padding-bottom: 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.printEyebrow {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+.printMeta {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.printStatus {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent-strong);
+}
+/* Anything not yet released is the case worth shouting about on a printed
+   copy — it's the version most likely to be forwarded by mistake. */
+.printStatusWarn {
+  composes: printStatus;
+  color: var(--danger);
+}
+.printBody {
+  /* Overrides .reportMarkdown's screen measure — .printDoc already
+     constrains the column, and on paper a 68ch cap inside a narrower page
+     would just add a ragged right margin. */
+  max-width: none;
+}
+.printFootnote {
+  border-top: 1px solid var(--border);
+  padding-top: 0.9rem;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+@media print {
+  .printDoc {
+    max-width: none;
+    padding: 0;
+    gap: 1.2rem;
+  }
+  .printStatusWarn {
+    /* Print defaults often drop color; a border keeps "draft" unmissable
+       on a black-and-white copy. */
+    border: 1.5pt solid currentColor;
+    padding: 0.25rem 0.5rem;
+    align-self: flex-start;
+  }
 }

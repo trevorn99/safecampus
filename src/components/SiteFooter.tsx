@@ -8,7 +8,7 @@ function currentYear(): number {
 
 export function SiteFooter() {
   return (
-    <footer className={styles.siteFooter}>
+    <footer className={styles.siteFooter} data-print="hide">
       <div className={styles.siteFooterInner}>
         <span>&copy; {currentYear()} SafeCampus</span>
         <nav className={styles.siteFooterLinks}>

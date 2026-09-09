@@ -91,3 +91,47 @@ select {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
+
+/* Print — used by /threat-intelligence/[reportId]/print, which renders a
+   report on its own so there's no app chrome to strip beyond what the root
+   layout adds globally. Mark anything else that shouldn't reach paper with
+   data-print="hide". */
+@media print {
+  @page {
+    margin: 18mm 16mm;
+  }
+
+  body {
+    background: #fff;
+    font-size: 11pt;
+  }
+
+  [data-print="hide"] {
+    display: none !important;
+  }
+
+  /* Don't strand a heading at the foot of a page, and don't split a section
+     across a page boundary if it fits whole. */
+  h1,
+  h2,
+  h3 {
+    break-after: avoid-page;
+  }
+
+  p,
+  li,
+  blockquote {
+    break-inside: avoid-page;
+    orphans: 3;
+    widows: 3;
+  }
+
+  /* Sources are the point of a threat brief — a reviewer has to be able to
+     verify them off a printed copy. */
+  a::after {
+    content: " (" attr(href) ")";
+    font-size: 9pt;
+    color: #555;
+    word-break: break-all;
+  }
+}

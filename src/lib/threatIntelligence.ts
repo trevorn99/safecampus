@@ -3,8 +3,13 @@ import Anthropic from "@anthropic-ai/sdk";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { gatherXFindings } from "./xSearch";
 import { fetchChurchSecurityAdvisory } from "./churchSecurityAdvisory";
+import { recordClaudeUsage } from "./claudeUsage";
 
 const anthropic = new Anthropic();
+
+// One place, so the usage ledger's `model` column can't drift from what was
+// actually called.
+const MODEL = "claude-opus-5";
 
 // Hard cap: at most one combined report per organization per rolling week,
 // regardless of source (weekly cron or the on-demand "Generate report now"
@@ -15,6 +20,30 @@ export const MIN_DAYS_BETWEEN_REPORTS = 7;
 // crashed or hit the function timeout without cleaning up — treat it as
 // stale rather than letting it block this organization forever.
 export const GENERATION_STALE_MINUTES = 10;
+
+// Everything below bounds what one organization can put into a single
+// prompt. Input is the side that costs money here: the incident/watchlist
+// text is customer-written and unbounded in row count, web search results
+// are billed as input tokens, and every pause_turn resume re-sends the whole
+// accumulated conversation — so an oversized prompt is paid for several
+// times over, every week, automatically.
+const MAX_INCIDENTS = 60;
+const MAX_WATCHLIST_ENTRIES = 60;
+// Per-item cap on free text. Long enough for a real incident narrative;
+// short enough that 60 of them can't dominate the prompt.
+const MAX_NARRATIVE_CHARS = 1200;
+
+// Backstop, not the primary control: the caps above and the threat_context
+// length constraints should keep a normal prompt one to two orders of
+// magnitude below this. Tripping it means something unanticipated got in,
+// and failing loudly beats silently paying for it.
+const MAX_PROMPT_TOKENS = 60_000;
+
+// Ceiling on billed searches per request ($10 per 1,000, plus the input
+// tokens each result consumes). The prompt asks for four organization-wide
+// searches plus one per location, so this tracks that with headroom.
+const MAX_WEB_SEARCHES_BASE = 6;
+const MAX_WEB_SEARCHES_CAP = 25;
 
 export type GenerationStatus =
   | { state: "idle" }
@@ -80,6 +109,10 @@ type WatchlistRow = {
   description: string | null;
 };
 
+function clamp(text: string, max: number = MAX_NARRATIVE_CHARS): string {
+  return text.length > max ? `${text.slice(0, max)}… [truncated]` : text;
+}
+
 // Reads watchlist_entries/incident_reports directly (via the service-role
 // client — never exposed to the browser), the same "audited server-side
 // function" pattern the schema already calls for on watchlist_entries. The
@@ -93,6 +126,7 @@ function buildPrompt(
   watchlist: WatchlistRow[],
   xFindings: string,
   churchSecurityAdvisory: string | null,
+  omitted: { incidents: number; watchlist: number },
 ): string {
   const locationName = (locationId: string | null) =>
     locations.find((location) => location.id === locationId)?.name ?? "an unspecified location";
@@ -101,7 +135,7 @@ function buildPrompt(
     ? incidents
         .map(
           (incident) =>
-            `- [${incident.occurred_at}] (${locationName(incident.location_id)}) ${incident.type} (${incident.status}): ${incident.narrative}`,
+            `- [${incident.occurred_at}] (${locationName(incident.location_id)}) ${incident.type} (${incident.status}): ${clamp(incident.narrative)}`,
         )
         .join("\n")
     : "None across any location in the last 90 days.";
@@ -109,7 +143,7 @@ function buildPrompt(
     ? watchlist
         .map(
           (entry) =>
-            `- ${entry.name} (${locationName(entry.location_id)}, severity: ${entry.severity}): ${entry.reason ?? entry.description ?? "no details on file"}`,
+            `- ${entry.name} (${locationName(entry.location_id)}, severity: ${entry.severity}): ${clamp(entry.reason ?? entry.description ?? "no details on file")}`,
         )
         .join("\n")
     : "No active watchlist entries at any location.";
@@ -136,10 +170,18 @@ Locations covered by this report:
 ${locationsList || "No locations on file."}
 
 Incident reports across all locations (last 90 days):
-${incidentsText}
+${incidentsText}${
+    omitted.incidents > 0
+      ? `\n(Showing the ${incidents.length} most recent of ${incidents.length + omitted.incidents} incidents in this period; ${omitted.incidents} older ones are not included. Say so in the Coverage Note.)`
+      : ""
+  }
 
 Watchlist entries across all locations:
-${watchlistText}
+${watchlistText}${
+    omitted.watchlist > 0
+      ? `\n(Showing ${watchlist.length} of ${watchlist.length + omitted.watchlist} watchlist entries; ${omitted.watchlist} are not included. Say so in the Coverage Note.)`
+      : ""
+  }
 
 You have web search available. Use it to check current public information relevant to physical safety planning across these locations:
 
@@ -215,23 +257,28 @@ export async function generateThreatReport(admin: SupabaseClient, organizationId
 
     const locationIds = (locations ?? []).map((location) => location.id);
 
-    const [{ data: incidents }, { data: watchlist }] = await Promise.all([
+    // `count: "exact"` alongside the row limit so the prompt can state how
+    // many were left out rather than quietly narrowing the period a brief
+    // claims to cover.
+    const [{ data: incidents, count: incidentCount }, { data: watchlist, count: watchlistCount }] = await Promise.all([
       locationIds.length
         ? admin
             .from("incident_reports")
-            .select("id, location_id, occurred_at, type, narrative, status")
+            .select("id, location_id, occurred_at, type, narrative, status", { count: "exact" })
             .in("location_id", locationIds)
             .gte("occurred_at", since)
             .order("occurred_at", { ascending: false })
+            .limit(MAX_INCIDENTS)
             .returns<IncidentRow[]>()
-        : Promise.resolve({ data: [] as IncidentRow[] }),
+        : Promise.resolve({ data: [] as IncidentRow[], count: 0 }),
       locationIds.length
         ? admin
             .from("watchlist_entries")
-            .select("id, location_id, name, severity, reason, description")
+            .select("id, location_id, name, severity, reason, description", { count: "exact" })
             .in("location_id", locationIds)
+            .limit(MAX_WATCHLIST_ENTRIES)
             .returns<WatchlistRow[]>()
-        : Promise.resolve({ data: [] as WatchlistRow[] }),
+        : Promise.resolve({ data: [] as WatchlistRow[], count: 0 }),
     ]);
 
     const [xFindings, churchSecurityAdvisory] = await Promise.all([
@@ -247,29 +294,57 @@ export async function generateThreatReport(admin: SupabaseClient, organizationId
       watchlist ?? [],
       xFindings,
       churchSecurityAdvisory,
+      {
+        incidents: Math.max(0, (incidentCount ?? 0) - (incidents ?? []).length),
+        watchlist: Math.max(0, (watchlistCount ?? 0) - (watchlist ?? []).length),
+      },
     );
 
-    const tools: Anthropic.Messages.ToolUnion[] = [{ type: "web_search_20260209", name: "web_search" }];
+    const tools: Anthropic.Messages.ToolUnion[] = [
+      {
+        type: "web_search_20260209",
+        name: "web_search",
+        max_uses: Math.min(MAX_WEB_SEARCHES_CAP, MAX_WEB_SEARCHES_BASE + (locations ?? []).length),
+      },
+    ];
     let messages: Anthropic.Messages.MessageParam[] = [{ role: "user", content: prompt }];
 
+    // count_tokens is free and doesn't run the model — cheap insurance
+    // against paying for a prompt nothing should have produced. Refusing is
+    // deliberate: the alternative is trimming a safety brief's inputs
+    // silently, and an org admin seeing this error is the signal that
+    // something needs looking at.
+    const { input_tokens: promptTokens } = await anthropic.messages.countTokens({
+      model: MODEL,
+      tools,
+      messages,
+    });
+    if (promptTokens > MAX_PROMPT_TOKENS) {
+      throw new Error(
+        `Threat Intelligence prompt is ${promptTokens} tokens, over the ${MAX_PROMPT_TOKENS} limit — shorten this organization's context notes, incident narratives, or watchlist entries.`,
+      );
+    }
+
     let response = await anthropic.messages.create({
-      model: "claude-opus-5",
+      model: MODEL,
       max_tokens: 5000,
       thinking: { type: "adaptive" },
       tools,
       messages,
     });
+    await recordClaudeUsage(admin, organizationId, placeholder.id, MODEL, response.usage);
 
     let resumes = 0;
     while (response.stop_reason === "pause_turn" && resumes < MAX_PAUSE_TURN_RESUMES) {
       messages = [...messages, { role: "assistant", content: response.content }];
       response = await anthropic.messages.create({
-        model: "claude-opus-5",
+        model: MODEL,
         max_tokens: 5000,
         thinking: { type: "adaptive" },
         tools,
         messages,
       });
+      await recordClaudeUsage(admin, organizationId, placeholder.id, MODEL, response.usage);
       resumes += 1;
     }
 

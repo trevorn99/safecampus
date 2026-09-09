@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { MAX_THREAT_CONTEXT_CHARS } from "@/lib/threatContext";
 import styles from "@/styles/ui.module.css";
 
 type LocationContext = { id: string; name: string; threatContext: string };
@@ -84,11 +85,15 @@ export function ThreatContextForm({
           <textarea
             id="org-context"
             className={styles.textarea}
+            maxLength={MAX_THREAT_CONTEXT_CHARS}
             placeholder="e.g. We're a K-12 private school with ~800 students, primarily concerned about unauthorized visitors and custody disputes."
             value={orgContext}
             onChange={(event) => setOrgContext(event.target.value)}
             disabled={loading}
           />
+          <p className={styles.hint}>
+            {orgContext.length} / {MAX_THREAT_CONTEXT_CHARS} characters
+          </p>
         </div>
         {locations.map((location) => (
           <div className={styles.field} key={location.id}>
@@ -98,6 +103,7 @@ export function ThreatContextForm({
             <textarea
               id={`location-context-${location.id}`}
               className={styles.textarea}
+              maxLength={MAX_THREAT_CONTEXT_CHARS}
               placeholder="e.g. Construction crew on-site through August; recent uptick in loitering near the east entrance."
               value={locationContexts[location.id] ?? ""}
               onChange={(event) =>
