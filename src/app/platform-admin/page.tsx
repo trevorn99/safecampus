@@ -86,6 +86,9 @@ export default async function PlatformAdminPage() {
         </div>
 
         <div className={styles.actions}>
+          <Link href="/platform-admin/api-usage" className={`${styles.button} ${styles.buttonSecondary}`}>
+            View API usage
+          </Link>
           <Link href="/platform-admin/support-tickets" className={`${styles.button} ${styles.buttonSecondary}`}>
             View support tickets
           </Link>

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { MAX_THREAT_CONTEXT_CHARS } from "@/lib/threatContext";
 
 // organizations has no client update policy at all, so this org-wide "about
 // us" context (fed into every location's Threat Intelligence prompt) goes
@@ -30,11 +31,21 @@ export async function POST(request: Request) {
   }
 
   const { threatContext } = await request.json();
+  const trimmed = typeof threatContext === "string" ? threatContext.trim() : "";
+
+  // This text goes into every Threat Intelligence prompt for this org, on
+  // every weekly run — so its length is a recurring cost, not a one-off.
+  if (trimmed.length > MAX_THREAT_CONTEXT_CHARS) {
+    return NextResponse.json(
+      { error: `Keep this under ${MAX_THREAT_CONTEXT_CHARS} characters (currently ${trimmed.length}).` },
+      { status: 400 },
+    );
+  }
 
   const admin = createAdminClient();
   const { error } = await admin
     .from("organizations")
-    .update({ threat_context: typeof threatContext === "string" ? threatContext.trim() || null : null })
+    .update({ threat_context: trimmed || null })
     .eq("id", member.organization_id);
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 400 });
