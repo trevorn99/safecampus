@@ -37,7 +37,13 @@ type PositionRow = {
     id: string;
     title: string;
     organization_id: string;
-    organizations: { id: string; timezone: string; sms_enabled: boolean; email_enabled: boolean } | null;
+    organizations: {
+      id: string;
+      name: string;
+      timezone: string;
+      sms_enabled: boolean;
+      email_enabled: boolean;
+    } | null;
   } | null;
 };
 
@@ -63,6 +69,7 @@ export type DueReminder = {
   assignmentId: string;
   memberId: string;
   organizationId: string;
+  orgName: string;
   template: string;
   daysAhead: number;
   eventId: string;
@@ -110,24 +117,78 @@ export function buildReminderEmail(due: DueReminder, origin: string, unsubscribe
   const eventUrl = `${origin}/schedule/${due.eventId}`;
 
   const text = [
+    due.orgName,
+    "",
     lead,
+    "",
+    `Position: ${due.positionTitle}`,
+    `Event: ${due.eventTitle}`,
+    `When: ${due.when}`,
     "",
     `See the event and everyone else assigned: ${eventUrl}`,
     "",
-    `Don't want these reminders? Unsubscribe: ${unsubscribeUrl}`,
+    `You're getting this because you're on the schedule at ${due.orgName}.`,
+    `Unsubscribe from shift reminders: ${unsubscribeUrl}`,
   ].join("\n");
 
-  // Deliberately plain, inline-styled HTML: email clients strip <style>
-  // blocks and external CSS, so anything the ui.module.css design system
-  // does on the web has to be re-stated inline here or not at all.
-  const html = `<div style="font-family:system-ui,-apple-system,'Segoe UI',sans-serif;font-size:15px;line-height:1.5;color:#111">
-  <p>${escapeHtml(lead)}</p>
-  <p><a href="${escapeHtml(eventUrl)}" style="color:#1d4ed8">See the event and everyone else assigned</a></p>
-  <p style="font-size:12px;color:#666;margin-top:24px">
-    You're getting this because you're on the schedule at SafeCampus.
-    <a href="${escapeHtml(unsubscribeUrl)}" style="color:#666">Unsubscribe from shift reminders</a>.
-  </p>
-</div>`;
+  // Table layout with inline styles throughout, because that is what email
+  // clients actually support — Outlook renders through Word, which has no
+  // flexbox or grid, and Gmail strips <style> blocks and external CSS
+  // entirely. Nothing here can be shared with ui.module.css for the same
+  // reason. 600px is the conventional safe width for the desktop preview
+  // pane; the width:100% on the outer table is what lets it shrink on a
+  // phone.
+  //
+  // The logo is referenced by URL rather than embedded: Gmail discards
+  // data: URIs in <img>, and most clients block remote images by default
+  // anyway, so the wordmark next to it is text and carries the brand on its
+  // own when the image never loads.
+  const html = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f4f6f4;padding:24px 12px;font-family:system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif">
+  <tr>
+    <td align="center">
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;background:#ffffff;border:1px solid #dfe4df;border-radius:12px;overflow:hidden">
+        <tr>
+          <td style="padding:20px 28px;border-bottom:1px solid #dfe4df">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td style="padding-right:10px" valign="middle">
+                  <img src="${escapeHtml(origin)}/images/logo-mark.png" width="28" height="28" alt="" style="display:block;border:0;width:28px;height:28px" />
+                </td>
+                <td valign="middle" style="font-size:17px;font-weight:700;color:#1c2430;letter-spacing:-0.01em">
+                  Safe<span style="color:#0f7568">Campus</span>
+                </td>
+              </tr>
+            </table>
+            <div style="margin-top:8px;font-size:13px;color:#5b6670">${escapeHtml(due.orgName)}</div>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:28px">
+            <p style="margin:0 0 18px;font-size:16px;line-height:1.5;color:#1c2430">${escapeHtml(lead)}</p>
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f4f6f4;border-radius:8px;margin-bottom:22px">
+              <tr><td style="padding:14px 16px;font-size:14px;line-height:1.7;color:#1c2430">
+                <strong style="color:#5b6670;font-weight:600">Position</strong>&nbsp;&nbsp;${escapeHtml(due.positionTitle)}<br />
+                <strong style="color:#5b6670;font-weight:600">Event</strong>&nbsp;&nbsp;${escapeHtml(due.eventTitle)}<br />
+                <strong style="color:#5b6670;font-weight:600">When</strong>&nbsp;&nbsp;${escapeHtml(due.when)}
+              </td></tr>
+            </table>
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+              <tr><td style="background:#0f7568;border-radius:8px">
+                <a href="${escapeHtml(eventUrl)}" style="display:inline-block;padding:11px 20px;font-size:14px;font-weight:600;color:#ffffff;text-decoration:none">View the event</a>
+              </td></tr>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:16px 28px 22px;border-top:1px solid #dfe4df;font-size:12px;line-height:1.6;color:#5b6670">
+            You&rsquo;re getting this because you&rsquo;re on the schedule at ${escapeHtml(due.orgName)}.
+            <a href="${escapeHtml(unsubscribeUrl)}" style="color:#5b6670;text-decoration:underline">Unsubscribe from shift reminders</a>.
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>`;
 
   return { subject, text, html };
 }
@@ -138,7 +199,7 @@ export async function sendShiftReminders(admin: SupabaseClient, origin: string, 
   const { data: positions } = await admin
     .from("event_positions")
     .select(
-      "id, title, start_time, events(id, title, organization_id, organizations(id, timezone, sms_enabled, email_enabled))",
+      "id, title, start_time, events(id, title, organization_id, organizations(id, name, timezone, sms_enabled, email_enabled))",
     )
     .gte("start_time", now.toISOString())
     .lte("start_time", horizon.toISOString())
@@ -171,6 +232,7 @@ export async function sendShiftReminders(admin: SupabaseClient, origin: string, 
         assignmentId: assignment.id,
         memberId: member.id,
         organizationId: position.events!.organization_id,
+        orgName: org.name,
         template: window.template,
         daysAhead: window.daysAhead,
         eventId: position.events!.id,

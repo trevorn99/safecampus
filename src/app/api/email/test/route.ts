@@ -39,7 +39,17 @@ export async function POST(request: Request) {
   // reminders off. That's the point (an untested unsubscribe link is how you
   // find out it's broken from a spam complaint), and it's reversible from
   // the account page.
-  const { data: member } = await supabase.from("members").select("id").eq("user_id", user.id).maybeSingle();
+  const { data: member } = await supabase
+    .from("members")
+    .select("id, organization_id")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  // Real org name where the caller has one, so the test also proves the
+  // header renders a genuine name rather than a placeholder of known length.
+  const { data: org } = member
+    ? await supabase.from("organizations").select("name").eq("id", member.organization_id).maybeSingle()
+    : { data: null };
   const unsubscribe = unsubscribeUrlFor(new URL(request.url).origin, member?.id ?? user.id);
 
   const start = new Date(Date.now() + 24 * 60 * 60 * 1000);
@@ -47,6 +57,7 @@ export async function POST(request: Request) {
     assignmentId: "sample",
     memberId: member?.id ?? user.id,
     organizationId: "sample",
+    orgName: org?.name ?? "Sample Organization",
     template: "shift_reminder_24_hour",
     daysAhead: 1,
     eventId: "sample",
