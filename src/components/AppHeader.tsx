@@ -1,3 +1,4 @@
+import Link from "next/link";
 import styles from "@/styles/ui.module.css";
 import { AppNav, type NavEntry } from "@/components/AppNav";
 
@@ -69,9 +70,9 @@ export function AppHeader({
     <header className={styles.appHeader}>
       <div className={styles.appHeaderInner}>
         <div className={styles.appHeaderLeft}>
-          <a href="/dashboard" className={styles.wordmark}>
+          <Link href="/dashboard" className={styles.wordmark}>
             Safe<span className={styles.wordmarkAccent}>Campus</span>
-          </a>
+          </Link>
           <span className={styles.devBadge}>Beta</span>
           <AppNav items={items} />
         </div>

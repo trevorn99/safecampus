@@ -1134,3 +1134,49 @@
   font-weight: 500;
   color: var(--muted);
 }
+
+/* --- Route loading skeleton (app/loading.tsx) -------------------------- */
+/* AppHeader is rendered by each page rather than by a layout, so the
+   Suspense fallback replaces the header along with the content. The bar
+   below stands in for it, otherwise the whole chrome collapses and snaps
+   back on every navigation. */
+.skeletonHeader {
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  height: 61px;
+}
+.skeletonBlock {
+  background: var(--surface-muted);
+  border-radius: var(--radius-sm);
+  animation: skeletonPulse 1.4s ease-in-out infinite;
+}
+.skeletonTitle {
+  composes: skeletonBlock;
+  height: 1.6rem;
+  width: 14rem;
+}
+.skeletonSubtitle {
+  composes: skeletonBlock;
+  height: 0.9rem;
+  width: 9rem;
+  margin-top: 0.6rem;
+}
+.skeletonCard {
+  composes: skeletonBlock;
+  height: 8rem;
+  border-radius: var(--radius-lg);
+}
+@keyframes skeletonPulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeletonBlock {
+    animation: none;
+  }
+}
