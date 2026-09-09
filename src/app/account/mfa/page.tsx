@@ -6,6 +6,7 @@ import { MfaManager } from "./MfaManager";
 import { ProfilePictureForm } from "./ProfilePictureForm";
 import { ForgetDevicesButton } from "./ForgetDevicesButton";
 import { SmsPreferencesForm } from "./SmsPreferencesForm";
+import { EmailPreferencesForm } from "./EmailPreferencesForm";
 import styles from "@/styles/ui.module.css";
 
 export default async function MfaSettingsPage() {
@@ -22,7 +23,7 @@ export default async function MfaSettingsPage() {
   // without MFA to this exact page, which would loop.
   const { data: member } = await supabase
     .from("members")
-    .select("id, name, organization_id, profile_picture_url, phone, sms_opt_in")
+    .select("id, name, organization_id, profile_picture_url, phone, sms_opt_in, email, email_opt_in")
     .eq("user_id", user.id)
     .maybeSingle();
 
@@ -40,7 +41,7 @@ export default async function MfaSettingsPage() {
       .limit(1)
       .maybeSingle(),
     supabase.rpc("is_platform_admin"),
-    supabase.from("organizations").select("sms_enabled").eq("id", member.organization_id).single(),
+    supabase.from("organizations").select("sms_enabled, email_enabled").eq("id", member.organization_id).single(),
   ]);
 
   const avatarUrls = await getAvatarUrlMap(supabase, [member.profile_picture_url]);
@@ -61,6 +62,12 @@ export default async function MfaSettingsPage() {
         />
 
         <SmsPreferencesForm currentPhone={member.phone} currentOptIn={member.sms_opt_in} orgSmsEnabled={Boolean(org?.sms_enabled)} />
+
+        <EmailPreferencesForm
+          email={member.email}
+          currentOptIn={member.email_opt_in}
+          orgEmailEnabled={Boolean(org?.email_enabled)}
+        />
 
         <div className={styles.pageHeading}>
           <h2 className={styles.pageTitle}>Two-factor authentication</h2>

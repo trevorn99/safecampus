@@ -2,6 +2,7 @@ import { requireMembership } from "@/lib/session";
 import { AppHeader } from "@/components/AppHeader";
 import { OrgNameForm } from "./OrgNameForm";
 import { OrgSmsToggle } from "./OrgSmsToggle";
+import { OrgEmailToggle } from "./OrgEmailToggle";
 import styles from "@/styles/ui.module.css";
 
 export default async function OrganizationSettingsPage() {
@@ -9,7 +10,7 @@ export default async function OrganizationSettingsPage() {
 
   const { data: org } = await supabase
     .from("organizations")
-    .select("name, sms_enabled")
+    .select("name, sms_enabled, email_enabled")
     .eq("id", member.organization_id)
     .single();
 
@@ -26,6 +27,7 @@ export default async function OrganizationSettingsPage() {
           <>
             <OrgNameForm initialName={org?.name ?? ""} />
             <OrgSmsToggle initialEnabled={Boolean(org?.sms_enabled)} />
+            <OrgEmailToggle initialEnabled={Boolean(org?.email_enabled)} />
           </>
         ) : (
           <p className={styles.helperText}>Organization settings are visible to org admins only.</p>
