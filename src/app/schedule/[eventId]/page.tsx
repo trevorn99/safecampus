@@ -49,7 +49,7 @@ export default async function EventDetailPage({
       .order("start_time"),
     supabase
       .from("members")
-      .select("id, name, profile_picture_url")
+      .select("id, name, status, profile_picture_url")
       .eq("organization_id", member.organization_id)
       .order("name"),
     supabase.from("role_assignments").select("member_id, scope_id").eq("scope_type", "team"),
@@ -131,7 +131,13 @@ export default async function EventDetailPage({
           const eligiblePool = position.team_id
             ? (orgMembers ?? []).filter((m) => teamMemberIds.get(position.team_id!)?.has(m.id))
             : (orgMembers ?? []);
-          const eligibleMembers = eligiblePool.filter((m) => !assignedMemberIds.has(m.id));
+          // Members who haven't joined yet are deliberately in the pool: an
+          // org can schedule someone the moment they're on the roster, before
+          // any invite is accepted. The dropdown says so rather than hiding
+          // them.
+          const eligibleMembers = eligiblePool
+            .filter((m) => !assignedMemberIds.has(m.id))
+            .map((m) => ({ id: m.id, name: m.name, pending: m.status === "pending" }));
           const requiredTeamName = position.team_id
             ? (teams?.find((t) => t.id === position.team_id)?.name ?? "Unknown team")
             : null;
@@ -181,6 +187,9 @@ export default async function EventDetailPage({
                       <div className={styles.identityRow}>
                         <Avatar name={assignedMember?.name ?? "?"} url={avatarUrl} />
                         <p className={styles.itemName}>{assignedMember?.name ?? "Unknown member"}</p>
+                        {assignedMember?.status === "pending" && (
+                          <span className={styles.pillMuted}>Not joined yet</span>
+                        )}
                       </div>
                       <div className={styles.tagRow}>
                         {assignment.member_id === member.id ? (

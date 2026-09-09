@@ -5,12 +5,26 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import styles from "@/styles/ui.module.css";
 
-export function CancelInviteButton({ memberId, name }: { memberId: string; name: string }) {
+// `invited` false means this row was added to the roster without an invite
+// ever going out, so there's nothing to cancel — it's a plain removal, and
+// it takes their position assignments with it.
+export function CancelInviteButton({
+  memberId,
+  name,
+  invited,
+}: {
+  memberId: string;
+  name: string;
+  invited: boolean;
+}) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
   async function handleCancel() {
-    if (!window.confirm(`Cancel the invite for ${name}?`)) return;
+    const prompt = invited
+      ? `Cancel the invite for ${name}?`
+      : `Remove ${name} from the roster? Any positions they\u2019re assigned to will be unfilled.`;
+    if (!window.confirm(prompt)) return;
     setLoading(true);
     const supabase = createClient();
     // RLS ("admin removes members") is what actually enforces this is
@@ -27,7 +41,7 @@ export function CancelInviteButton({ memberId, name }: { memberId: string; name:
       disabled={loading}
       onClick={handleCancel}
     >
-      Cancel invite
+      {invited ? "Cancel invite" : "Remove"}
     </button>
   );
 }

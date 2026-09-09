@@ -19,6 +19,10 @@ export function InviteForm({
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<Role>("member");
   const [scopeId, setScopeId] = useState("");
+  // Off means "add them to the roster now, invite them later" — the row is
+  // schedulable straight away and links to their account whenever they
+  // eventually sign in.
+  const [sendInvite, setSendInvite] = useState(true);
 
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [error, setError] = useState("");
@@ -39,6 +43,7 @@ export function InviteForm({
         email,
         name,
         role,
+        sendInvite,
         scopeType: role === "member" && !scopeId ? "org" : scopeType,
         scopeId: role === "member" && !scopeId ? organizationId : resolvedScopeId,
       }),
@@ -57,9 +62,13 @@ export function InviteForm({
     return (
       <div className={styles.card}>
         <div className={styles.cardHeader}>
-          <span className={styles.badge}>Invite sent</span>
+          <span className={styles.badge}>{sendInvite ? "Invite sent" : "Added to roster"}</span>
           <h1 className={styles.cardTitle}>You&apos;re done</h1>
-          <p className={styles.subtitle}>{email} will receive an email with a sign-in link.</p>
+          <p className={styles.subtitle}>
+            {sendInvite
+              ? `${email} will receive an email with a sign-in link.`
+              : `${name} is on the roster and can be scheduled now. Send the invite whenever you're ready — their assignments carry over when they join.`}
+          </p>
         </div>
         <a href="/team" className={styles.link}>
           ← Back to team roster
@@ -71,8 +80,12 @@ export function InviteForm({
   return (
     <div className={styles.card}>
       <div className={styles.cardHeader}>
-        <h1 className={styles.cardTitle}>Invite a team member</h1>
-        <p className={styles.subtitle}>They&apos;ll get an email with a sign-in link.</p>
+        <h1 className={styles.cardTitle}>Add a team member</h1>
+        <p className={styles.subtitle}>
+          {sendInvite
+            ? "They'll get an email with a sign-in link."
+            : "They'll go on the roster now and can be scheduled right away — no email sent."}
+        </p>
       </div>
       <form onSubmit={handleSubmit} className={styles.form}>
         <div className={styles.field}>
@@ -89,16 +102,21 @@ export function InviteForm({
         </div>
         <div className={styles.field}>
           <label className={styles.label} htmlFor="email">
-            Email
+            Email {!sendInvite && <span className={styles.hint}>(optional)</span>}
           </label>
           <input
             id="email"
             className={styles.input}
-            required
+            required={sendInvite}
             type="email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
           />
+          {!sendInvite && (
+            <p className={styles.hint}>
+              Worth filling in anyway: it&apos;s what links this person to their account when they sign in.
+            </p>
+          )}
         </div>
         <div className={styles.field}>
           <label className={styles.label} htmlFor="role">
@@ -161,12 +179,21 @@ export function InviteForm({
             </select>
           </div>
         )}
+        <label className={styles.checkboxRow}>
+          <input
+            type="checkbox"
+            checked={sendInvite}
+            onChange={(event) => setSendInvite(event.target.checked)}
+          />
+          Send them an invite email now
+        </label>
+
         <button
           type="submit"
           className={`${styles.button} ${styles.buttonPrimary}`}
           disabled={status === "sending"}
         >
-          {status === "sending" ? "Sending…" : "Send invite"}
+          {status === "sending" ? "Saving…" : sendInvite ? "Send invite" : "Add to roster"}
         </button>
         {status === "error" && <p className={styles.errorText} role="alert">{error}</p>}
       </form>

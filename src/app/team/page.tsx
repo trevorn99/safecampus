@@ -3,6 +3,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { Avatar } from "@/components/Avatar";
 import { getAvatarUrlMap } from "@/lib/avatars";
 import { CancelInviteButton } from "./CancelInviteButton";
+import { SendInviteButton } from "./SendInviteButton";
 import { TeamMembershipManager } from "./TeamMembershipManager";
 import styles from "@/styles/ui.module.css";
 
@@ -25,6 +26,9 @@ type Member = {
   id: string;
   name: string;
   email: string | null;
+  // Null until an invite goes out — see the tri-state in the roster-only
+  // members migration. A member can be scheduled long before this is set.
+  user_id: string | null;
   status: string;
   profile_picture_url: string | null;
   identity_verification_status: string;
@@ -37,7 +41,7 @@ export default async function TeamPage() {
     await Promise.all([
       supabase
         .from("members")
-        .select("id, name, email, status, profile_picture_url, identity_verification_status")
+        .select("id, name, email, user_id, status, profile_picture_url, identity_verification_status")
         .eq("organization_id", member.organization_id)
         .order("name"),
       supabase.from("role_assignments").select("id, member_id, scope_type, scope_id, role"),
@@ -106,7 +110,7 @@ export default async function TeamPage() {
           />
           <div>
             <p className={styles.itemName}>{teamMember.name}</p>
-            <p className={styles.itemMeta}>{teamMember.email}</p>
+            <p className={styles.itemMeta}>{teamMember.email ?? "No email on file"}</p>
           </div>
         </div>
         <div className={styles.tagRow}>
@@ -115,7 +119,9 @@ export default async function TeamPage() {
               {ROLE_LABEL[row.role] ?? row.role} · {describeScope(row)}
             </span>
           ))}
-          {teamMember.status === "pending" && <span className={styles.pillMuted}>Pending</span>}
+          {teamMember.status === "pending" && (
+            <span className={styles.pillMuted}>{teamMember.user_id ? "Invite pending" : "Not invited"}</span>
+          )}
           {isAdmin && org?.identity_verification_enabled && (
             <span
               className={
@@ -130,7 +136,16 @@ export default async function TeamPage() {
             </span>
           )}
           {isAdmin && teamMember.status === "pending" && (
-            <CancelInviteButton memberId={teamMember.id} name={teamMember.name} />
+            <>
+              {!teamMember.user_id && teamMember.email && (
+                <SendInviteButton memberId={teamMember.id} name={teamMember.name} />
+              )}
+              <CancelInviteButton
+                memberId={teamMember.id}
+                name={teamMember.name}
+                invited={Boolean(teamMember.user_id)}
+              />
+            </>
           )}
         </div>
         {isAdmin && (
@@ -190,7 +205,7 @@ export default async function TeamPage() {
         {isAdmin && (
           <div className={styles.actions}>
             <a href="/team/invite" className={`${styles.button} ${styles.buttonPrimary}`}>
-              Invite a team member
+              Add a team member
             </a>
           </div>
         )}
