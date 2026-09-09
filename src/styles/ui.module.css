@@ -1083,3 +1083,31 @@
     align-self: flex-start;
   }
 }
+
+/* --- Locked-out banner (billing) --------------------------------------- */
+/* When has_active_access() is false, requireMembership() redirects every
+   other page here — so the person arrives having clicked something that
+   looked like it did nothing. This is the explanation for that, and it has
+   to outweigh the page's own heading, which is why it's a full block rather
+   than another line of .itemMeta. */
+.lockoutBanner {
+  border: 1px solid var(--danger);
+  border-left-width: 4px;
+  background: var(--danger-bg);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.lockoutTitle {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--danger);
+}
+.lockoutBody {
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: var(--ink);
+  max-width: 62ch;
+}
