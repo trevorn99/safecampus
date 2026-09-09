@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendShiftReminders } from "@/lib/shiftReminders";
+import { isAuthorizedCronRequest } from "@/lib/cronAuth";
 
 // Triggered daily by Vercel Cron (see vercel.json), same auth pattern as
 // generate-events — walks every organization in one pass, sending both the
@@ -12,8 +13,7 @@ import { sendShiftReminders } from "@/lib/shiftReminders";
 export const maxDuration = 300;
 
 export async function GET(request: Request) {
-  const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!isAuthorizedCronRequest(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
