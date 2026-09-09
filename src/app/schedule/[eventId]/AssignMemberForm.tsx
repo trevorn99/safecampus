@@ -6,7 +6,9 @@ import { createClient } from "@/lib/supabase/client";
 import { assignAcrossSeries } from "@/lib/assignAcrossSeries";
 import styles from "@/styles/ui.module.css";
 
-type Option = { id: string; name: string };
+// `pending` is someone on the roster who hasn't joined yet — assignable,
+// but worth flagging so an admin knows who they're counting on.
+type Option = { id: string; name: string; pending?: boolean };
 
 export function AssignMemberForm({
   positionId,
@@ -84,6 +86,7 @@ export function AssignMemberForm({
           {eligibleMembers.map((option) => (
             <option key={option.id} value={option.id}>
               {option.name}
+              {option.pending ? " (not yet joined)" : ""}
             </option>
           ))}
         </select>

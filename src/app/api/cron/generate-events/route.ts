@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { generateSeriesOccurrences, type EventSeriesRow } from "@/lib/eventSeries";
+import { isAuthorizedCronRequest } from "@/lib/cronAuth";
 
 // Triggered daily by Vercel Cron (see vercel.json). Vercel signs scheduled
 // requests with this bearer token automatically when CRON_SECRET is set —
 // this route intentionally has no per-org scoping, since it walks every
 // active series across every organization in one pass.
 export async function GET(request: Request) {
-  const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!isAuthorizedCronRequest(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

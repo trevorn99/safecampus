@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { generateThreatReport, getGenerationStatus } from "@/lib/threatIntelligence";
+import { isAuthorizedCronRequest } from "@/lib/cronAuth";
 
 // Triggered weekly by Vercel Cron (see vercel.json) — refreshes the single
 // combined Threat Intelligence report for each org with the add-on enabled
@@ -10,8 +11,7 @@ import { generateThreatReport, getGenerationStatus } from "@/lib/threatIntellige
 export const maxDuration = 300;
 
 export async function GET(request: Request) {
-  const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!isAuthorizedCronRequest(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
