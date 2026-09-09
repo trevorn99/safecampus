@@ -1111,3 +1111,26 @@
   color: var(--ink);
   max-width: 62ch;
 }
+
+/* --- Certifications grouped by member ---------------------------------- */
+/* Each member gets their own <ul>, so .listRow's first/last padding and
+   divider rules resolve per person rather than across the whole card. */
+.certGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.certGroupName {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--ink);
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.certGroupCount {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--muted);
+}
