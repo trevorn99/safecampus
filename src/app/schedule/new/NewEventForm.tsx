@@ -117,6 +117,13 @@ export function NewEventForm({
   // needed, unlike the one-off case where saving one is optional).
   const needsTemplateName = repeats !== "never" && positions.length > 0;
 
+  // Naming the template is the one bit of bookkeeping a repeating event
+  // forces on you, and inventing a second name for the same thing is busywork
+  // — so it falls back to the event's own title. Only the name is optional;
+  // the template itself isn't, since without one only the first occurrence
+  // would get positions.
+  const resolvedTemplateName = templateName.trim() || title.trim();
+
   async function createTemplateFromPositions(name: string): Promise<string | null> {
     const supabase = createClient();
     const { data: newTemplate, error: templateError } = await supabase
@@ -148,9 +155,11 @@ export function NewEventForm({
       setError("Pick at least one day of the week.");
       return;
     }
-    if ((repeats === "never" && saveAsTemplate && !templateName.trim()) || (needsTemplateName && !templateName.trim())) {
-      setError("Name the template you're saving, or remove the positions.");
-      return;
+    if ((repeats === "never" && saveAsTemplate) || needsTemplateName) {
+      if (!resolvedTemplateName) {
+        setError("Give the event a title — the positions template is named after it.");
+        return;
+      }
     }
     if (repeats !== "never" && !endTime) {
       setError("Set an end time — it's what gives every occurrence its length.");
@@ -171,7 +180,7 @@ export function NewEventForm({
     try {
       let newTemplateId: string | null = null;
       if (positions.length > 0 && (needsTemplateName || (repeats === "never" && saveAsTemplate))) {
-        newTemplateId = await createTemplateFromPositions(templateName.trim());
+        newTemplateId = await createTemplateFromPositions(resolvedTemplateName);
       }
       // templateId defaults to "" (not null) when nothing's selected — ??
       // only skips null/undefined, so it wouldn't catch that empty string.
@@ -518,7 +527,7 @@ export function NewEventForm({
             {saveAsTemplate && (
               <input
                 className={styles.input}
-                placeholder="Template name"
+                placeholder={title.trim() || "Template name"}
                 value={templateName}
                 onChange={(event) => setTemplateName(event.target.value)}
               />
@@ -529,15 +538,19 @@ export function NewEventForm({
         {needsTemplateName && (
           <div className={styles.field}>
             <label className={styles.label} htmlFor="seriesTemplateName">
-              Template name <span className={styles.hint}>positions repeat every occurrence via this template</span>
+              Template name <span className={styles.hint}>(optional)</span>
             </label>
             <input
               id="seriesTemplateName"
               className={styles.input}
-              placeholder="Template name"
+              placeholder={title.trim() || "Template name"}
               value={templateName}
               onChange={(event) => setTemplateName(event.target.value)}
             />
+            <p className={styles.hint}>
+              Your positions are saved as a template so every occurrence gets them — future events can reuse it
+              too. Left blank it takes the event&apos;s title, {title.trim() ? `“${title.trim()}”` : "once you add one"}.
+            </p>
           </div>
         )}
 
