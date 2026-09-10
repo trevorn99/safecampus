@@ -11,7 +11,7 @@ export function AddonToggle({
   description,
   checkboxLabel,
   initialEnabled,
-  hasSubscription,
+  canToggle,
   enabledMessage,
   disabledMessage,
 }: {
@@ -20,7 +20,8 @@ export function AddonToggle({
   description: string[];
   checkboxLabel: string;
   initialEnabled: boolean;
-  hasSubscription: boolean;
+  /** A paying subscription, or a comped org — either can flip add-ons. */
+  canToggle: boolean;
   enabledMessage: string;
   disabledMessage: string;
 }) {
@@ -72,7 +73,7 @@ export function AddonToggle({
           ))}
         </div>
       </div>
-      {!hasSubscription ? (
+      {!canToggle ? (
         <p className={styles.helperText}>Subscribe to a plan before enabling add-ons.</p>
       ) : (
         <label className={styles.checkboxRow}>

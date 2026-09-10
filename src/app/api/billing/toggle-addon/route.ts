@@ -39,9 +39,33 @@ export async function POST(request: Request) {
 
   const { data: org } = await supabase
     .from("organizations")
-    .select("stripe_subscription_id")
+    .select("stripe_subscription_id, paywall_exempt")
     .eq("id", member.organization_id)
     .single();
+
+  const admin = createAdminClient();
+
+  // A comped org has no subscription to hang an add-on item off, so there is
+  // nothing for Stripe to do — being exempt from the paywall means being
+  // exempt from the add-on charge too. The column is still the only thing
+  // that gates the feature, so it's written exactly as it is for a paying
+  // org, and the weekly cron picks the org up the same way.
+  //
+  // Deliberately still a toggle rather than implied by paywall_exempt:
+  // Threat Intelligence costs real money per report (Claude, plus X reads),
+  // so switching it on for an org stays a decision someone makes, and
+  // Identity Verification would otherwise start forcing ID checks on every
+  // member of every comped org.
+  if (org?.paywall_exempt) {
+    const { error } = await admin
+      .from("organizations")
+      .update({ [addonConfig.column]: Boolean(enabled) })
+      .eq("id", member.organization_id);
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+    return NextResponse.json({ ok: true, billed: false });
+  }
 
   if (!org?.stripe_subscription_id) {
     return NextResponse.json(
@@ -69,11 +93,10 @@ export async function POST(request: Request) {
     await stripe.subscriptionItems.del(addonItem.id, { proration_behavior: "always_invoice" });
   }
 
-  const admin = createAdminClient();
   await admin
     .from("organizations")
     .update({ [addonConfig.column]: Boolean(enabled) })
     .eq("id", member.organization_id);
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, billed: true });
 }
