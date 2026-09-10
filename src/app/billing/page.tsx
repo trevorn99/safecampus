@@ -129,13 +129,13 @@ export default async function BillingPage() {
           )}
         </div>
 
-        {isAdmin && !org?.paywall_exempt && (
+        {isAdmin && (
           <AddonToggle
             addon="threat_intel"
-            title="Threat Intelligence — $30/mo add-on"
+            title={org?.paywall_exempt ? "Threat Intelligence — included" : "Threat Intelligence — $30/mo add-on"}
             checkboxLabel="Enable Threat Intelligence for this organization"
             initialEnabled={Boolean(org?.threat_intel_enabled)}
-            hasSubscription={hasSubscription}
+            canToggle={hasSubscription || Boolean(org?.paywall_exempt)}
             enabledMessage="Enabled — generate or review your combined report from the Threat Intelligence page."
             disabledMessage="Disabled for this organization."
             description={[
@@ -145,13 +145,13 @@ export default async function BillingPage() {
           />
         )}
 
-        {isAdmin && !org?.paywall_exempt && (
+        {isAdmin && (
           <AddonToggle
             addon="identity_verification"
-            title="Identity Verification — $10/mo add-on"
+            title={org?.paywall_exempt ? "Identity Verification — included" : "Identity Verification — $10/mo add-on"}
             checkboxLabel="Require identity verification for this organization"
             initialEnabled={Boolean(org?.identity_verification_enabled)}
-            hasSubscription={hasSubscription}
+            canToggle={hasSubscription || Boolean(org?.paywall_exempt)}
             enabledMessage="Enabled — every non-admin member must verify their identity (photo ID + selfie, via Stripe) before they can use the app. Members not yet verified will be prompted the next time they sign in."
             disabledMessage="Disabled for this organization. Members are no longer required to verify."
             description={[
