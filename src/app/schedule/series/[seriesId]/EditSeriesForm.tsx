@@ -57,7 +57,15 @@ export function EditSeriesForm({
   const [type, setType] = useState(series.type);
   const [locationId, setLocationId] = useState(series.location_id ?? "");
   const [firstOccurrence, setFirstOccurrence] = useState(toZonedInputValue(series.first_occurrence_at, timeZone));
-  const [durationMinutes, setDurationMinutes] = useState(String(series.duration_minutes));
+  // A series stores a length, not an end instant — every occurrence lands on
+  // a different date — but people think in end times, so the field is an end
+  // time seeded from the first occurrence plus the stored length.
+  const [endTime, setEndTime] = useState(
+    toZonedInputValue(
+      new Date(new Date(series.first_occurrence_at).getTime() + series.duration_minutes * 60_000).toISOString(),
+      timeZone,
+    ),
+  );
   const [repeats, setRepeats] = useState<Repeats>(parsed?.freq === "MONTHLY" ? "monthly" : "weekly");
   const [interval, setInterval] = useState(String(parsed?.freq === "WEEKLY" ? parsed.interval : 1));
   const [weekDays, setWeekDays] = useState<string[]>(parsed?.freq === "WEEKLY" ? parsed.days : []);
@@ -72,8 +80,14 @@ export function EditSeriesForm({
   // below. Changing duration or start time and leaving it unticked looks
   // exactly like the save didn't work, so say so before they submit.
   const originalFirstOccurrence = toZonedInputValue(series.first_occurrence_at, timeZone);
+  // Both sides go through the location's timezone before subtracting, so the
+  // length stays right across a DST boundary.
+  const durationMinutes = Math.round(
+    (fromZonedInputValue(endTime, timeZone).getTime() - fromZonedInputValue(firstOccurrence, timeZone).getTime()) /
+      60_000,
+  );
   const scheduleChanged =
-    Number(durationMinutes) !== series.duration_minutes || firstOccurrence !== originalFirstOccurrence;
+    durationMinutes !== series.duration_minutes || firstOccurrence !== originalFirstOccurrence;
 
   function toggleWeekDay(day: string) {
     setWeekDays((prev) => (prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]));
@@ -85,6 +99,11 @@ export function EditSeriesForm({
 
     if (repeats === "weekly" && weekDays.length === 0) {
       setError("Pick at least one day of the week.");
+      return;
+    }
+
+    if (durationMinutes <= 0) {
+      setError("End time must be after the first occurrence's start time.");
       return;
     }
 
@@ -101,7 +120,7 @@ export function EditSeriesForm({
         type,
         location_id: locationId || null,
         first_occurrence_at: fromZonedInputValue(firstOccurrence, timeZone).toISOString(),
-        duration_minutes: Number(durationMinutes),
+        duration_minutes: durationMinutes,
         recurrence_rule: recurrenceRule,
       })
       .eq("id", series.id);
@@ -115,7 +134,7 @@ export function EditSeriesForm({
     if (applyToEvents) {
       const [, newTime] = firstOccurrence.split("T");
       const [newHour, newMinute] = newTime.split(":").map(Number);
-      const durationMs = Number(durationMinutes) * 60_000;
+      const durationMs = durationMinutes * 60_000;
 
       const { data: futureEvents } = await supabase
         .from("events")
@@ -209,20 +228,13 @@ export function EditSeriesForm({
         </select>
       </div>
       <DateTimeField label="First occurrence" defaultValue={firstOccurrence} onChange={setFirstOccurrence} required />
-      <div className={styles.field}>
-        <label className={styles.label} htmlFor="editSeriesDuration">
-          Duration <span className={styles.hint}>minutes — sets each occurrence&apos;s end time</span>
-        </label>
-        <input
-          id="editSeriesDuration"
-          type="number"
-          min={1}
-          className={styles.input}
-          required
-          value={durationMinutes}
-          onChange={(event) => setDurationMinutes(event.target.value)}
-        />
-      </div>
+      <DateTimeField
+        label="End time"
+        hint="sets how long every occurrence runs"
+        defaultValue={endTime}
+        onChange={setEndTime}
+        required
+      />
 
       <div className={styles.field}>
         <label className={styles.label} htmlFor="editSeriesRepeats">
@@ -302,20 +314,20 @@ export function EditSeriesForm({
         />
         Also update this series&apos; upcoming events to match
         <span className={styles.hint}>
-          (title, type, start time, duration, and location — dates and positions stay as they are)
+          (title, type, start and end time, and location — dates and positions stay as they are)
         </span>
       </label>
       {scheduleChanged && !applyToEvents && (
         <p className={styles.errorText} role="alert">
-          You changed the {Number(durationMinutes) !== series.duration_minutes ? "duration" : "start time"}. Events
+          You changed the {durationMinutes !== series.duration_minutes ? "end time" : "start time"}. Events
           already on the calendar keep their current times unless you tick the box above — only newly generated
           occurrences will use the new value.
         </p>
       )}
       <p className={styles.hint}>
         {applyToEvents
-          ? "Every upcoming event in this series will be updated to the title, type, start time, duration, and location above. Past events, and events that already started, are left alone."
-          : "Changes apply to newly generated occurrences. Events already generated for future dates keep their current title, time, duration, and location — edit those individually, or check the box above to update them all at once."}
+          ? "Every upcoming event in this series will be updated to the title, type, start and end time, and location above. Past events, and events that already started, are left alone."
+          : "Changes apply to newly generated occurrences. Events already generated for future dates keep their current title, times, and location — edit those individually, or check the box above to update them all at once."}
       </p>
 
       <div className={styles.actions}>

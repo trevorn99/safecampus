@@ -79,7 +79,6 @@ export function NewEventForm({
   const [error, setError] = useState("");
 
   const [repeats, setRepeats] = useState<Repeats>("never");
-  const [durationMinutes, setDurationMinutes] = useState("60");
   const [interval, setInterval] = useState("1");
   const [weekDays, setWeekDays] = useState<string[]>([]);
   const [ordinal, setOrdinal] = useState("1");
@@ -153,7 +152,11 @@ export function NewEventForm({
       setError("Name the template you're saving, or remove the positions.");
       return;
     }
-    if (repeats === "never" && endTime && new Date(endTime) <= new Date(startTime)) {
+    if (repeats !== "never" && !endTime) {
+      setError("Set an end time — it's what gives every occurrence its length.");
+      return;
+    }
+    if (endTime && new Date(endTime) <= new Date(startTime)) {
       setError("End time must be after the start time.");
       return;
     }
@@ -232,7 +235,9 @@ export function NewEventForm({
           type,
           recurrence_rule: recurrenceRule,
           first_occurrence_at: startTimeIso,
-          duration_minutes: Number(durationMinutes),
+          duration_minutes: Math.round(
+            (new Date(endTimeIso!).getTime() - new Date(startTimeIso).getTime()) / 60_000,
+          ),
         })
         .select("id")
         .single();
@@ -311,9 +316,13 @@ export function NewEventForm({
           required
         />
 
-        {repeats === "never" && (
-          <DateTimeField label="End time" hint="(optional)" defaultValue={endTime} onChange={setEndTime} />
-        )}
+        <DateTimeField
+          label="End time"
+          hint={repeats === "never" ? "(optional)" : "sets how long every occurrence runs"}
+          defaultValue={endTime}
+          onChange={setEndTime}
+          required={repeats !== "never"}
+        />
 
         <div className={styles.field}>
           <label className={styles.label} htmlFor="repeats">
@@ -333,21 +342,6 @@ export function NewEventForm({
 
         {repeats !== "never" && (
           <>
-            <div className={styles.field}>
-              <label className={styles.label} htmlFor="durationMinutes">
-                Duration <span className={styles.hint}>minutes — sets each occurrence&apos;s end time</span>
-              </label>
-              <input
-                id="durationMinutes"
-                type="number"
-                min={1}
-                className={styles.input}
-                required
-                value={durationMinutes}
-                onChange={(event) => setDurationMinutes(event.target.value)}
-              />
-            </div>
-
             {repeats === "weekly" && (
               <>
                 <div className={styles.field}>

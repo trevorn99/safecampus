@@ -15,6 +15,7 @@ type MyAssignment = {
     id: string;
     title: string;
     start_time: string;
+    end_time: string | null;
     events: { title: string } | { title: string }[] | null;
   } | null;
 };
@@ -31,7 +32,7 @@ export default async function SchedulePage() {
   const [{ data: events }, { data: myAssignments }, timeZone] = await Promise.all([
     supabase
       .from("events")
-      .select("id, title, start_time, type")
+      .select("id, title, start_time, end_time, type")
       .eq("organization_id", member.organization_id)
       .gte("start_time", rangeStartIso)
       .lt("start_time", rangeEndExclusiveIso)

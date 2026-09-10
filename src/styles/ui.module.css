@@ -673,6 +673,8 @@
   font-size: 0.64rem;
   opacity: 0.75;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .calendarEvent:hover {
   background: var(--accent);

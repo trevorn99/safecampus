@@ -6,7 +6,7 @@ import { eventTypeLabel } from "@/lib/eventTypes";
 import { utcToZonedWallTime } from "@/lib/timezone";
 import styles from "@/styles/ui.module.css";
 
-type CalendarEvent = { id: string; title: string; start_time: string; type?: string };
+type CalendarEvent = { id: string; title: string; start_time: string; end_time?: string | null; type?: string };
 
 const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MAX_VISIBLE_PER_DAY = 3;
@@ -39,8 +39,17 @@ function eventDayKey(iso: string, timeZone: string) {
   return `${wall.year}-${wall.month - 1}-${wall.day}`;
 }
 
-function formatEventTime(iso: string, timeZone: string) {
+function formatTimeOfDay(iso: string, timeZone: string) {
   return new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit", timeZone });
+}
+
+// "9:00 AM – 10:30 AM", or just the start when there's no end on file.
+// Deliberately time-only on both sides even for an overnight shift: the grid
+// cell it sits in already establishes the date, and a full date on the end
+// would blow out a chip that has to fit three to a day.
+function formatEventTime(event: CalendarEvent, timeZone: string) {
+  const start = formatTimeOfDay(event.start_time, timeZone);
+  return event.end_time ? `${start} – ${formatTimeOfDay(event.end_time, timeZone)}` : start;
 }
 
 // YYYY-MM-DD, for the ?date= param the New Event page reads to pre-fill a
@@ -166,7 +175,7 @@ export function EventCalendar({
                 >
                   <span className={styles.calendarEventTitle}>{event.title}</span>
                   <span className={styles.calendarEventTime}>
-                    {formatEventTime(event.start_time, timeZone)}
+                    {formatEventTime(event, timeZone)}
                   </span>
                 </Link>
               ))}
@@ -197,7 +206,7 @@ export function EventCalendar({
               </Link>
               <div className={styles.tagRow}>
                 {event.type && <span className={styles.pillMuted}>{eventTypeLabel(event.type)}</span>}
-                <span className={styles.itemMeta}>{formatEventTime(event.start_time, timeZone)}</span>
+                <span className={styles.itemMeta}>{formatEventTime(event, timeZone)}</span>
               </div>
             </li>
           ))}

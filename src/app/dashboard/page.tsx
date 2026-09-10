@@ -41,7 +41,7 @@ export default async function DashboardPage() {
     supabase.from("members").select("profile_picture_url").eq("id", member.id).single(),
     supabase
       .from("events")
-      .select("id, title, start_time, type")
+      .select("id, title, start_time, end_time, type")
       .eq("organization_id", member.organization_id)
       .gte("start_time", rangeStartIso)
       .lt("start_time", rangeEndExclusiveIso)
