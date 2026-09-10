@@ -5,6 +5,7 @@ import { EditSeriesForm } from "./EditSeriesForm";
 import { ActiveToggle } from "./ActiveToggle";
 import { GenerateNowButton } from "./GenerateNowButton";
 import { DeleteSeriesButton } from "./DeleteSeriesButton";
+import { formatEventTimeRange } from "@/lib/formatDateTime";
 import styles from "@/styles/ui.module.css";
 
 type Option = { id: string; name: string };
@@ -50,9 +51,15 @@ export function SeriesHeader({
 
   return (
     <div className={styles.card}>
+      {/* Shown as a range rather than "N minutes" to match how the series is
+          now edited — the form asks for an end time and derives the length. */}
       <p className={styles.itemMeta}>
-        First occurrence {new Date(series.first_occurrence_at).toLocaleString(undefined, { timeZone })} ·{" "}
-        {series.duration_minutes} minutes
+        First occurrence{" "}
+        {formatEventTimeRange(
+          series.first_occurrence_at,
+          new Date(new Date(series.first_occurrence_at).getTime() + series.duration_minutes * 60_000).toISOString(),
+          timeZone,
+        )}
       </p>
       <div className={styles.actions}>
         <button type="button" className={`${styles.button} ${styles.buttonSecondary}`} onClick={() => setEditing(true)}>
