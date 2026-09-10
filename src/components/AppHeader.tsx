@@ -18,12 +18,7 @@ function buildNav(isAdmin: boolean, isPlatformAdmin: boolean): NavEntry[] {
       items: [
         { href: "/team", label: "Roster" },
         { href: "/certifications", label: "Certifications" },
-        ...(isAdmin
-          ? [
-              { href: "/teams", label: "Manage teams" },
-              { href: "/locations", label: "Locations" },
-            ]
-          : []),
+        ...(isAdmin ? [{ href: "/teams", label: "Manage teams" }] : []),
       ],
     },
     { href: "/threat-intelligence", label: "Threat Intelligence" },
@@ -35,6 +30,10 @@ function buildNav(isAdmin: boolean, isPlatformAdmin: boolean): NavEntry[] {
             label: "Organization",
             items: [
               { href: "/organization", label: "Settings" },
+              // Campuses are organization structure, not people management —
+              // they define where events happen and scope location_manager
+              // roles, so they sit with Settings rather than under Team.
+              { href: "/locations", label: "Locations" },
               { href: "/billing", label: "Billing" },
               { href: "/audit-log", label: "Audit log" },
             ],

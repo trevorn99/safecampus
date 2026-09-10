@@ -7,6 +7,7 @@ import { ExemptionToggle } from "./ExemptionToggle";
 import { ExtendTrialForm } from "./ExtendTrialForm";
 import { SupportAccessControls } from "./SupportAccessControls";
 import { SendTestEmailButton } from "./SendTestEmailButton";
+import { AddonGrantToggle } from "./AddonGrantToggle";
 import { TIER_LABEL, type PlanTier } from "@/lib/stripe";
 import styles from "@/styles/ui.module.css";
 
@@ -46,7 +47,7 @@ export default async function PlatformAdminPage() {
   const [{ data: organizations }, { data: grants }] = await Promise.all([
     admin
       .from("organizations")
-      .select("id, name, subscription_status, trial_ends_at, paywall_exempt, plan_tier")
+      .select("id, name, subscription_status, trial_ends_at, paywall_exempt, plan_tier, threat_intel_enabled, stripe_subscription_id")
       .order("name"),
     admin
       .from("support_access_grants")
@@ -126,6 +127,14 @@ export default async function PlatformAdminPage() {
                         <ExtendTrialForm organizationId={org.id} />
                       </div>
                     )}
+                    <div className={styles.controlGroup}>
+                      <span className={styles.controlLabel}>Threat Intel</span>
+                      <AddonGrantToggle
+                        organizationId={org.id}
+                        enabled={Boolean(org.threat_intel_enabled)}
+                        billedThroughStripe={Boolean(org.stripe_subscription_id)}
+                      />
+                    </div>
                     <div className={styles.controlGroup}>
                       <span className={styles.controlLabel}>Support access</span>
                       <SupportAccessControls

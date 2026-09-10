@@ -38,7 +38,7 @@ export default async function ThreatIntelligencePage() {
       .single(),
     supabase
       .from("locations")
-      .select("id, name, threat_context")
+      .select("id, name, address, threat_context")
       .eq("organization_id", member.organization_id)
       .order("name"),
     supabase
@@ -49,6 +49,15 @@ export default async function ThreatIntelligencePage() {
   ]);
 
   const enabled = Boolean(org?.threat_intel_enabled);
+
+  // A report's per-campus coverage comes entirely from locations: the prompt
+  // runs one protest/civil-unrest search per location that has a street
+  // address, and the pre-fetched X queries key off the same addresses. With
+  // no locations at all there is nothing campus-specific to report on, so
+  // generating is blocked rather than quietly producing a brief that only
+  // covers national advisories.
+  const locationCount = (locations ?? []).length;
+  const locationsWithAddress = (locations ?? []).filter((location) => location.address).length;
   const generating = isActivelyGenerating(reports?.[0]);
   const nextEligibleAt = generating ? null : nextEligibleDate(reports?.[0]?.generated_at);
   const visibleReports = (reports ?? []).filter((report) => report.status !== "generating");
@@ -110,6 +119,8 @@ export default async function ThreatIntelligencePage() {
                 <GenerateReportButton
                   nextEligibleAt={nextEligibleAt ? nextEligibleAt.toISOString() : null}
                   generating={generating}
+                  locationCount={locationCount}
+                  locationsWithAddress={locationsWithAddress}
                 />
               </>
             )}
