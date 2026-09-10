@@ -72,8 +72,21 @@ export async function POST(request: Request) {
 
   const origin = new URL(request.url).origin;
   const admin = createAdminClient();
+
+  // organization_name rides along in user_metadata so Supabase's invite
+  // template can say who is inviting them — see
+  // supabase/email-templates/invite.html, which reads {{ .Data.organization_name }}.
+  // Auth is per-project, not per-org, so this metadata is the only way the
+  // template can know.
+  const { data: inviteOrg } = await supabase
+    .from("organizations")
+    .select("name")
+    .eq("id", organizationId)
+    .maybeSingle();
+
   const { data: invited, error: inviteError } = await admin.auth.admin.inviteUserByEmail(normalizedEmail!, {
     redirectTo: `${origin}/auth/callback`,
+    data: { organization_name: inviteOrg?.name ?? null },
   });
 
   if (inviteError) {

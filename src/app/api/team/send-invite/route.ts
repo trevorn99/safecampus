@@ -45,8 +45,18 @@ export async function POST(request: Request) {
 
   const origin = new URL(request.url).origin;
   const admin = createAdminClient();
+
+  // Same metadata as /api/team/invite, for the same reason — the invite
+  // template has no other way to name the organization.
+  const { data: inviteOrg } = await supabase
+    .from("organizations")
+    .select("name")
+    .eq("id", target.organization_id)
+    .maybeSingle();
+
   const { data: invited, error: inviteError } = await admin.auth.admin.inviteUserByEmail(target.email, {
     redirectTo: `${origin}/auth/callback`,
+    data: { organization_name: inviteOrg?.name ?? null },
   });
 
   if (inviteError) {

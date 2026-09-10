@@ -2,7 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { utcToZonedWallTime } from "@/lib/timezone";
 import { sendSms } from "@/lib/sms";
-import { escapeHtml, sendEmail, unsubscribeUrlFor } from "@/lib/email";
+import { escapeHtml, renderBrandedEmail, sendEmail, unsubscribeUrlFor } from "@/lib/email";
 
 // SignalWire currently throttles this account to 1 message/second —
 // pace sends a bit under that rather than racing the exact boundary,
@@ -37,7 +37,13 @@ type PositionRow = {
     id: string;
     title: string;
     organization_id: string;
-    organizations: { id: string; timezone: string; sms_enabled: boolean; email_enabled: boolean } | null;
+    organizations: {
+      id: string;
+      name: string;
+      timezone: string;
+      sms_enabled: boolean;
+      email_enabled: boolean;
+    } | null;
   } | null;
 };
 
@@ -59,10 +65,11 @@ type AssignmentRow = {
 // everything both channels need. Which channels it actually goes out on is
 // decided per member: the two opt-ins are independent, so a member with
 // both on gets the text and the email.
-type DueReminder = {
+export type DueReminder = {
   assignmentId: string;
   memberId: string;
   organizationId: string;
+  orgName: string;
   template: string;
   daysAhead: number;
   eventId: string;
@@ -95,7 +102,10 @@ function smsBody(due: DueReminder): string {
     : `SafeCampus reminder: you're on ${due.positionTitle} for ${due.eventTitle} tomorrow, ${due.when}. Reply STOP to opt out.`;
 }
 
-function emailContent(due: DueReminder, origin: string, unsubscribeUrl: string) {
+// Exported so /api/email/test sends the genuine article rather than a
+// lookalike — a test that renders its own copy of the template proves
+// nothing about the one that actually goes out.
+export function buildReminderEmail(due: DueReminder, origin: string, unsubscribeUrl: string) {
   const subject =
     due.daysAhead === 3
       ? `Shift reminder: ${due.positionTitle} on ${due.when}`
@@ -107,24 +117,35 @@ function emailContent(due: DueReminder, origin: string, unsubscribeUrl: string) 
   const eventUrl = `${origin}/schedule/${due.eventId}`;
 
   const text = [
+    due.orgName,
+    "",
     lead,
+    "",
+    `Position: ${due.positionTitle}`,
+    `Event: ${due.eventTitle}`,
+    `When: ${due.when}`,
     "",
     `See the event and everyone else assigned: ${eventUrl}`,
     "",
-    `Don't want these reminders? Unsubscribe: ${unsubscribeUrl}`,
+    `You're getting this because you're on the schedule at ${due.orgName}.`,
+    `Unsubscribe from shift reminders: ${unsubscribeUrl}`,
   ].join("\n");
 
-  // Deliberately plain, inline-styled HTML: email clients strip <style>
-  // blocks and external CSS, so anything the ui.module.css design system
-  // does on the web has to be re-stated inline here or not at all.
-  const html = `<div style="font-family:system-ui,-apple-system,'Segoe UI',sans-serif;font-size:15px;line-height:1.5;color:#111">
-  <p>${escapeHtml(lead)}</p>
-  <p><a href="${escapeHtml(eventUrl)}" style="color:#1d4ed8">See the event and everyone else assigned</a></p>
-  <p style="font-size:12px;color:#666;margin-top:24px">
-    You're getting this because you're on the schedule at SafeCampus.
-    <a href="${escapeHtml(unsubscribeUrl)}" style="color:#666">Unsubscribe from shift reminders</a>.
-  </p>
-</div>`;
+  const html = renderBrandedEmail({
+    origin,
+    eyebrow: due.orgName,
+    bodyHtml: `<p style="margin:0 0 18px;font-size:16px;line-height:1.5;color:#1c2430">${escapeHtml(lead)}</p>
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f4f6f4;border-radius:8px;margin-bottom:22px">
+              <tr><td style="padding:14px 16px;font-size:14px;line-height:1.7;color:#1c2430">
+                <strong style="color:#5b6670;font-weight:600">Position</strong>&nbsp;&nbsp;${escapeHtml(due.positionTitle)}<br />
+                <strong style="color:#5b6670;font-weight:600">Event</strong>&nbsp;&nbsp;${escapeHtml(due.eventTitle)}<br />
+                <strong style="color:#5b6670;font-weight:600">When</strong>&nbsp;&nbsp;${escapeHtml(due.when)}
+              </td></tr>
+            </table>`,
+    cta: { label: "View the event", url: eventUrl },
+    footerHtml: `You&rsquo;re getting this because you&rsquo;re on the schedule at ${escapeHtml(due.orgName)}.
+            <a href="${escapeHtml(unsubscribeUrl)}" style="color:#5b6670;text-decoration:underline">Unsubscribe from shift reminders</a>.`,
+  });
 
   return { subject, text, html };
 }
@@ -135,7 +156,7 @@ export async function sendShiftReminders(admin: SupabaseClient, origin: string, 
   const { data: positions } = await admin
     .from("event_positions")
     .select(
-      "id, title, start_time, events(id, title, organization_id, organizations(id, timezone, sms_enabled, email_enabled))",
+      "id, title, start_time, events(id, title, organization_id, organizations(id, name, timezone, sms_enabled, email_enabled))",
     )
     .gte("start_time", now.toISOString())
     .lte("start_time", horizon.toISOString())
@@ -168,6 +189,7 @@ export async function sendShiftReminders(admin: SupabaseClient, origin: string, 
         assignmentId: assignment.id,
         memberId: member.id,
         organizationId: position.events!.organization_id,
+        orgName: org.name,
         template: window.template,
         daysAhead: window.daysAhead,
         eventId: position.events!.id,
@@ -249,7 +271,7 @@ export async function sendShiftReminders(admin: SupabaseClient, origin: string, 
     if (emailSentKeys.has(`${due.assignmentId}:${due.template}`)) continue;
 
     const unsubscribe = unsubscribeUrlFor(origin, due.memberId);
-    const { subject, text, html } = emailContent(due, origin, unsubscribe.url);
+    const { subject, text, html } = buildReminderEmail(due, origin, unsubscribe.url);
     const result = await sendEmail({
       to: due.email!,
       subject,

@@ -6,6 +6,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { ExemptionToggle } from "./ExemptionToggle";
 import { ExtendTrialForm } from "./ExtendTrialForm";
 import { SupportAccessControls } from "./SupportAccessControls";
+import { SendTestEmailButton } from "./SendTestEmailButton";
 import { TIER_LABEL, type PlanTier } from "@/lib/stripe";
 import styles from "@/styles/ui.module.css";
 
@@ -89,6 +90,7 @@ export default async function PlatformAdminPage() {
           <Link href="/platform-admin/api-usage" className={`${styles.button} ${styles.buttonSecondary}`}>
             View API usage
           </Link>
+          <SendTestEmailButton />
           <Link href="/platform-admin/support-tickets" className={`${styles.button} ${styles.buttonSecondary}`}>
             View support tickets
           </Link>

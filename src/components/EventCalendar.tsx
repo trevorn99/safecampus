@@ -39,6 +39,10 @@ function eventDayKey(iso: string, timeZone: string) {
   return `${wall.year}-${wall.month - 1}-${wall.day}`;
 }
 
+function formatEventTime(iso: string, timeZone: string) {
+  return new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit", timeZone });
+}
+
 // YYYY-MM-DD, for the ?date= param the New Event page reads to pre-fill a
 // start time — distinct from dayKey() above, which isn't zero-padded and
 // isn't meant to round-trip through a URL.
@@ -160,7 +164,10 @@ export function EventCalendar({
                   className={styles.calendarEvent}
                   onClick={(e) => e.stopPropagation()}
                 >
-                  {event.title}
+                  <span className={styles.calendarEventTitle}>{event.title}</span>
+                  <span className={styles.calendarEventTime}>
+                    {formatEventTime(event.start_time, timeZone)}
+                  </span>
                 </Link>
               ))}
               {extra > 0 && <span className={styles.calendarMore}>+{extra} more</span>}
@@ -190,9 +197,7 @@ export function EventCalendar({
               </Link>
               <div className={styles.tagRow}>
                 {event.type && <span className={styles.pillMuted}>{eventTypeLabel(event.type)}</span>}
-                <span className={styles.itemMeta}>
-                  {new Date(event.start_time).toLocaleTimeString([], { hour: "numeric", minute: "2-digit", timeZone })}
-                </span>
+                <span className={styles.itemMeta}>{formatEventTime(event.start_time, timeZone)}</span>
               </div>
             </li>
           ))}

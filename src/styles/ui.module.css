@@ -608,7 +608,9 @@
 }
 .calendarDay {
   background: var(--surface);
-  min-height: 110px;
+  /* Three two-line chips plus the day number — was 110px, sized for the
+     single-line chips this replaced. */
+  min-height: 132px;
   padding: 0.4rem;
   display: flex;
   flex-direction: column;
@@ -652,10 +654,25 @@
   border-radius: var(--radius-sm);
   background: var(--surface-muted);
   color: var(--ink);
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+  overflow: hidden;
+}
+/* Truncation moves to the title alone — it was on the chip, which now has
+   two lines and must not clip the second one away. */
+.calendarEventTitle {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  display: block;
+}
+/* Dimmed with opacity rather than var(--muted): the chip inverts to
+   --accent-contrast on --accent when hovered, and a fixed muted colour
+   would be close to unreadable against it. */
+.calendarEventTime {
+  font-size: 0.64rem;
+  opacity: 0.75;
+  white-space: nowrap;
 }
 .calendarEvent:hover {
   background: var(--accent);
