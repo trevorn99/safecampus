@@ -85,6 +85,7 @@ export async function generateSeriesOccurrences(
   if (missing.length === 0) return { created: 0 };
 
   let templatePositions: Array<{
+    id: string;
     team_id: string | null;
     title: string;
     location_id: string | null;
@@ -95,7 +96,7 @@ export async function generateSeriesOccurrences(
   if (series.template_id) {
     const { data } = await supabase
       .from("template_positions")
-      .select("team_id, title, location_id, start_offset_minutes, end_offset_minutes, slots")
+      .select("id, team_id, title, location_id, start_offset_minutes, end_offset_minutes, slots")
       .eq("template_id", series.template_id);
     templatePositions = data ?? [];
   }
@@ -131,6 +132,14 @@ export async function generateSeriesOccurrences(
         const startMs = new Date(event.start_time).getTime();
         return templatePositions.map((tp) => ({
           event_id: event.id,
+          // The link back to the series' position. Without it the
+          // "apply to every future event in this series" paths can't find an
+          // occurrence at all: assignAcrossSeries matches siblings on this
+          // column, and both assign forms hide their series checkbox when
+          // it's null. AddSeriesPositionForm has always set it; generated
+          // occurrences never did, so the feature only worked on events that
+          // already existed when a position was added.
+          template_position_id: tp.id,
           team_id: tp.team_id,
           title: tp.title,
           location_id: tp.location_id,
