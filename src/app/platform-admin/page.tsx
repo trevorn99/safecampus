@@ -104,7 +104,13 @@ export default async function PlatformAdminPage() {
               return (
                 <li key={org.id} className={styles.listRow}>
                   <div>
-                    <p className={styles.itemName}>{org.name}</p>
+                    {/* The only route to the per-org view used to be the
+                        Troubleshoot button, which appears only after a grant
+                        exists — so there was no way to discover the page at
+                        all. It explains the grant requirement itself now. */}
+                    <Link href={`/platform-admin/${org.id}`} className={styles.itemName}>
+                      {org.name}
+                    </Link>
                     <p className={styles.itemMeta}>
                       {org.subscription_status}
                       {org.plan_tier ? ` · ${TIER_LABEL[org.plan_tier as PlanTier]}` : ""}

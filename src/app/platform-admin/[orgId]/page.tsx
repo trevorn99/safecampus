@@ -38,11 +38,39 @@ export default async function PlatformAdminOrgPage({
   // support_access_grants row for this exact org (see has_active_support_grant()
   // in the support-access-grants migration). No standing elevated RLS.
   const { data: hasGrant } = await supabase.rpc("has_active_support_grant", { target_org: orgId });
-  if (!hasGrant) {
-    redirect("/platform-admin");
-  }
 
   const admin = createAdminClient();
+
+  // Said rather than enacted. Redirecting to the console left someone back
+  // where they started with no explanation, which reads as the page being
+  // broken rather than as a gate they haven't passed — and the grant is
+  // requested on that very page, so they'd have no idea what to do next.
+  if (!hasGrant) {
+    const { data: org } = await admin.from("organizations").select("name").eq("id", orgId).maybeSingle();
+    return (
+      <>
+        <AppHeader isAdmin={false} isPlatformAdmin />
+        <main className={styles.appMain}>
+          <div className={styles.pageHeading}>
+            <h1 className={styles.pageTitle}>{org?.name ?? "Organization"}</h1>
+            <p className={styles.subtitle}>Support access required</p>
+          </div>
+          <div className={styles.card}>
+            <p className={styles.helperText}>
+              Looking at an organization&apos;s data needs an active support access grant — a recorded reason and
+              an expiry, granted by you to yourself. Find this organization on the platform admin console and
+              request access under <strong>Support access</strong>; a <strong>Troubleshoot</strong> button appears
+              on the row once you have it, and brings you back here.
+            </p>
+            <Link href="/platform-admin" className={styles.link}>
+              ← Platform admin console
+            </Link>
+          </div>
+        </main>
+      </>
+    );
+  }
+
   const [{ data: organization }, { data: members }, { data: roleAssignments }, { data: locations }, { data: teams }] =
     await Promise.all([
       admin.from("organizations").select("name").eq("id", orgId).single(),
