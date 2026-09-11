@@ -2,8 +2,7 @@ import { notFound } from "next/navigation";
 import { requireMembership } from "@/lib/session";
 import { AppHeader } from "@/components/AppHeader";
 import { ORG_FILES_BUCKET } from "@/lib/supabase/storage";
-import { PostsManager } from "../PostsManager";
-import { MapEditor } from "./MapEditor";
+import { LocationMapPanel } from "../LocationMapPanel";
 import styles from "@/styles/ui.module.css";
 
 export default async function LocationMapPage({
@@ -70,26 +69,7 @@ export default async function LocationMapPage({
           <p className={styles.subtitle}>{organizationName}</p>
         </div>
 
-        {canManage && (
-          <div className={styles.card}>
-            <div className={styles.cardHeader}>
-              <h2 className={styles.cardTitle}>Posts</h2>
-              <p className={styles.helperText}>
-                The places people actually stand at this location. A post exists once however many events need it
-                covered, carries one pin on the map, and is what a staffing requirement points at when it&apos;s a
-                fixed place — things like &ldquo;Roam&rdquo; don&apos;t need one.
-              </p>
-            </div>
-            <PostsManager
-              organizationId={member.organization_id}
-              locationId={locationId}
-              posts={posts ?? []}
-              pinnedPostIds={[...pinnedPostIds]}
-            />
-          </div>
-        )}
-
-        <MapEditor
+        <LocationMapPanel
           organizationId={member.organization_id}
           locationId={locationId}
           canManage={canManage}
@@ -98,10 +78,13 @@ export default async function LocationMapPage({
             id: pin.id,
             xPct: Number(pin.x_pct),
             yPct: Number(pin.y_pct),
+            postId: pin.post_id,
             title: postNames.get(pin.post_id) ?? "Unknown post",
           }))}
+          posts={posts ?? []}
           availablePositions={availablePositions}
         />
+
       </main>
     </>
   );

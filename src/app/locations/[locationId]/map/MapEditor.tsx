@@ -7,7 +7,7 @@ import { ORG_FILES_BUCKET, orgFilePath } from "@/lib/supabase/storage";
 import styles from "@/styles/ui.module.css";
 import mapStyles from "./map.module.css";
 
-type Pin = { id: string; xPct: number; yPct: number; title: string };
+type Pin = { id: string; xPct: number; yPct: number; title: string; postId: string };
 type Position = { id: string; title: string; templateName: string | null };
 
 export function MapEditor({
@@ -17,6 +17,7 @@ export function MapEditor({
   map,
   pins,
   availablePositions,
+  highlightedPostId,
 }: {
   organizationId: string;
   locationId: string;
@@ -24,6 +25,8 @@ export function MapEditor({
   map: { id: string; imageUrl: string | null } | null;
   pins: Pin[];
   availablePositions: Position[];
+  /** Flashes this post's pin so it can be found on a busy floor plan. */
+  highlightedPostId?: string | null;
 }) {
   const router = useRouter();
   const imgRef = useRef<HTMLImageElement>(null);
@@ -139,7 +142,9 @@ export function MapEditor({
         {pins.map((pin) => (
           <div
             key={pin.id}
-            className={mapStyles.pin}
+            className={
+              highlightedPostId === pin.postId ? `${mapStyles.pin} ${mapStyles.pinFlash}` : mapStyles.pin
+            }
             style={{ left: `${pin.xPct}%`, top: `${pin.yPct}%` }}
           >
             <span className={mapStyles.pinLabel}>{pin.title}</span>
