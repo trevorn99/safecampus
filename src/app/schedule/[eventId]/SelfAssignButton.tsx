@@ -67,7 +67,7 @@ export function SelfAssignButton({
             checked={applyToSeries}
             onChange={(event) => setApplyToSeries(event.target.checked)}
           />
-          Also sign up for every future event in this series
+          Also sign up for every future event in this series, and stay on it
         </label>
       )}
       {error && <p className={styles.errorText} role="alert">{error}</p>}

@@ -127,7 +127,7 @@ export async function generateSeriesOccurrences(
   if (insertError || !insertedEvents) return { created: 0 };
 
   if (templatePositions.length > 0) {
-    await supabase.from("event_positions").insert(
+    const { data: insertedPositions } = await supabase.from("event_positions").insert(
       insertedEvents.flatMap((event) => {
         const startMs = new Date(event.start_time).getTime();
         return templatePositions.map((tp) => ({
@@ -151,7 +151,39 @@ export async function generateSeriesOccurrences(
           slots: tp.slots,
         }));
       }),
-    );
+    ).select("id, template_position_id");
+
+    // Standing assignments — the roster for the recurring position itself —
+    // are copied onto each new occurrence, so people stay on a position as
+    // the horizon rolls forward instead of every generated event arriving
+    // unfilled. Someone removed from one occurrence stays removed only
+    // there; this is what an admin changes to stop it recurring.
+    const { data: standing } = await supabase
+      .from("template_position_assignments")
+      .select("template_position_id, member_id")
+      .in(
+        "template_position_id",
+        templatePositions.map((tp) => tp.id),
+      );
+
+    if (standing && standing.length > 0 && insertedPositions && insertedPositions.length > 0) {
+      const membersByTemplatePosition = new Map<string, string[]>();
+      for (const row of standing) {
+        const list = membersByTemplatePosition.get(row.template_position_id) ?? [];
+        list.push(row.member_id);
+        membersByTemplatePosition.set(row.template_position_id, list);
+      }
+
+      const assignmentRows = insertedPositions.flatMap((position) =>
+        (membersByTemplatePosition.get(position.template_position_id ?? "") ?? []).map((member_id) => ({
+          event_position_id: position.id,
+          member_id,
+        })),
+      );
+      if (assignmentRows.length > 0) {
+        await supabase.from("assignments").insert(assignmentRows);
+      }
+    }
   }
 
   const created = insertedEvents.length;
