@@ -22,6 +22,31 @@ const VERIFICATION_LABEL: Record<string, string> = {
 };
 
 type RoleAssignment = { id: string; member_id: string; scope_type: string; scope_id: string; role: string };
+type Certification = { id: string; member_id: string; type: string; issued_at: string | null; expires_at: string | null };
+
+// Pulled out of the component body — react-hooks/purity flags impure calls
+// (Date construction with no args) made directly during render.
+function todayIsoDate(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+// issued_at/expires_at are `date` columns, so they arrive as "YYYY-MM-DD"
+// with no time and no zone. Feeding that to new Date() parses it as UTC
+// midnight, which renders as the previous day for anyone west of Greenwich —
+// so the parts are formatted directly instead.
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+function formatDateOnly(value: string): string {
+  const [year, month, day] = value.split("-").map(Number);
+  return `${day} ${MONTHS[month - 1]} ${year}`;
+}
+
+// Comparing "YYYY-MM-DD" strings is the same as comparing the dates, and
+// avoids inventing a timezone for a value that has none.
+function expiryState(expiresAt: string | null, today: string, soon: string): "none" | "expired" | "soon" | "valid" {
+  if (!expiresAt) return "none";
+  if (expiresAt < today) return "expired";
+  return expiresAt <= soon ? "soon" : "valid";
+}
 type Member = {
   id: string;
   name: string;
@@ -37,8 +62,21 @@ type Member = {
 export default async function TeamPage() {
   const { supabase, member, organizationName, isAdmin, isPlatformAdmin } = await requireMembership();
 
-  const [{ data: members }, { data: roleAssignments }, { data: locations }, { data: teams }, { data: org }] =
-    await Promise.all([
+  const today = todayIsoDate();
+  // 60 days is the window the roster calls "expiring soon" — long enough that
+  // a background check or a renewal course can still be booked.
+  const soonCutoff = new Date(new Date(`${today}T00:00:00Z`).getTime() + 60 * 86_400_000)
+    .toISOString()
+    .slice(0, 10);
+
+  const [
+    { data: members },
+    { data: roleAssignments },
+    { data: locations },
+    { data: teams },
+    { data: org },
+    { data: certifications },
+  ] = await Promise.all([
       supabase
         .from("members")
         .select("id, name, email, user_id, status, profile_picture_url, identity_verification_status")
@@ -48,7 +86,23 @@ export default async function TeamPage() {
       supabase.from("locations").select("id, name").eq("organization_id", member.organization_id),
       supabase.from("teams").select("id, name").eq("organization_id", member.organization_id).order("name"),
       supabase.from("organizations").select("identity_verification_enabled").eq("id", member.organization_id).single(),
+      // RLS returns everyone's to an org admin and only your own otherwise,
+      // so this needs no isAdmin branch — the roster shows what the viewer is
+      // allowed to see. Soonest expiry first, undated last (nulls sort last
+      // on an ascending order in Postgres).
+      supabase
+        .from("certifications")
+        .select("id, member_id, type, issued_at, expires_at")
+        .order("expires_at", { ascending: true })
+        .returns<Certification[]>(),
     ]);
+
+  const certsByMember = new Map<string, Certification[]>();
+  for (const certification of certifications ?? []) {
+    const list = certsByMember.get(certification.member_id) ?? [];
+    list.push(certification);
+    certsByMember.set(certification.member_id, list);
+  }
 
   const avatarUrls = await getAvatarUrlMap(
     supabase,
@@ -148,6 +202,27 @@ export default async function TeamPage() {
             </>
           )}
         </div>
+        {(() => {
+          const memberCerts = certsByMember.get(teamMember.id) ?? [];
+          if (memberCerts.length === 0) return null;
+          return (
+            <ul className={styles.docList}>
+              {memberCerts.map((certification) => {
+                const state = expiryState(certification.expires_at, today, soonCutoff);
+                return (
+                  <li key={certification.id} className={styles.itemMeta}>
+                    <strong>{certification.type}</strong>
+                    {certification.issued_at ? ` · issued ${formatDateOnly(certification.issued_at)}` : ""}
+                    {certification.expires_at ? ` · expires ${formatDateOnly(certification.expires_at)}` : " · no expiry"}
+                    {state === "expired" && <span className={styles.pillDanger}> Expired</span>}
+                    {state === "soon" && <span className={styles.pillMuted}> Expiring soon</span>}
+                  </li>
+                );
+              })}
+            </ul>
+          );
+        })()}
+
         {isAdmin && (
           <TeamMembershipManager
             memberId={teamMember.id}

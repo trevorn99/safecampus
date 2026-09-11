@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { utcToZonedWallTime, zonedWallTimeToUtc } from "@/lib/timezone";
 import { DateTimeField } from "@/components/DateTimeField";
+import { PostSelect, type PostOption } from "@/components/PostSelect";
 import styles from "@/styles/ui.module.css";
 
 type Option = { id: string; name: string };
@@ -30,12 +31,14 @@ export function AddPositionForm({
   teams,
   locations,
   timeZone,
+  posts,
 }: {
   eventId: string;
   eventStartTime: string;
   teams: Option[];
   locations: Option[];
   timeZone: string;
+  posts: PostOption[];
 }) {
   const router = useRouter();
   const [title, setTitle] = useState("");
@@ -45,6 +48,7 @@ export function AddPositionForm({
   const [endTime, setEndTime] = useState("");
   const [endTimeResetKey, setEndTimeResetKey] = useState(0);
   const [slots, setSlots] = useState("1");
+  const [postId, setPostId] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -68,6 +72,7 @@ export function AddPositionForm({
       start_time: fromZonedInputValue(startTime, timeZone).toISOString(),
       end_time: endTime ? fromZonedInputValue(endTime, timeZone).toISOString() : null,
       slots: Number(slots),
+      post_id: postId || null,
     });
 
     setLoading(false);
@@ -158,6 +163,7 @@ export function AddPositionForm({
         />
       </div>
       <div className={styles.actions}>
+        <PostSelect id="eventPositionPost" value={postId} posts={posts} onChange={setPostId} disabled={loading} />
         <button type="submit" className={`${styles.button} ${styles.buttonPrimary}`} disabled={loading}>
           {loading ? "Adding…" : "Add position"}
         </button>

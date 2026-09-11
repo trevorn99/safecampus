@@ -8,7 +8,7 @@ import styles from "@/styles/ui.module.css";
 import mapStyles from "./map.module.css";
 
 type Pin = { id: string; xPct: number; yPct: number; title: string };
-type Position = { id: string; title: string };
+type Position = { id: string; title: string; templateName: string | null };
 
 export function MapEditor({
   organizationId,
@@ -75,7 +75,7 @@ export function MapEditor({
     const supabase = createClient();
     const { error: pinError } = await supabase.from("map_pins").insert({
       map_id: map.id,
-      template_position_id: selectedPositionId,
+      post_id: selectedPositionId,
       x_pct: pendingClick.x.toFixed(2),
       y_pct: pendingClick.y.toFixed(2),
     });
@@ -170,10 +170,11 @@ export function MapEditor({
             value={selectedPositionId}
             onChange={(event) => setSelectedPositionId(event.target.value)}
           >
-            <option value="">Select a position</option>
+            <option value="">Select a post</option>
             {availablePositions.map((position) => (
               <option key={position.id} value={position.id}>
                 {position.title}
+                {position.templateName ? ` — ${position.templateName}` : ""}
               </option>
             ))}
           </select>
