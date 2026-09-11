@@ -77,6 +77,10 @@ export function StandingAssignments({ positions }: { positions: StandingPosition
         {positions.map((position) => {
           const assignedIds = new Set(position.assigned.map((a) => a.memberId));
           const available = position.candidates.filter((m) => !assignedIds.has(m.id));
+          // Only the first `slots` of a roster get placed on each occurrence
+          // (see eventSeries.ts), so offering more here would promise
+          // something generation won't do.
+          const full = position.assigned.length >= position.slots;
           return (
             <li key={position.id} className={styles.listRow}>
               <div>
@@ -101,7 +105,11 @@ export function StandingAssignments({ positions }: { positions: StandingPosition
                     </button>
                   </span>
                 ))}
-                {available.length > 0 ? (
+                {full ? (
+                  <span className={styles.itemMeta}>
+                    All {position.slots} {position.slots === 1 ? "slot is" : "slots are"} covered.
+                  </span>
+                ) : available.length > 0 ? (
                   <select
                     className={styles.select}
                     value=""

@@ -39,6 +39,19 @@ type PositionRow = {
 };
 type Repeats = "never" | "weekly" | "monthly";
 
+// Order-independent fingerprint of a set of positions, used to tell "this
+// event still uses the template I picked" from "I picked a template and then
+// changed the positions". Rows can be added and removed but not reordered,
+// so sorting is enough to make the comparison stable.
+function positionsSignature(
+  rows: { title: string; teamId: string; startOffset: string; endOffset: string; slots: string }[],
+): string {
+  return rows
+    .map((row) => `${row.title}|${row.teamId}|${row.startOffset}|${row.endOffset}|${row.slots}`)
+    .sort()
+    .join(";");
+}
+
 function emptyRow(): PositionRow {
   return { key: crypto.randomUUID(), title: "", teamId: "", startOffset: "0", endOffset: "", slots: "1" };
 }
@@ -115,7 +128,28 @@ export function NewEventForm({
   // Whenever this event repeats, positions can only carry forward to future
   // occurrences via a template — so a name is required (no "save?" checkbox
   // needed, unlike the one-off case where saving one is optional).
-  const needsTemplateName = repeats !== "never" && positions.length > 0;
+  // The positions as the selected template defines them, in the same shape
+  // the form holds them, so the two can be compared.
+  const selectedTemplateRows = templatePositions
+    .filter((tp) => tp.template_id === templateId)
+    .map((tp) => ({
+      title: tp.title,
+      teamId: tp.team_id ?? "",
+      startOffset: String(tp.start_offset_minutes),
+      endOffset: tp.end_offset_minutes != null ? String(tp.end_offset_minutes) : "",
+      slots: String(tp.slots),
+    }));
+
+  // Picking a template copies its rows into `positions`, and a repeating
+  // event then needs *a* template to generate from — but it already has one.
+  // Without this check every repeating event created from a template built a
+  // duplicate of that template and used the copy, so the list filled up with
+  // identical templates and edits to the original stopped affecting anything.
+  const reusesSelectedTemplate =
+    Boolean(templateId) && positionsSignature(positions) === positionsSignature(selectedTemplateRows);
+
+  // A name is only wanted when a template is actually about to be created.
+  const needsTemplateName = repeats !== "never" && positions.length > 0 && !reusesSelectedTemplate;
 
   // Naming the template is the one bit of bookkeeping a repeating event
   // forces on you, and inventing a second name for the same thing is busywork
@@ -179,7 +213,11 @@ export function NewEventForm({
 
     try {
       let newTemplateId: string | null = null;
-      if (positions.length > 0 && (needsTemplateName || (repeats === "never" && saveAsTemplate))) {
+      if (
+        positions.length > 0 &&
+        !reusesSelectedTemplate &&
+        (needsTemplateName || (repeats === "never" && saveAsTemplate))
+      ) {
         newTemplateId = await createTemplateFromPositions(resolvedTemplateName);
       }
       // templateId defaults to "" (not null) when nothing's selected — ??
@@ -533,6 +571,14 @@ export function NewEventForm({
               />
             )}
           </div>
+        )}
+
+        {repeats !== "never" && positions.length > 0 && reusesSelectedTemplate && (
+          <p className={styles.hint}>
+            Using the “{templates.find((t) => t.id === templateId)?.name ?? "selected"}” template — every occurrence
+            gets these positions from it. Editing the positions above instead saves a new template for this series,
+            leaving the original alone.
+          </p>
         )}
 
         {needsTemplateName && (

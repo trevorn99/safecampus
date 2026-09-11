@@ -174,12 +174,16 @@ export async function generateSeriesOccurrences(
         membersByTemplatePosition.set(row.template_position_id, list);
       }
 
-      const assignmentRows = insertedPositions.flatMap((position) =>
-        (membersByTemplatePosition.get(position.template_position_id ?? "") ?? []).map((member_id) => ({
-          event_position_id: position.id,
-          member_id,
-        })),
-      );
+      const slotsByTemplatePosition = new Map(templatePositions.map((tp) => [tp.id, tp.slots]));
+      const assignmentRows = insertedPositions.flatMap((position) => {
+        const key = position.template_position_id ?? "";
+        // A standing roster longer than the position's slots would otherwise
+        // overfill every occurrence it seeds. Capped here rather than
+        // rejected, so a roster kept deliberately deep (cover for absences)
+        // still works — the first `slots` are placed and the rest aren't.
+        const members = (membersByTemplatePosition.get(key) ?? []).slice(0, slotsByTemplatePosition.get(key) ?? 1);
+        return members.map((member_id) => ({ event_position_id: position.id, member_id }));
+      });
       if (assignmentRows.length > 0) {
         await supabase.from("assignments").insert(assignmentRows);
       }
