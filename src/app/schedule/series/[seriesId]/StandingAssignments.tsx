@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { assignToFutureOccurrences, unassignFromFutureOccurrences } from "@/lib/assignAcrossSeries";
 import styles from "@/styles/ui.module.css";
 
 type Member = { id: string; name: string; pending: boolean };
@@ -30,15 +31,21 @@ export function StandingAssignments({ positions }: { positions: StandingPosition
     const { error: insertError } = await supabase
       .from("template_position_assignments")
       .insert({ template_position_id: templatePositionId, member_id: memberId });
-    setPendingId("");
     if (insertError) {
+      setPendingId("");
       setError(insertError.message);
       return;
     }
+
+    // The roster row alone only reaches occurrences generated from here on.
+    // Events already on the calendar need the assignment written too, or
+    // adding someone appears to do nothing until the horizon next advances.
+    await assignToFutureOccurrences(supabase, memberId, templatePositionId);
+    setPendingId("");
     router.refresh();
   }
 
-  async function remove(assignmentId: string) {
+  async function remove(assignmentId: string, templatePositionId: string, memberId: string) {
     setPendingId(assignmentId);
     setError("");
     const supabase = createClient();
@@ -46,11 +53,17 @@ export function StandingAssignments({ positions }: { positions: StandingPosition
       .from("template_position_assignments")
       .delete()
       .eq("id", assignmentId);
-    setPendingId("");
     if (deleteError) {
+      setPendingId("");
       setError(deleteError.message);
       return;
     }
+
+    // Symmetric with add(): leaving them on every occurrence already
+    // generated would mean removing someone from the roster still had them
+    // covering up to a year of shifts.
+    await unassignFromFutureOccurrences(supabase, memberId, templatePositionId);
+    setPendingId("");
     router.refresh();
   }
 
@@ -81,7 +94,7 @@ export function StandingAssignments({ positions }: { positions: StandingPosition
                       type="button"
                       className={styles.linkButton}
                       disabled={pendingId === assignment.assignmentId}
-                      onClick={() => remove(assignment.assignmentId)}
+                      onClick={() => remove(assignment.assignmentId, position.id, assignment.memberId)}
                       aria-label={`Remove ${assignment.name} from ${position.title}`}
                     >
                       ×

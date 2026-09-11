@@ -225,7 +225,14 @@ One or two sentences stating what was actually checked this time (e.g. "DHS NTAS
 // rounds (stop_reason: "pause_turn") — resume by re-sending the
 // conversation so far, per Anthropic's documented pattern. Capped so one
 // report can't loop indefinitely.
-const MAX_PAUSE_TURN_RESUMES = 3;
+const MAX_PAUSE_TURN_RESUMES = 6;
+
+// Thinking tokens are drawn from max_tokens, and adaptive thinking on a
+// research task that runs a dozen searches uses a lot of them before a word
+// of the brief is written. At 5000 the budget could be spent entirely on
+// thinking and tool calls, and the run would come back with no text blocks
+// at all — a report that saved successfully and was completely blank.
+const MAX_OUTPUT_TOKENS = 16000;
 
 export async function generateThreatReport(admin: SupabaseClient, organizationId: string) {
   // Claim this organization immediately, before any slow work — this row
@@ -332,7 +339,7 @@ export async function generateThreatReport(admin: SupabaseClient, organizationId
 
     let response = await anthropic.messages.create({
       model: MODEL,
-      max_tokens: 5000,
+      max_tokens: MAX_OUTPUT_TOKENS,
       thinking: { type: "adaptive" },
       tools,
       messages,
@@ -344,13 +351,30 @@ export async function generateThreatReport(admin: SupabaseClient, organizationId
       messages = [...messages, { role: "assistant", content: response.content }];
       response = await anthropic.messages.create({
         model: MODEL,
-        max_tokens: 5000,
+        max_tokens: MAX_OUTPUT_TOKENS,
         thinking: { type: "adaptive" },
         tools,
         messages,
       });
       await recordClaudeUsage(admin, organizationId, placeholder.id, MODEL, response.usage);
       resumes += 1;
+    }
+
+    // Every way this can end without a brief, checked before the content is
+    // read. Each one used to store a blank report as a finished draft — and
+    // because getGenerationStatus() dates the weekly cooldown from the latest
+    // report, a blank one locked the organization out for another seven days.
+    // Throwing instead deletes the placeholder, frees the cooldown, and shows
+    // the admin why.
+    if (response.stop_reason === "pause_turn") {
+      throw new Error(
+        `Threat Intelligence run still had work to do after ${MAX_PAUSE_TURN_RESUMES} continuations — try again, or reduce the number of locations with addresses.`,
+      );
+    }
+    if (response.stop_reason === "refusal") {
+      throw new Error(
+        `Claude declined to complete this report (${response.stop_details?.category ?? "unspecified"}). The incident or watchlist text it was given may be the cause.`,
+      );
     }
 
     // Join with "" not "\n\n": with a server-side tool like web_search, a
@@ -374,6 +398,16 @@ export async function generateThreatReport(admin: SupabaseClient, organizationId
     // (title, then the first "## " section), so trim anything before it.
     const firstHeadingIndex = rawSummary.search(/^#{1,2} /m);
     const summary = firstHeadingIndex > 0 ? rawSummary.slice(firstHeadingIndex) : rawSummary;
+
+    // Catches the truncation case that started all this: max_tokens spent on
+    // thinking and searches with nothing left for the brief. stop_reason is
+    // "max_tokens" there, but this also covers any other shape of empty
+    // response rather than enumerating them.
+    if (!summary.trim()) {
+      throw new Error(
+        `Threat Intelligence run produced no report text (stop reason: ${response.stop_reason ?? "unknown"}). Nothing was saved — try again.`,
+      );
+    }
 
     const { data: report, error } = await admin
       .from("threat_reports")

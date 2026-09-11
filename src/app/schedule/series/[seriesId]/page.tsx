@@ -159,9 +159,10 @@ export default async function SeriesDetailPage({
           <div className={styles.cardHeader}>
             <h2 className={styles.cardTitle}>Who normally covers this</h2>
             <p className={styles.helperText}>
-              People here are put on every occurrence as it&apos;s created, including ones generated months from
-              now — so an assignment lasts until it&apos;s changed here. Taking someone off a single event on the
-              schedule only covers that week and leaves this list alone.
+              People here are put on every upcoming occurrence — the ones already on the calendar and the ones
+              generated months from now — so an assignment lasts until it&apos;s changed here. Removing someone
+              takes them off every future occurrence too. Past events are never touched, and taking someone off a
+              single event on the schedule only covers that week, leaving this list alone.
             </p>
           </div>
           <StandingAssignments positions={standingPositions} />
