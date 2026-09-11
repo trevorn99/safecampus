@@ -5,6 +5,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { AddTemplatePositionForm } from "./AddTemplatePositionForm";
 import { DeleteTemplatePositionButton } from "./DeleteTemplatePositionButton";
 import { DeleteTemplateButton } from "./DeleteTemplateButton";
+import { TemplateTimeForm } from "./TemplateTimeForm";
 import styles from "@/styles/ui.module.css";
 
 function formatOffset(minutes: number) {
@@ -26,7 +27,11 @@ export default async function TemplateDetailPage({
   }
 
   const [{ data: template }, { data: teams }, { data: positions }] = await Promise.all([
-    supabase.from("event_templates").select("id, name, description").eq("id", templateId).maybeSingle(),
+    supabase
+      .from("event_templates")
+      .select("id, name, description, default_start_time, default_duration_minutes")
+      .eq("id", templateId)
+      .maybeSingle(),
     supabase.from("teams").select("id, name").eq("organization_id", member.organization_id),
     supabase
       .from("template_positions")
@@ -58,6 +63,21 @@ export default async function TemplateDetailPage({
         <div className={styles.pageHeading}>
           <h1 className={styles.pageTitle}>{template.name}</h1>
           <p className={styles.subtitle}>{organizationName}{template.description ? ` · ${template.description}` : ""}</p>
+        </div>
+
+        <div className={styles.card}>
+          <div className={styles.cardHeader}>
+            <h2 className={styles.cardTitle}>Usual time</h2>
+            <p className={styles.helperText}>
+              Fills in the start and end of any event created from this template. Position offsets below are
+              measured from this start.
+            </p>
+          </div>
+          <TemplateTimeForm
+            templateId={template.id}
+            defaultStartTime={template.default_start_time}
+            defaultDurationMinutes={template.default_duration_minutes}
+          />
         </div>
 
         <div className={styles.card}>

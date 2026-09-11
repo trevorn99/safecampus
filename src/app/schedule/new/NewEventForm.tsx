@@ -7,9 +7,20 @@ import { createClient } from "@/lib/supabase/client";
 import { WEEKDAYS, ORDINALS, buildWeeklyRule, buildMonthlyRule } from "@/lib/recurrence";
 import { zonedWallTimeToUtc } from "@/lib/timezone";
 import { DateTimeField } from "@/components/DateTimeField";
+import {
+  addMinutesToTimeInput,
+  minutesBetweenTimeInputs,
+  toTimeInputValue,
+  todayDateInput,
+  withTime,
+} from "@/lib/templateTime";
 import styles from "@/styles/ui.module.css";
 
 type Option = { id: string; name: string };
+type TemplateOption = Option & {
+  default_start_time: string | null;
+  default_duration_minutes: number | null;
+};
 type LocationOption = { id: string; name: string; timezone: string | null };
 
 function fromZonedInputValue(value: string, timeZone: string): Date {
@@ -72,7 +83,7 @@ export function NewEventForm({
   locations: LocationOption[];
   orgTimeZone: string;
   teams: Option[];
-  templates: Option[];
+  templates: TemplateOption[];
   templatePositions: TemplatePosition[];
   pcoCandidate?: { id: string; title: string; startTime: string; endTime: string } | null;
   defaultDate?: string;
@@ -115,6 +126,22 @@ export function NewEventForm({
         slots: String(tp.slots),
       }));
     setPositions(rows);
+
+    // A template's usual time fills the event's start and end, keeping
+    // whatever date is already chosen — the date comes from the calendar or
+    // the ?date= param, the template only ever supplies the time of day.
+    // Position offsets below are measured from this start, so they only line
+    // up if the event actually begins when the template says it does.
+    const template = templates.find((t) => t.id === nextTemplateId);
+    const templateStart = toTimeInputValue(template?.default_start_time);
+    if (templateStart) {
+      const fallbackDate = defaultDate ?? todayDateInput();
+      const nextStart = withTime(startTime, templateStart, fallbackDate);
+      setStartTime(nextStart);
+      if (template?.default_duration_minutes) {
+        setEndTime(withTime(nextStart, addMinutesToTimeInput(templateStart, template.default_duration_minutes), fallbackDate));
+      }
+    }
   }
 
   function updateRow(key: string, patch: Partial<PositionRow>) {
@@ -160,9 +187,20 @@ export function NewEventForm({
 
   async function createTemplateFromPositions(name: string): Promise<string | null> {
     const supabase = createClient();
+    // Carries the event's own time onto the template it spawns, so the next
+    // event created from it starts out already scheduled.
+    const [, startClock] = startTime.split("T");
+    const [, endClock] = endTime ? endTime.split("T") : [null, null];
+
     const { data: newTemplate, error: templateError } = await supabase
       .from("event_templates")
-      .insert({ organization_id: organizationId, name })
+      .insert({
+        organization_id: organizationId,
+        name,
+        default_start_time: startClock || null,
+        default_duration_minutes:
+          startClock && endClock ? minutesBetweenTimeInputs(startClock, endClock) : null,
+      })
       .select("id")
       .single();
     if (templateError) throw new Error(templateError.message);
