@@ -2,16 +2,18 @@ import { notFound } from "next/navigation";
 import { requireMembership } from "@/lib/session";
 import { AppHeader } from "@/components/AppHeader";
 import { ORG_FILES_BUCKET } from "@/lib/supabase/storage";
-import { PostsManager } from "../PostsManager";
-import { MapEditor } from "./MapEditor";
+import { LocationMapPanel } from "../LocationMapPanel";
 import styles from "@/styles/ui.module.css";
 
 export default async function LocationMapPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locationId: string }>;
+  searchParams: Promise<{ map?: string }>;
 }) {
   const { locationId } = await params;
+  const { map: requestedMapId } = await searchParams;
   const { supabase, member, organizationName, isAdmin, isPlatformAdmin } = await requireMembership();
 
   const { data: location } = await supabase
@@ -30,11 +32,16 @@ export default async function LocationMapPage({
   });
   const canManage = isAdmin || Boolean(canManageLocation);
 
-  const { data: map } = await supabase
+  // A location can have several maps — floors of a building, buildings on a
+  // campus. Which one is shown lives in the URL rather than component state,
+  // so a link to "the first floor" is a link someone can send.
+  const { data: maps } = await supabase
     .from("maps")
-    .select("id, storage_path")
+    .select("id, name, storage_path")
     .eq("location_id", locationId)
-    .maybeSingle();
+    .order("name");
+
+  const map = (maps ?? []).find((candidate) => candidate.id === requestedMapId) ?? (maps ?? [])[0] ?? null;
 
   let imageUrl: string | null = null;
   if (map) {
@@ -70,38 +77,23 @@ export default async function LocationMapPage({
           <p className={styles.subtitle}>{organizationName}</p>
         </div>
 
-        {canManage && (
-          <div className={styles.card}>
-            <div className={styles.cardHeader}>
-              <h2 className={styles.cardTitle}>Posts</h2>
-              <p className={styles.helperText}>
-                The places people actually stand at this location. A post exists once however many events need it
-                covered, carries one pin on the map, and is what a staffing requirement points at when it&apos;s a
-                fixed place — things like &ldquo;Roam&rdquo; don&apos;t need one.
-              </p>
-            </div>
-            <PostsManager
-              organizationId={member.organization_id}
-              locationId={locationId}
-              posts={posts ?? []}
-              pinnedPostIds={[...pinnedPostIds]}
-            />
-          </div>
-        )}
-
-        <MapEditor
+        <LocationMapPanel
           organizationId={member.organization_id}
           locationId={locationId}
           canManage={canManage}
-          map={map ? { id: map.id, imageUrl } : null}
+          map={map ? { id: map.id, name: map.name, imageUrl } : null}
+          maps={maps ?? []}
           pins={(pins ?? []).map((pin) => ({
             id: pin.id,
             xPct: Number(pin.x_pct),
             yPct: Number(pin.y_pct),
+            postId: pin.post_id,
             title: postNames.get(pin.post_id) ?? "Unknown post",
           }))}
+          posts={posts ?? []}
           availablePositions={availablePositions}
         />
+
       </main>
     </>
   );

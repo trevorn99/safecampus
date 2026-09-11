@@ -14,11 +14,17 @@ export function PostsManager({
   locationId,
   posts,
   pinnedPostIds,
+  canManage,
+  highlightedPostId,
+  onHighlight,
 }: {
   organizationId: string;
   locationId: string;
   posts: { id: string; name: string }[];
   pinnedPostIds: string[];
+  canManage: boolean;
+  highlightedPostId: string | null;
+  onHighlight: (postId: string) => void;
 }) {
   const router = useRouter();
   const [name, setName] = useState("");
@@ -77,27 +83,44 @@ export function PostsManager({
         <ul className={styles.list}>
           {posts.map((post) => (
             <li key={post.id} className={styles.listRow}>
-              <p className={styles.itemName}>{post.name}</p>
+              {pinned.has(post.id) ? (
+                // Only a pinned post has somewhere to flash to, so only that
+                // one is clickable — an unpinned name that did nothing when
+                // clicked would read as broken.
+                <button
+                  type="button"
+                  className={styles.linkButton}
+                  aria-pressed={highlightedPostId === post.id}
+                  onClick={() => onHighlight(post.id)}
+                >
+                  {post.name}
+                </button>
+              ) : (
+                <p className={styles.itemName}>{post.name}</p>
+              )}
               <div className={styles.tagRow}>
                 {pinned.has(post.id) ? (
-                  <span className={styles.pill}>Pinned</span>
+                  <span className={styles.pill}>Show on map</span>
                 ) : (
                   <span className={styles.pillMuted}>Not on the map</span>
                 )}
-                <button
-                  type="button"
-                  className={`${styles.button} ${styles.buttonSecondary}`}
-                  disabled={loading}
-                  onClick={() => remove(post.id, post.name)}
-                >
-                  Remove
-                </button>
+                {canManage && (
+                  <button
+                    type="button"
+                    className={`${styles.button} ${styles.buttonSecondary}`}
+                    disabled={loading}
+                    onClick={() => remove(post.id, post.name)}
+                  >
+                    Remove
+                  </button>
+                )}
               </div>
             </li>
           ))}
         </ul>
       )}
 
+      {canManage && (
       <form onSubmit={add} className={styles.form}>
         <div className={styles.tagRow}>
           <input
@@ -117,6 +140,7 @@ export function PostsManager({
           </p>
         )}
       </form>
+      )}
     </>
   );
 }

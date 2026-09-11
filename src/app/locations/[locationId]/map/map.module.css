@@ -49,3 +49,33 @@
   justify-content: center;
   padding: 0;
 }
+
+/* Flashed when a post is clicked in the list beside the map — a floor plan
+   can carry a dozen pins and finding one by reading labels is slow.
+   z-index lifts it clear of neighbouring pins for the duration. */
+.pinFlash {
+  z-index: 2;
+  animation: pinFlash 0.55s ease-in-out 3;
+}
+
+@keyframes pinFlash {
+  0%,
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.35);
+  }
+}
+
+/* Scaling repeatedly is exactly what motion sensitivity struggles with, so
+   the pin holds a ring instead of pulsing — same "it's this one" signal,
+   no movement. */
+@media (prefers-reduced-motion: reduce) {
+  .pinFlash {
+    animation: none;
+    outline: 3px solid var(--danger);
+    outline-offset: 3px;
+    border-radius: 999px;
+  }
+}

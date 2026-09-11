@@ -88,15 +88,6 @@ export default async function SchedulePage() {
             <Link href="/schedule/new" className={`${styles.button} ${styles.buttonPrimary}`}>
               New event
             </Link>
-            <Link href="/schedule/templates" className={`${styles.button} ${styles.buttonSecondary}`}>
-              Manage templates
-            </Link>
-            <Link href="/schedule/series" className={`${styles.button} ${styles.buttonSecondary}`}>
-              Recurring series
-            </Link>
-            <Link href="/schedule/integrations" className={`${styles.button} ${styles.buttonSecondary}`}>
-              Integrations
-            </Link>
           </div>
         )}
 
