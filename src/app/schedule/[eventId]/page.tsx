@@ -12,6 +12,7 @@ import { PositionHeader } from "./PositionHeader";
 import { SelfAssignButton } from "./SelfAssignButton";
 import { AttendanceCard } from "./AttendanceCard";
 import { DeleteEventButton } from "./DeleteEventButton";
+import { NotifyTeamButton } from "./NotifyTeamButton";
 import { formatEventTimeRange } from "@/lib/formatDateTime";
 import { resolveTimeZone } from "@/lib/resolveTimeZone";
 import { eventTypeLabel } from "@/lib/eventTypes";
@@ -124,6 +125,7 @@ export default async function EventDetailPage({
 
         {isAdmin && (
           <div className={styles.actions}>
+            <NotifyTeamButton eventId={event.id} />
             <DeleteEventButton
               eventId={event.id}
               title={event.title}

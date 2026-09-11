@@ -103,6 +103,9 @@ export function NewEventForm({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  // Off by default: mailing everyone is a thing you should have to ask for,
+  // not something that happens because you created an event.
+  const [notifyTeam, setNotifyTeam] = useState(false);
   const [repeats, setRepeats] = useState<Repeats>("never");
   const [interval, setInterval] = useState("1");
   const [weekDays, setWeekDays] = useState<string[]>([]);
@@ -313,6 +316,17 @@ export function NewEventForm({
             .eq("id", pcoCandidate.id);
         }
 
+        // Deliberately not fatal: the event exists and the admin is about to
+        // look at it. Failing the whole creation because an email didn't go
+        // out would be the wrong trade.
+        if (notifyTeam) {
+          await fetch("/api/schedule/notify-event", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ eventId: createdEvent.id }),
+          }).catch(() => {});
+        }
+
         setLoading(false);
         router.push(`/schedule/${createdEvent.id}`);
         return;
@@ -426,6 +440,20 @@ export function NewEventForm({
           onChange={setEndTime}
           required={repeats !== "never"}
         />
+
+        {repeats === "never" && (
+          <label className={styles.checkboxRow}>
+            <input
+              type="checkbox"
+              checked={notifyTeam}
+              onChange={(event) => setNotifyTeam(event.target.checked)}
+            />
+            Email the team that this event has been added
+            <span className={styles.hint}>
+              (goes to the teams its positions ask for, or everyone if none do)
+            </span>
+          </label>
+        )}
 
         <div className={styles.field}>
           <label className={styles.label} htmlFor="repeats">
