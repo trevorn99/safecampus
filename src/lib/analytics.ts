@@ -22,10 +22,19 @@ export async function getEventTypeBreakdown(
   supabase: SupabaseClient,
   organizationId: string,
   sinceIso: string,
+  untilIso: string,
 ): Promise<EventTypeCount[]> {
   const [{ data: types }, { data: events }] = await Promise.all([
     supabase.from("event_types").select("name").eq("organization_id", organizationId).order("name"),
-    supabase.from("events").select("type").eq("organization_id", organizationId).gte("start_time", sinceIso),
+    // Closed at both ends. Only opening the window counted every occurrence a
+    // series had generated ahead of time — a year of them — so a breakdown
+    // labelled "last 90 days" was mostly events that hadn't happened yet.
+    supabase
+      .from("events")
+      .select("type")
+      .eq("organization_id", organizationId)
+      .gte("start_time", sinceIso)
+      .lte("start_time", untilIso),
   ]);
 
   const counts = new Map<string, number>();
@@ -76,11 +85,18 @@ export async function getWeeklyFillRate(
   const now = new Date();
   const rangeStart = startOfWeek(new Date(now.getTime() - (weeks - 1) * 7 * 24 * 60 * 60 * 1000));
 
+  // Bounded by the last bucket rather than left open: events beyond the
+  // charted weeks were fetched, then dropped by the buckets.has() check
+  // below, which with a year of generated occurrences meant pulling hundreds
+  // of rows to throw them away.
+  const rangeEnd = new Date(rangeStart.getTime() + weeks * 7 * 24 * 60 * 60 * 1000);
+
   const { data: events } = await supabase
     .from("events")
     .select("id, start_time")
     .eq("organization_id", organizationId)
-    .gte("start_time", rangeStart.toISOString());
+    .gte("start_time", rangeStart.toISOString())
+    .lt("start_time", rangeEnd.toISOString());
 
   const eventWeek = new Map<string, string>();
   for (const event of events ?? []) {
@@ -161,12 +177,14 @@ export async function getAttendanceStat(
   supabase: SupabaseClient,
   organizationId: string,
   sinceIso: string,
+  untilIso: string,
 ): Promise<AttendanceStat> {
   const { data: events } = await supabase
     .from("events")
     .select("id")
     .eq("organization_id", organizationId)
-    .gte("start_time", sinceIso);
+    .gte("start_time", sinceIso)
+    .lte("start_time", untilIso);
   const eventIds = (events ?? []).map((e) => e.id);
   if (eventIds.length === 0) return { totalRecords: 0, uniqueMembers: 0 };
 
