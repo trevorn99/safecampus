@@ -32,7 +32,7 @@ export default async function NewEventPage({
       supabase.from("teams").select("id, name").eq("organization_id", member.organization_id),
       supabase
         .from("event_templates")
-        .select("id, name, default_start_time, default_duration_minutes")
+        .select("id, name, default_type, default_start_time, default_duration_minutes")
         .eq("organization_id", member.organization_id),
       supabase.from("event_types").select("name").eq("organization_id", member.organization_id).order("name"),
       resolveTimeZone(supabase, member.organization_id, null),

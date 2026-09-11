@@ -8,6 +8,7 @@ import { resolveTimeZone } from "@/lib/resolveTimeZone";
 import { SeriesHeader } from "./SeriesHeader";
 import { AddSeriesPositionForm } from "./AddSeriesPositionForm";
 import { StandingAssignments, type StandingPosition } from "./StandingAssignments";
+import { CancelledDates } from "./CancelledDates";
 import styles from "@/styles/ui.module.css";
 
 export default async function SeriesDetailPage({
@@ -49,6 +50,7 @@ export default async function SeriesDetailPage({
     { data: teams },
     { data: orgMembers },
     { data: teamRoleAssignments },
+    { data: skips },
     timeZone,
   ] = await Promise.all([
     supabase
@@ -66,6 +68,11 @@ export default async function SeriesDetailPage({
       .eq("organization_id", member.organization_id)
       .order("name"),
     supabase.from("role_assignments").select("member_id, scope_id").eq("scope_type", "team"),
+    supabase
+      .from("event_series_skips")
+      .select("id, occurs_at")
+      .eq("series_id", seriesId)
+      .order("occurs_at", { ascending: false }),
     resolveTimeZone(supabase, member.organization_id, series.location_id),
   ]);
 
@@ -166,6 +173,28 @@ export default async function SeriesDetailPage({
             </p>
           </div>
           <StandingAssignments positions={standingPositions} />
+        </div>
+
+        <div className={styles.card}>
+          <div className={styles.cardHeader}>
+            <h2 className={styles.cardTitle}>Cancelled dates</h2>
+            <p className={styles.helperText}>
+              Occurrences someone deleted from the schedule. The series skips these when it generates. Restoring
+              one brings the event back with its template positions and whoever is on the standing roster above —
+              the assignments that were on the cancelled event itself don&apos;t return.
+            </p>
+          </div>
+          <CancelledDates
+            skips={(skips ?? []).map((skip) => ({
+              id: skip.id,
+              label: formatEventTimeRange(
+                skip.occurs_at,
+                new Date(new Date(skip.occurs_at).getTime() + series.duration_minutes * 60_000).toISOString(),
+                timeZone,
+              ),
+              past: new Date(skip.occurs_at) < new Date(),
+            }))}
+          />
         </div>
 
         <div className={styles.card}>
