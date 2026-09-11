@@ -99,6 +99,7 @@ export async function generateSeriesOccurrences(
   let templatePositions: Array<{
     id: string;
     team_id: string | null;
+    post_id: string | null;
     title: string;
     location_id: string | null;
     start_offset_minutes: number;
@@ -108,7 +109,7 @@ export async function generateSeriesOccurrences(
   if (series.template_id) {
     const { data } = await supabase
       .from("template_positions")
-      .select("id, team_id, title, location_id, start_offset_minutes, end_offset_minutes, slots")
+      .select("id, team_id, title, location_id, post_id, start_offset_minutes, end_offset_minutes, slots")
       .eq("template_id", series.template_id);
     templatePositions = data ?? [];
   }
@@ -152,6 +153,9 @@ export async function generateSeriesOccurrences(
           // occurrences never did, so the feature only worked on events that
           // already existed when a position was added.
           template_position_id: tp.id,
+          // Carried onto the concrete position so "who is covering the Lobby
+          // door" can be answered without joining back through the template.
+          post_id: tp.post_id,
           team_id: tp.team_id,
           title: tp.title,
           location_id: tp.location_id,
