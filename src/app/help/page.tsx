@@ -89,25 +89,44 @@ export default async function HelpPage() {
           <p className={styles.docBody}>
             <strong>Events</strong> are created from <strong>Schedule → New event</strong>. Add positions
             right there — a title, an optional team, a time offset from the event&apos;s start (negative
-            values work too, e.g. -15 for &quot;15 minutes early&quot;), and how many people are needed. You
-            can optionally save those positions as a reusable <strong>template</strong> so the next similar
-            event starts pre-filled.
+            values work too, e.g. -15 for &quot;15 minutes early&quot;), and how many people are needed. Those
+            positions are saved as a reusable <strong>template</strong> so the next similar event starts
+            pre-filled — a template carries its own usual start and end time and event type too, so picking
+            one fills in when the event happens as well as who works it. Templates are managed from{" "}
+            <strong>Schedule → Templates</strong>.
           </p>
           <p className={styles.docBody}>
             For events that repeat, set <strong>Repeats</strong> to Weekly or Monthly right on that same
-            form. Weekly supports an interval (every N weeks) plus specific days; Monthly supports an
-            ordinal weekday like &quot;the 1st Sunday&quot; — these aren&apos;t the same thing: every 4 weeks
-            drifts relative to the calendar over a year, monthly-by-ordinal doesn&apos;t. A series can be
-            paused, resumed, or deleted from <strong>Schedule → Recurring series</strong> — deleting one
-            only stops future generation, it doesn&apos;t remove events already created.
+            form, and give it an end time — that&apos;s what sets how long every occurrence runs. Weekly
+            supports an interval (every N weeks) plus specific days; Monthly supports an ordinal weekday like
+            &quot;the 1st Sunday&quot; — these aren&apos;t the same thing: every 4 weeks drifts relative to
+            the calendar over a year, monthly-by-ordinal doesn&apos;t. A series generates a year ahead and
+            keeps rolling forward on its own, so there&apos;s never anything to renew.
+          </p>
+          <p className={styles.docBody}>
+            A series can be paused, resumed, or deleted from <strong>Schedule → Recurring series</strong>.
+            Deleting one takes its upcoming events with it by default — untick that if you&apos;d rather keep
+            them — and past events are always kept as history. To drop a single date rather than the whole
+            series, open that event and choose <strong>Cancel this occurrence</strong>: the series stops
+            recreating that date, every other date carries on, and it can be put back later from the{" "}
+            <strong>Cancelled dates</strong> list on the series page.
+          </p>
+          <p className={styles.docBody}>
+            Each recurring position has a <strong>standing roster</strong> — &quot;who normally covers
+            this&quot; on the series page. People on it are put on every upcoming occurrence and on each new
+            one as it&apos;s generated, so an assignment lasts until it&apos;s changed there rather than
+            having to be redone every time the schedule extends. Taking someone off a single event covers
+            just that week and leaves the roster alone.
           </p>
           <p className={styles.docBody}>
             On an event&apos;s page, admins assign members to open positions (only members on that
             position&apos;s team are offered, if it has one) and can edit a position after the fact. If it
             came from a template and its event is part of a series, there&apos;s an option to apply a
-            title/team/location/slots change to every event in that series at once. Everyone sees their own
-            assignments at the top of <strong>Schedule</strong> and on the dashboard calendar, with buttons
-            to confirm or decline.
+            title/team/location/slots change to every <em>upcoming</em> event in that series at once — past
+            occurrences are never rewritten. Members can also sign themselves up for an open position, and
+            optionally for every future occurrence of it. Everyone sees their own assignments at the top of{" "}
+            <strong>Schedule</strong> and on the dashboard calendar, with buttons to confirm or decline —
+            declining frees the slot for someone else.
           </p>
           <p className={styles.docBody}>
             Events have their own type — Service, Drill, Meeting, and Training by default — and an admin can
@@ -126,8 +145,10 @@ export default async function HelpPage() {
           <p className={styles.docBody}>
             Members upload their own certifications from the <strong>Certifications</strong> page — type,
             issue/expiration dates, and an optional file. Admins can see and track everyone&apos;s across
-            the organization from the same page. See <strong>Teams</strong> for how a team can require
-            specific certifications from its members.
+            the organization from the same page, grouped by member. Each person&apos;s certifications and
+            their dates also appear on their row in the team roster, marked when one has expired or is within
+            60 days of doing so. See <strong>Teams</strong> for how a team can require specific
+            certifications from its members.
           </p>
         </div>
 
@@ -136,9 +157,21 @@ export default async function HelpPage() {
             <h2 className={styles.cardTitle}>Locations & maps</h2>
           </div>
           <p className={styles.docBody}>
-            Admins manage locations from the <strong>Locations</strong> page. Each location can have a map
-            image uploaded, with position pins placed directly on it so new volunteers can see exactly where
-            a position stands.
+            Admins manage locations from <strong>Organization → Locations</strong> — name, address and
+            timezone. The address matters beyond directions: Threat Intelligence runs a separate local search
+            for each location that has one, and the timezone decides which calendar day a shift reminder
+            fires on.
+          </p>
+          <p className={styles.docBody}>
+            Each location can have a map image uploaded, and <strong>posts</strong> placed on it. A post is a
+            physical place somebody stands — a door, a corridor, a camera desk. It exists once for the
+            location however many events need it covered, and carries one pin. Clicking a post in the list
+            beside the map flashes its pin, which is quicker than reading labels on a busy floor plan.
+          </p>
+          <p className={styles.docBody}>
+            A position on an event or template can point at a post, so a new volunteer can see exactly where
+            it stands. That link is always optional — plenty of real positions, like &quot;Roam&quot; or
+            &quot;Camera,&quot; aren&apos;t a fixed place.
           </p>
         </div>
 
@@ -167,8 +200,12 @@ export default async function HelpPage() {
             be undone for all devices at once from the same Account page.
           </p>
           <p className={styles.docBody}>
-            From the same page, members can opt in to SMS shift reminders — a text 3 days and 24 hours before
-            an assigned shift — if your organization has turned them on.
+            From the same page, members control shift reminders: an email 3 days and 24 hours before an
+            assigned shift, and optionally a text at the same points. Email is on by default and SMS is
+            opt-in (it needs a phone number); the two are independent, so you can have either, both or
+            neither. Every reminder email carries an unsubscribe link, and replying STOP to a reminder text
+            turns those off. Sign-in links and invitations aren&apos;t reminders and keep arriving either
+            way.
           </p>
         </div>
 
@@ -180,9 +217,9 @@ export default async function HelpPage() {
             <p className={styles.docBody}>
               Org admins manage organization-wide settings from <strong>Organization</strong> in the nav,
               separate from personal <strong>Account</strong> settings: the organization&apos;s name, and the
-              master switch for SMS reminders (turning it off stops all shift-reminder texts org-wide, even for
-              members who&apos;ve opted in). <strong>Billing</strong> and the <strong>Audit log</strong> live
-              in that same nav group.
+              master switches for email and SMS reminders (turning one off stops those reminders org-wide,
+              even for members who want them). <strong>Locations</strong>, <strong>Integrations</strong>,{" "}
+              <strong>Billing</strong> and the <strong>Audit log</strong> live in that same nav group.
             </p>
           </div>
         )}
@@ -192,7 +229,7 @@ export default async function HelpPage() {
             <h2 className={styles.cardTitle}>Planning Center</h2>
           </div>
           <p className={styles.docBody}>
-            From <strong>Schedule → Integrations</strong>, connect your organization&apos;s own Planning
+            From <strong>Organization → Integrations</strong>, connect your organization&apos;s own Planning
             Center account (you register a small OAuth app in your Planning Center account — the exact steps
             and redirect URL are shown right on that page). Once connected, &quot;Check for new events&quot;
             pulls in upcoming Planning Center calendar events as a list — nothing is added to your schedule
