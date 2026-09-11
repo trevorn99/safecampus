@@ -91,7 +91,7 @@ export function NewEventForm({
 }) {
   const router = useRouter();
   const [title, setTitle] = useState(pcoCandidate?.title ?? "");
-  const [type, setType] = useState(eventTypes[0] ?? "");
+  const [type, setType] = useState("");
   const [locationId, setLocationId] = useState("");
   const [startTime, setStartTime] = useState(pcoCandidate?.startTime ?? (defaultDate ? `${defaultDate}T09:00` : ""));
   const [endTime, setEndTime] = useState(pcoCandidate?.endTime ?? "");
@@ -379,7 +379,14 @@ export function NewEventForm({
           <label className={styles.label} htmlFor="eventType">
             Type <span className={styles.hint}>(<Link href="/schedule/event-types" className={styles.link}>manage types</Link>)</span>
           </label>
-          <select id="eventType" className={styles.select} value={type} onChange={(event) => setType(event.target.value)}>
+          <select
+            id="eventType"
+            className={styles.select}
+            required
+            value={type}
+            onChange={(event) => setType(event.target.value)}
+          >
+            <option value="">Select a type…</option>
             {eventTypes.map((eventType) => (
               <option key={eventType} value={eventType}>
                 {eventType}
