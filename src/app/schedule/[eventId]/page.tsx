@@ -11,6 +11,7 @@ import { DeletePositionButton } from "./DeletePositionButton";
 import { PositionHeader } from "./PositionHeader";
 import { SelfAssignButton } from "./SelfAssignButton";
 import { AttendanceCard } from "./AttendanceCard";
+import { DeleteEventButton } from "./DeleteEventButton";
 import { formatEventTimeRange } from "@/lib/formatDateTime";
 import { resolveTimeZone } from "@/lib/resolveTimeZone";
 import { eventTypeLabel } from "@/lib/eventTypes";
@@ -118,6 +119,17 @@ export default async function EventDetailPage({
             {event.location_id ? (locationName.get(event.location_id) ?? "Unknown location") : "Org-wide"}
           </p>
         </div>
+
+        {isAdmin && (
+          <div className={styles.actions}>
+            <DeleteEventButton
+              eventId={event.id}
+              title={event.title}
+              seriesId={event.series_id}
+              startTime={event.start_time}
+            />
+          </div>
+        )}
 
         <h2 className={styles.cardTitle}>Positions</h2>
 

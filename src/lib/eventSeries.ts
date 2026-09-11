@@ -81,7 +81,19 @@ export async function generateSeriesOccurrences(
     .eq("series_id", series.id)
     .gte("start_time", now.toISOString());
   const existingTimes = new Set((existingEvents ?? []).map((e) => new Date(e.start_time).getTime()));
-  const missing = occurrences.filter((date) => !existingTimes.has(date.getTime()));
+
+  // Occurrences someone cancelled. Without this they read as missing and get
+  // recreated on the next run — deleting one Sunday would undo itself
+  // overnight.
+  const { data: skips } = await supabase
+    .from("event_series_skips")
+    .select("occurs_at")
+    .eq("series_id", series.id);
+  const skippedTimes = new Set((skips ?? []).map((skip) => new Date(skip.occurs_at).getTime()));
+
+  const missing = occurrences.filter(
+    (date) => !existingTimes.has(date.getTime()) && !skippedTimes.has(date.getTime()),
+  );
   if (missing.length === 0) return { created: 0 };
 
   let templatePositions: Array<{
