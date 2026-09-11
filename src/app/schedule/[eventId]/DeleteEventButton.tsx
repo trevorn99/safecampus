@@ -22,8 +22,11 @@ export function DeleteEventButton({
 
   async function handleDelete() {
     const warning = seriesId
-      ? `Cancel this occurrence of "${title}"? Its positions and assignments go with it, and the series won't recreate this date. Later occurrences are unaffected.`
-      : `Delete "${title}"? Its positions and assignments go with it. This can't be undone.`;
+      ? `Cancel just this ${new Date(startTime).toLocaleDateString()} occurrence of "${title}"?\n\n` +
+        `• The series itself is NOT deleted — every other date carries on.\n` +
+        `• This date's positions and assignments are removed.\n` +
+        `• The series will not recreate this date. You can restore it later from the series page.`
+      : `Delete "${title}"? Its positions and assignments go with it, and this can't be undone.`;
     if (!window.confirm(warning)) return;
 
     setLoading(true);
@@ -68,6 +71,11 @@ export function DeleteEventButton({
       >
         {loading ? "Deleting…" : seriesId ? "Cancel this occurrence" : "Delete event"}
       </button>
+      {seriesId && (
+        <span className={styles.itemMeta}>
+          Cancels this date only — the series and its other dates are unaffected.
+        </span>
+      )}
       {error && (
         <p className={styles.errorText} role="alert">
           {error}
