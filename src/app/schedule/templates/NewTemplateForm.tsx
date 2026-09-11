@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { minutesBetweenTimeInputs } from "@/lib/templateTime";
 import styles from "@/styles/ui.module.css";
 
 export function NewTemplateForm({ organizationId }: { organizationId: string }) {
@@ -10,6 +11,8 @@ export function NewTemplateForm({ organizationId }: { organizationId: string }) 
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [startTime, setStartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -23,6 +26,11 @@ export function NewTemplateForm({ organizationId }: { organizationId: string }) 
       organization_id: organizationId,
       name,
       description: description || null,
+      default_start_time: startTime || null,
+      // Both or neither: a length with no start to hang it off can't fill
+      // anything in.
+      default_duration_minutes:
+        startTime && endTime ? minutesBetweenTimeInputs(startTime, endTime) : null,
     });
 
     setLoading(false);
@@ -32,6 +40,8 @@ export function NewTemplateForm({ organizationId }: { organizationId: string }) 
     }
     setName("");
     setDescription("");
+    setStartTime("");
+    setEndTime("");
     setOpen(false);
     router.refresh();
   }
@@ -73,6 +83,28 @@ export function NewTemplateForm({ organizationId }: { organizationId: string }) 
             value={description}
             onChange={(event) => setDescription(event.target.value)}
           />
+        </div>
+        <div className={styles.field}>
+          <label className={styles.label} htmlFor="templateStart">
+            Usual time <span className={styles.hint}>(optional — pre-fills an event created from this template)</span>
+          </label>
+          <div className={styles.tagRow}>
+            <input
+              id="templateStart"
+              type="time"
+              className={styles.input}
+              value={startTime}
+              onChange={(event) => setStartTime(event.target.value)}
+            />
+            <span className={styles.itemMeta}>to</span>
+            <input
+              type="time"
+              className={styles.input}
+              aria-label="Usual end time"
+              value={endTime}
+              onChange={(event) => setEndTime(event.target.value)}
+            />
+          </div>
         </div>
         <div className={styles.actions}>
           <button type="submit" className={`${styles.button} ${styles.buttonPrimary}`} disabled={loading}>
