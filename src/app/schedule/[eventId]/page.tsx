@@ -127,6 +127,12 @@ export default async function EventDetailPage({
 
         {(positions ?? []).map((position) => {
           const positionAssignments = assignmentsByPosition.get(position.id) ?? [];
+          // Someone who declined no longer holds the slot — the whole point of
+          // declining is to free it. They stay in assignedMemberIds so a
+          // second row isn't created for them (there's no unique constraint on
+          // the table yet), and their row still renders with its status, so an
+          // admin can see who dropped out.
+          const filledCount = positionAssignments.filter((a) => a.status !== "declined").length;
           const assignedMemberIds = new Set(positionAssignments.map((a) => a.member_id));
           const eligiblePool = position.team_id
             ? (orgMembers ?? []).filter((m) => teamMemberIds.get(position.team_id!)?.has(m.id))
@@ -144,7 +150,7 @@ export default async function EventDetailPage({
           const selfEligible =
             (!position.team_id || teamMemberIds.get(position.team_id)?.has(member.id)) &&
             !assignedMemberIds.has(member.id) &&
-            positionAssignments.length < position.slots;
+            filledCount < position.slots;
 
           const metaText = [
             new Date(position.start_time).toLocaleTimeString([], { hour: "numeric", minute: "2-digit", timeZone }) +
@@ -153,7 +159,7 @@ export default async function EventDetailPage({
                 : ""),
             position.team_id ? (teams?.find((t) => t.id === position.team_id)?.name ?? "Unknown team") : null,
             position.location_id ? (locationName.get(position.location_id) ?? "Unknown location") : null,
-            `${positionAssignments.length} of ${position.slots} filled`,
+            `${filledCount} of ${position.slots} filled`,
           ]
             .filter(Boolean)
             .join(" · ");
@@ -209,7 +215,7 @@ export default async function EventDetailPage({
                 })}
               </ul>
 
-              {isAdmin && positionAssignments.length < position.slots && (
+              {isAdmin && filledCount < position.slots && (
                 <AssignMemberForm
                   positionId={position.id}
                   eligibleMembers={eligibleMembers}

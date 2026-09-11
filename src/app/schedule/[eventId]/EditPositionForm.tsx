@@ -97,7 +97,15 @@ export function EditPositionForm({
     }
 
     if (applyToSeries && canApplyToSeries) {
-      const { data: seriesEvents } = await supabase.from("events").select("id").eq("series_id", seriesId);
+      // Future events only, matching every other series-wide action in the
+      // app. Without the filter this rewrote the time, team, location and
+      // slots of positions on occurrences that had already happened —
+      // silently editing the record of shifts people actually worked.
+      const { data: seriesEvents } = await supabase
+        .from("events")
+        .select("id")
+        .eq("series_id", seriesId)
+        .gte("start_time", new Date().toISOString());
       const eventIds = (seriesEvents ?? []).map((e) => e.id);
       if (eventIds.length > 0) {
         await supabase
@@ -183,7 +191,7 @@ export function EditPositionForm({
             checked={applyToSeries}
             onChange={(event) => setApplyToSeries(event.target.checked)}
           />
-          Also apply the position/team/location/slots changes to every event in this series
+          Also apply these changes to every upcoming event in this series
           <span className={styles.hint}>(times stay per-event)</span>
         </label>
       )}
