@@ -9,8 +9,17 @@ function buildNav(isAdmin: boolean, isPlatformAdmin: boolean): NavEntry[] {
       label: "Schedule",
       items: [
         { href: "/schedule", label: "Calendar" },
-        { href: "/schedule/integrations", label: "Integrations" },
-        ...(isAdmin ? [{ href: "/schedule/event-types", label: "Event types" }] : []),
+        // Series and templates are how a schedule is built, so they belong
+        // beside the calendar rather than as buttons on it. Integrations moved
+        // out to Organization: connecting Planning Center is an account-level
+        // setup job, done once, not part of running the schedule.
+        ...(isAdmin
+          ? [
+              { href: "/schedule/series", label: "Recurring series" },
+              { href: "/schedule/templates", label: "Templates" },
+              { href: "/schedule/event-types", label: "Event types" },
+            ]
+          : []),
       ],
     },
     {
@@ -30,6 +39,7 @@ function buildNav(isAdmin: boolean, isPlatformAdmin: boolean): NavEntry[] {
             label: "Organization",
             items: [
               { href: "/organization", label: "Settings" },
+              { href: "/schedule/integrations", label: "Integrations" },
               // Campuses are organization structure, not people management —
               // they define where events happen and scope location_manager
               // roles, so they sit with Settings rather than under Team.
