@@ -7,10 +7,13 @@ import styles from "@/styles/ui.module.css";
 
 export default async function LocationMapPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locationId: string }>;
+  searchParams: Promise<{ map?: string }>;
 }) {
   const { locationId } = await params;
+  const { map: requestedMapId } = await searchParams;
   const { supabase, member, organizationName, isAdmin, isPlatformAdmin } = await requireMembership();
 
   const { data: location } = await supabase
@@ -29,11 +32,16 @@ export default async function LocationMapPage({
   });
   const canManage = isAdmin || Boolean(canManageLocation);
 
-  const { data: map } = await supabase
+  // A location can have several maps — floors of a building, buildings on a
+  // campus. Which one is shown lives in the URL rather than component state,
+  // so a link to "the first floor" is a link someone can send.
+  const { data: maps } = await supabase
     .from("maps")
-    .select("id, storage_path")
+    .select("id, name, storage_path")
     .eq("location_id", locationId)
-    .maybeSingle();
+    .order("name");
+
+  const map = (maps ?? []).find((candidate) => candidate.id === requestedMapId) ?? (maps ?? [])[0] ?? null;
 
   let imageUrl: string | null = null;
   if (map) {
@@ -73,7 +81,8 @@ export default async function LocationMapPage({
           organizationId={member.organization_id}
           locationId={locationId}
           canManage={canManage}
-          map={map ? { id: map.id, imageUrl } : null}
+          map={map ? { id: map.id, name: map.name, imageUrl } : null}
+          maps={maps ?? []}
           pins={(pins ?? []).map((pin) => ({
             id: pin.id,
             xPct: Number(pin.x_pct),

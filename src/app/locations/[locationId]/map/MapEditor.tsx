@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRef, useState, type ChangeEvent, type MouseEvent as ReactMouseEvent } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -15,6 +16,7 @@ export function MapEditor({
   locationId,
   canManage,
   map,
+  maps,
   pins,
   availablePositions,
   highlightedPostId,
@@ -22,7 +24,9 @@ export function MapEditor({
   organizationId: string;
   locationId: string;
   canManage: boolean;
-  map: { id: string; imageUrl: string | null } | null;
+  map: { id: string; name: string; imageUrl: string | null } | null;
+  /** Every map at this location — floors, buildings — for the picker. */
+  maps: { id: string; name: string }[];
   pins: Pin[];
   availablePositions: Position[];
   /** Flashes this post's pin so it can be found on a busy floor plan. */
@@ -34,6 +38,7 @@ export function MapEditor({
   const [error, setError] = useState("");
   const [pendingClick, setPendingClick] = useState<{ x: number; y: number } | null>(null);
   const [selectedPositionId, setSelectedPositionId] = useState("");
+  const [newMapName, setNewMapName] = useState("");
 
   async function handleUpload(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -50,17 +55,25 @@ export function MapEditor({
       return;
     }
 
+    // Named by the person uploading, falling back to the filename. A picker
+    // full of "floorplan-final-v2.png" is no use for telling floors apart,
+    // and the unique index on (location_id, name) means two can't collide.
     const { error: mapError } = await supabase.from("maps").insert({
       organization_id: organizationId,
       location_id: locationId,
-      name: file.name,
+      name: newMapName.trim() || file.name,
       storage_path: path,
     });
     setUploading(false);
     if (mapError) {
-      setError(mapError.message);
+      setError(
+        mapError.code === "23505"
+          ? `This location already has a map called "${newMapName.trim() || file.name}".`
+          : mapError.message,
+      );
       return;
     }
+    setNewMapName("");
     router.refresh();
   }
 
@@ -90,6 +103,49 @@ export function MapEditor({
     router.refresh();
   }
 
+  async function handleRenameMap() {
+    if (!map) return;
+    const nextName = window.prompt("Name for this map", map.name);
+    if (!nextName || nextName.trim() === map.name) return;
+
+    const supabase = createClient();
+    const { error: renameError } = await supabase
+      .from("maps")
+      .update({ name: nextName.trim() })
+      .eq("id", map.id);
+    if (renameError) {
+      setError(
+        renameError.code === "23505"
+          ? `This location already has a map called "${nextName.trim()}".`
+          : renameError.message,
+      );
+      return;
+    }
+    router.refresh();
+  }
+
+  async function handleDeleteMap() {
+    if (!map) return;
+    if (
+      !window.confirm(
+        `Delete the "${map.name}" map? Its pins go with it. The posts themselves stay — they're the places, not the drawing.`,
+      )
+    ) {
+      return;
+    }
+
+    const supabase = createClient();
+    const { error: deleteError } = await supabase.from("maps").delete().eq("id", map.id);
+    if (deleteError) {
+      setError(deleteError.message);
+      return;
+    }
+    // Back to the location's default map rather than a ?map= pointing at
+    // something that no longer exists.
+    router.push(`/locations/${locationId}/map`);
+    router.refresh();
+  }
+
   async function handleRemovePin(pinId: string) {
     const supabase = createClient();
     await supabase.from("map_pins").delete().eq("id", pinId);
@@ -111,6 +167,13 @@ export function MapEditor({
           A floor plan or campus image — you&apos;ll place position pins on it next.
         </p>
         <input
+          className={styles.input}
+          placeholder="Map name, e.g. Ground floor"
+          value={newMapName}
+          onChange={(event) => setNewMapName(event.target.value)}
+          disabled={uploading}
+        />
+        <input
           type="file"
           accept="image/*"
           className={styles.input}
@@ -128,6 +191,26 @@ export function MapEditor({
 
   return (
     <div className={styles.card}>
+      {/* Tabs rather than a select: with two or three floors they're all
+          visible at once, and each is a real link someone can send. */}
+      {maps.length > 1 && (
+        <div className={styles.tagRow}>
+          {maps.map((candidate) => (
+            <Link
+              key={candidate.id}
+              href={`/locations/${locationId}/map?map=${candidate.id}`}
+              className={candidate.id === map.id ? styles.pill : styles.pillMuted}
+            >
+              {candidate.name}
+            </Link>
+          ))}
+        </div>
+      )}
+
+      <div className={styles.cardHeader}>
+        <h2 className={styles.cardTitle}>{map.name}</h2>
+      </div>
+
       <div className={mapStyles.mapFrame}>
         {map.imageUrl && (
           // eslint-disable-next-line @next/next/no-img-element -- private, expiring signed URL; not worth next/image's remote-pattern + caching complexity here
@@ -162,7 +245,41 @@ export function MapEditor({
         ))}
       </div>
 
-      {canManage && <p className={styles.helperText}>Click anywhere on the map to place a position pin.</p>}
+      {canManage && <p className={styles.helperText}>Click anywhere on the map to place a post pin.</p>}
+
+      {canManage && (
+        <>
+          <div className={styles.actions}>
+            <button type="button" className={`${styles.button} ${styles.buttonSecondary}`} onClick={handleRenameMap}>
+              Rename this map
+            </button>
+            <button type="button" className={`${styles.button} ${styles.buttonSecondary}`} onClick={handleDeleteMap}>
+              Delete this map
+            </button>
+          </div>
+
+          <div className={styles.field}>
+            <label className={styles.label} htmlFor="addMapName">
+              Add another map <span className={styles.hint}>(another floor, or another building)</span>
+            </label>
+            <input
+              id="addMapName"
+              className={styles.input}
+              placeholder="Map name, e.g. First floor"
+              value={newMapName}
+              onChange={(event) => setNewMapName(event.target.value)}
+              disabled={uploading}
+            />
+            <input
+              type="file"
+              accept="image/*"
+              className={styles.input}
+              onChange={handleUpload}
+              disabled={uploading}
+            />
+          </div>
+        </>
+      )}
 
       {canManage && pendingClick && (
         <div className={styles.field}>

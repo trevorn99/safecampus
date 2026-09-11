@@ -14,6 +14,7 @@ export function LocationMapPanel({
   locationId,
   canManage,
   map,
+  maps,
   pins,
   posts,
   availablePositions,
@@ -21,7 +22,8 @@ export function LocationMapPanel({
   organizationId: string;
   locationId: string;
   canManage: boolean;
-  map: { id: string; imageUrl: string | null } | null;
+  map: { id: string; name: string; imageUrl: string | null } | null;
+  maps: { id: string; name: string }[];
   pins: { id: string; xPct: number; yPct: number; title: string; postId: string }[];
   posts: { id: string; name: string }[];
   availablePositions: { id: string; title: string; templateName: string | null }[];
@@ -63,6 +65,7 @@ export function LocationMapPanel({
         locationId={locationId}
         canManage={canManage}
         map={map}
+        maps={maps}
         pins={pins}
         availablePositions={availablePositions}
         highlightedPostId={highlightedPostId}
