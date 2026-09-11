@@ -5,7 +5,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { AddTemplatePositionForm } from "./AddTemplatePositionForm";
 import { DeleteTemplatePositionButton } from "./DeleteTemplatePositionButton";
 import { DeleteTemplateButton } from "./DeleteTemplateButton";
-import { TemplateTimeForm } from "./TemplateTimeForm";
+import { TemplateDefaultsForm } from "./TemplateDefaultsForm";
 import styles from "@/styles/ui.module.css";
 
 function formatOffset(minutes: number) {
@@ -26,13 +26,14 @@ export default async function TemplateDetailPage({
     redirect("/schedule");
   }
 
-  const [{ data: template }, { data: teams }, { data: positions }] = await Promise.all([
+  const [{ data: template }, { data: teams }, { data: eventTypes }, { data: positions }] = await Promise.all([
     supabase
       .from("event_templates")
-      .select("id, name, description, default_start_time, default_duration_minutes")
+      .select("id, name, description, default_start_time, default_duration_minutes, default_type")
       .eq("id", templateId)
       .maybeSingle(),
     supabase.from("teams").select("id, name").eq("organization_id", member.organization_id),
+    supabase.from("event_types").select("name").eq("organization_id", member.organization_id).order("name"),
     supabase
       .from("template_positions")
       .select("id, title, team_id, start_offset_minutes, end_offset_minutes, slots")
@@ -67,16 +68,18 @@ export default async function TemplateDetailPage({
 
         <div className={styles.card}>
           <div className={styles.cardHeader}>
-            <h2 className={styles.cardTitle}>Usual time</h2>
+            <h2 className={styles.cardTitle}>Defaults</h2>
             <p className={styles.helperText}>
-              Fills in the start and end of any event created from this template. Position offsets below are
-              measured from this start.
+              Pre-fills the type, start and end of any event created from this template. Position offsets below
+              are measured from that start.
             </p>
           </div>
-          <TemplateTimeForm
+          <TemplateDefaultsForm
             templateId={template.id}
             defaultStartTime={template.default_start_time}
             defaultDurationMinutes={template.default_duration_minutes}
+            defaultType={template.default_type}
+            eventTypes={(eventTypes ?? []).map((t) => t.name)}
           />
         </div>
 

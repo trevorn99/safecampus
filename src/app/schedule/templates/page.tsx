@@ -12,11 +12,14 @@ export default async function TemplatesPage() {
     redirect("/schedule");
   }
 
-  const { data: templates } = await supabase
-    .from("event_templates")
-    .select("id, name, description")
-    .eq("organization_id", member.organization_id)
-    .order("name");
+  const [{ data: templates }, { data: eventTypes }] = await Promise.all([
+    supabase
+      .from("event_templates")
+      .select("id, name, description, default_type")
+      .eq("organization_id", member.organization_id)
+      .order("name"),
+    supabase.from("event_types").select("name").eq("organization_id", member.organization_id).order("name"),
+  ]);
 
   return (
     <>
@@ -38,12 +41,13 @@ export default async function TemplatesPage() {
                   </Link>
                   {template.description && <p className={styles.itemMeta}>{template.description}</p>}
                 </div>
+                {template.default_type && <span className={styles.pillMuted}>{template.default_type}</span>}
               </li>
             ))}
           </ul>
         </div>
 
-        <NewTemplateForm organizationId={member.organization_id} />
+        <NewTemplateForm organizationId={member.organization_id} eventTypes={(eventTypes ?? []).map((t) => t.name)} />
 
         <Link href="/schedule" className={styles.link}>
           ← Back to schedule

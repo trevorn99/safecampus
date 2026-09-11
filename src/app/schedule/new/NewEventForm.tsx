@@ -18,6 +18,7 @@ import styles from "@/styles/ui.module.css";
 
 type Option = { id: string; name: string };
 type TemplateOption = Option & {
+  default_type: string | null;
   default_start_time: string | null;
   default_duration_minutes: number | null;
 };
@@ -133,6 +134,15 @@ export function NewEventForm({
     // Position offsets below are measured from this start, so they only line
     // up if the event actually begins when the template says it does.
     const template = templates.find((t) => t.id === nextTemplateId);
+
+    // Only when the type still exists for this org — event types are plain
+    // text with no foreign key, so a template can hold one that has since
+    // been renamed or deleted, and selecting a missing option would silently
+    // blank the field.
+    if (template?.default_type && eventTypes.includes(template.default_type)) {
+      setType(template.default_type);
+    }
+
     const templateStart = toTimeInputValue(template?.default_start_time);
     if (templateStart) {
       const fallbackDate = defaultDate ?? todayDateInput();
@@ -197,6 +207,7 @@ export function NewEventForm({
       .insert({
         organization_id: organizationId,
         name,
+        default_type: type || null,
         default_start_time: startClock || null,
         default_duration_minutes:
           startClock && endClock ? minutesBetweenTimeInputs(startClock, endClock) : null,

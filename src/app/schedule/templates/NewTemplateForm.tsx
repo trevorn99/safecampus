@@ -6,13 +6,20 @@ import { createClient } from "@/lib/supabase/client";
 import { minutesBetweenTimeInputs } from "@/lib/templateTime";
 import styles from "@/styles/ui.module.css";
 
-export function NewTemplateForm({ organizationId }: { organizationId: string }) {
+export function NewTemplateForm({
+  organizationId,
+  eventTypes,
+}: {
+  organizationId: string;
+  eventTypes: string[];
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
+  const [type, setType] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -26,6 +33,7 @@ export function NewTemplateForm({ organizationId }: { organizationId: string }) 
       organization_id: organizationId,
       name,
       description: description || null,
+      default_type: type || null,
       default_start_time: startTime || null,
       // Both or neither: a length with no start to hang it off can't fill
       // anything in.
@@ -42,6 +50,7 @@ export function NewTemplateForm({ organizationId }: { organizationId: string }) 
     setDescription("");
     setStartTime("");
     setEndTime("");
+    setType("");
     setOpen(false);
     router.refresh();
   }
@@ -83,6 +92,24 @@ export function NewTemplateForm({ organizationId }: { organizationId: string }) 
             value={description}
             onChange={(event) => setDescription(event.target.value)}
           />
+        </div>
+        <div className={styles.field}>
+          <label className={styles.label} htmlFor="templateType">
+            Event type <span className={styles.hint}>(optional)</span>
+          </label>
+          <select
+            id="templateType"
+            className={styles.select}
+            value={type}
+            onChange={(event) => setType(event.target.value)}
+          >
+            <option value="">No default</option>
+            {eventTypes.map((eventType) => (
+              <option key={eventType} value={eventType}>
+                {eventType}
+              </option>
+            ))}
+          </select>
         </div>
         <div className={styles.field}>
           <label className={styles.label} htmlFor="templateStart">
