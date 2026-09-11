@@ -1,0 +1,121 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+import styles from "@/styles/ui.module.css";
+
+type Member = { id: string; name: string; pending: boolean };
+
+export type StandingPosition = {
+  id: string;
+  title: string;
+  slots: number;
+  teamName: string | null;
+  /** Members eligible for this position — the whole roster, or one team's. */
+  candidates: Member[];
+  assigned: { assignmentId: string; memberId: string; name: string }[];
+};
+
+export function StandingAssignments({ positions }: { positions: StandingPosition[] }) {
+  const router = useRouter();
+  const [pendingId, setPendingId] = useState("");
+  const [error, setError] = useState("");
+
+  async function add(templatePositionId: string, memberId: string) {
+    if (!memberId) return;
+    setPendingId(templatePositionId);
+    setError("");
+    const supabase = createClient();
+    const { error: insertError } = await supabase
+      .from("template_position_assignments")
+      .insert({ template_position_id: templatePositionId, member_id: memberId });
+    setPendingId("");
+    if (insertError) {
+      setError(insertError.message);
+      return;
+    }
+    router.refresh();
+  }
+
+  async function remove(assignmentId: string) {
+    setPendingId(assignmentId);
+    setError("");
+    const supabase = createClient();
+    const { error: deleteError } = await supabase
+      .from("template_position_assignments")
+      .delete()
+      .eq("id", assignmentId);
+    setPendingId("");
+    if (deleteError) {
+      setError(deleteError.message);
+      return;
+    }
+    router.refresh();
+  }
+
+  if (positions.length === 0) {
+    return <p className={styles.helperText}>This series has no recurring positions yet.</p>;
+  }
+
+  return (
+    <>
+      <ul className={styles.list}>
+        {positions.map((position) => {
+          const assignedIds = new Set(position.assigned.map((a) => a.memberId));
+          const available = position.candidates.filter((m) => !assignedIds.has(m.id));
+          return (
+            <li key={position.id} className={styles.listRow}>
+              <div>
+                <p className={styles.itemName}>{position.title}</p>
+                <p className={styles.itemMeta}>
+                  {position.teamName ? `${position.teamName} · ` : ""}
+                  {position.assigned.length} of {position.slots} filled
+                </p>
+              </div>
+              <div className={styles.tagRow}>
+                {position.assigned.map((assignment) => (
+                  <span key={assignment.assignmentId} className={styles.pill}>
+                    {assignment.name}{" "}
+                    <button
+                      type="button"
+                      className={styles.linkButton}
+                      disabled={pendingId === assignment.assignmentId}
+                      onClick={() => remove(assignment.assignmentId)}
+                      aria-label={`Remove ${assignment.name} from ${position.title}`}
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+                {available.length > 0 ? (
+                  <select
+                    className={styles.select}
+                    value=""
+                    disabled={pendingId === position.id}
+                    onChange={(event) => add(position.id, event.target.value)}
+                  >
+                    <option value="">Add someone…</option>
+                    {available.map((member) => (
+                      <option key={member.id} value={member.id}>
+                        {member.name}
+                        {member.pending ? " (not yet joined)" : ""}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <span className={styles.itemMeta}>Everyone eligible is already on this position.</span>
+                )}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+      {error && (
+        <p className={styles.errorText} role="alert">
+          {error}
+        </p>
+      )}
+    </>
+  );
+}

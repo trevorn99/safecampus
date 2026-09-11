@@ -7,6 +7,7 @@ import { formatEventTimeRange } from "@/lib/formatDateTime";
 import { resolveTimeZone } from "@/lib/resolveTimeZone";
 import { SeriesHeader } from "./SeriesHeader";
 import { AddSeriesPositionForm } from "./AddSeriesPositionForm";
+import { StandingAssignments, type StandingPosition } from "./StandingAssignments";
 import styles from "@/styles/ui.module.css";
 
 export default async function SeriesDetailPage({
@@ -41,19 +42,79 @@ export default async function SeriesDetailPage({
     );
   }
 
-  const [{ data: generatedEvents }, { data: locations }, { data: eventTypes }, { data: teams }, timeZone] =
-    await Promise.all([
-      supabase
-        .from("events")
-        .select("id, title, start_time, end_time")
-        .eq("series_id", series.id)
-        .order("start_time", { ascending: false })
-        .limit(20),
-      supabase.from("locations").select("id, name").eq("organization_id", member.organization_id),
-      supabase.from("event_types").select("name").eq("organization_id", member.organization_id).order("name"),
-      supabase.from("teams").select("id, name").eq("organization_id", member.organization_id),
-      resolveTimeZone(supabase, member.organization_id, series.location_id),
-    ]);
+  const [
+    { data: generatedEvents },
+    { data: locations },
+    { data: eventTypes },
+    { data: teams },
+    { data: orgMembers },
+    { data: teamRoleAssignments },
+    timeZone,
+  ] = await Promise.all([
+    supabase
+      .from("events")
+      .select("id, title, start_time, end_time")
+      .eq("series_id", series.id)
+      .order("start_time", { ascending: false })
+      .limit(20),
+    supabase.from("locations").select("id, name").eq("organization_id", member.organization_id),
+    supabase.from("event_types").select("name").eq("organization_id", member.organization_id).order("name"),
+    supabase.from("teams").select("id, name").eq("organization_id", member.organization_id),
+    supabase
+      .from("members")
+      .select("id, name, status")
+      .eq("organization_id", member.organization_id)
+      .order("name"),
+    supabase.from("role_assignments").select("member_id, scope_id").eq("scope_type", "team"),
+    resolveTimeZone(supabase, member.organization_id, series.location_id),
+  ]);
+
+  // The recurring positions themselves, and who normally fills them. These
+  // are what generation copies onto each new occurrence, so editing here is
+  // what makes an assignment stick rather than decay as the horizon rolls.
+  const { data: templatePositions } = series.template_id
+    ? await supabase
+        .from("template_positions")
+        .select("id, title, team_id, slots")
+        .eq("template_id", series.template_id)
+        .order("start_offset_minutes")
+    : { data: [] as { id: string; title: string; team_id: string | null; slots: number }[] };
+
+  const templatePositionIds = (templatePositions ?? []).map((p) => p.id);
+  const { data: standingRows } = templatePositionIds.length
+    ? await supabase
+        .from("template_position_assignments")
+        .select("id, template_position_id, member_id")
+        .in("template_position_id", templatePositionIds)
+    : { data: [] as { id: string; template_position_id: string; member_id: string }[] };
+
+  const memberById = new Map((orgMembers ?? []).map((m) => [m.id, m]));
+  const teamNames = new Map((teams ?? []).map((t) => [t.id, t.name]));
+  const memberIdsByTeam = new Map<string, Set<string>>();
+  for (const row of (teamRoleAssignments ?? []) as { member_id: string; scope_id: string }[]) {
+    const set = memberIdsByTeam.get(row.scope_id) ?? new Set<string>();
+    set.add(row.member_id);
+    memberIdsByTeam.set(row.scope_id, set);
+  }
+
+  const standingPositions: StandingPosition[] = (templatePositions ?? []).map((position) => ({
+    id: position.id,
+    title: position.title,
+    slots: position.slots,
+    teamName: position.team_id ? (teamNames.get(position.team_id) ?? "Unknown team") : null,
+    // A position scoped to a team can only be filled from that team, matching
+    // the eligibility rule the event page already applies per occurrence.
+    candidates: (orgMembers ?? [])
+      .filter((m) => !position.team_id || memberIdsByTeam.get(position.team_id)?.has(m.id))
+      .map((m) => ({ id: m.id, name: m.name, pending: m.status === "pending" })),
+    assigned: (standingRows ?? [])
+      .filter((row) => row.template_position_id === position.id)
+      .map((row) => ({
+        assignmentId: row.id,
+        memberId: row.member_id,
+        name: memberById.get(row.member_id)?.name ?? "Unknown member",
+      })),
+  }));
 
   return (
     <>
@@ -92,6 +153,18 @@ export default async function SeriesDetailPage({
               </li>
             ))}
           </ul>
+        </div>
+
+        <div className={styles.card}>
+          <div className={styles.cardHeader}>
+            <h2 className={styles.cardTitle}>Who normally covers this</h2>
+            <p className={styles.helperText}>
+              People here are put on every occurrence as it&apos;s created, including ones generated months from
+              now — so an assignment lasts until it&apos;s changed here. Taking someone off a single event on the
+              schedule only covers that week and leaves this list alone.
+            </p>
+          </div>
+          <StandingAssignments positions={standingPositions} />
         </div>
 
         <div className={styles.card}>

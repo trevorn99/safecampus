@@ -13,6 +13,15 @@ export async function assignAcrossSeries(
   templatePositionId: string,
   excludePositionId: string,
 ): Promise<void> {
+  // Recorded against the recurring position first, so the assignment also
+  // reaches occurrences that don't exist yet. Without this the fan-out below
+  // covers only what the generator has produced so far, and every future
+  // occurrence arrives unfilled. Ignores a duplicate — the unique constraint
+  // means re-assigning someone already on the standing roster is a no-op.
+  await supabase
+    .from("template_position_assignments")
+    .upsert({ template_position_id: templatePositionId, member_id: memberId }, { onConflict: "template_position_id,member_id" });
+
   const { data: seriesEvents } = await supabase
     .from("events")
     .select("id")

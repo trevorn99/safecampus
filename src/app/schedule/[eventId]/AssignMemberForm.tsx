@@ -101,7 +101,7 @@ export function AssignMemberForm({
             checked={applyToSeries}
             onChange={(event) => setApplyToSeries(event.target.checked)}
           />
-          Also assign to every future event in this series
+          Also assign to every future event in this series, and keep them on it
         </label>
       )}
       {error && <p className={styles.errorText} role="alert">{error}</p>}
