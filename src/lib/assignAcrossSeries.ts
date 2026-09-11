@@ -1,42 +1,35 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-// Assigns memberId to every other future occurrence of the same
-// template-derived position within a series — used when an admin or a
-// volunteer opts to sign up for a recurring position once instead of
-// per-event. Only future events are touched (matches the convention used
-// elsewhere for series-wide edits — past occurrences are historical).
-// Silently skips positions the member is already assigned to.
-export async function assignAcrossSeries(
+// Every occurrence of one recurring position that hasn't happened yet.
+// Keyed on the position's own start_time rather than its event's: a position
+// can sit hours off the event start, and "future" should mean the shift
+// itself hasn't begun.
+async function futurePositionIds(
   supabase: SupabaseClient,
-  memberId: string,
-  seriesId: string,
   templatePositionId: string,
-  excludePositionId: string,
-): Promise<void> {
-  // Recorded against the recurring position first, so the assignment also
-  // reaches occurrences that don't exist yet. Without this the fan-out below
-  // covers only what the generator has produced so far, and every future
-  // occurrence arrives unfilled. Ignores a duplicate — the unique constraint
-  // means re-assigning someone already on the standing roster is a no-op.
-  await supabase
-    .from("template_position_assignments")
-    .upsert({ template_position_id: templatePositionId, member_id: memberId }, { onConflict: "template_position_id,member_id" });
-
-  const { data: seriesEvents } = await supabase
-    .from("events")
-    .select("id")
-    .eq("series_id", seriesId)
-    .gte("start_time", new Date().toISOString());
-  const eventIds = (seriesEvents ?? []).map((e) => e.id);
-  if (eventIds.length === 0) return;
-
-  const { data: siblingPositions } = await supabase
+  excludePositionId?: string,
+): Promise<string[]> {
+  const query = supabase
     .from("event_positions")
     .select("id")
     .eq("template_position_id", templatePositionId)
-    .in("event_id", eventIds)
-    .neq("id", excludePositionId);
-  const positionIds = (siblingPositions ?? []).map((p) => p.id);
+    .gte("start_time", new Date().toISOString());
+  const { data } = excludePositionId ? await query.neq("id", excludePositionId) : await query;
+  return (data ?? []).map((position) => position.id);
+}
+
+// Puts a member on every future occurrence of a recurring position that's
+// already been generated. The standing roster
+// (template_position_assignments) covers occurrences that don't exist yet;
+// this covers the ones that do. Both are needed — neither alone means "on
+// this position from now on".
+export async function assignToFutureOccurrences(
+  supabase: SupabaseClient,
+  memberId: string,
+  templatePositionId: string,
+  excludePositionId?: string,
+): Promise<void> {
+  const positionIds = await futurePositionIds(supabase, templatePositionId, excludePositionId);
   if (positionIds.length === 0) return;
 
   const { data: existing } = await supabase
@@ -52,4 +45,40 @@ export async function assignAcrossSeries(
   if (toInsert.length > 0) {
     await supabase.from("assignments").insert(toInsert);
   }
+}
+
+// The mirror of the above, for when someone comes off the standing roster.
+// Without it, removing a person would stop them being added to occurrences
+// generated later while leaving them on every one already created — up to a
+// year of events they're no longer supposed to be covering.
+export async function unassignFromFutureOccurrences(
+  supabase: SupabaseClient,
+  memberId: string,
+  templatePositionId: string,
+): Promise<void> {
+  const positionIds = await futurePositionIds(supabase, templatePositionId);
+  if (positionIds.length === 0) return;
+
+  await supabase.from("assignments").delete().eq("member_id", memberId).in("event_position_id", positionIds);
+}
+
+// Used by the "also assign to every future event in this series" checkbox on
+// an individual event. Records the standing roster entry first so the
+// assignment also reaches occurrences that don't exist yet, then fans out
+// across the ones that do.
+export async function assignAcrossSeries(
+  supabase: SupabaseClient,
+  memberId: string,
+  seriesId: string,
+  templatePositionId: string,
+  excludePositionId: string,
+): Promise<void> {
+  await supabase
+    .from("template_position_assignments")
+    .upsert(
+      { template_position_id: templatePositionId, member_id: memberId },
+      { onConflict: "template_position_id,member_id" },
+    );
+
+  await assignToFutureOccurrences(supabase, memberId, templatePositionId, excludePositionId);
 }
