@@ -19,6 +19,13 @@ function daysAgoIso(days: number): string {
   return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
 }
 
+// The window has to close as well as open. Series now generate a year ahead,
+// so an unbounded "since" sweeps in hundreds of events that haven't happened
+// — "Events, last 90 days" was counting next spring's Sundays.
+function nowIso(): string {
+  return new Date().toISOString();
+}
+
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 }
@@ -31,12 +38,13 @@ export default async function AnalyticsPage() {
   }
 
   const sinceIso = daysAgoIso(ACTIVITY_WINDOW_DAYS);
+  const untilIso = nowIso();
 
   const [eventTypeBreakdown, weeklyFillRate, expiringCerts, attendanceStat] = await Promise.all([
-    getEventTypeBreakdown(supabase, member.organization_id, sinceIso),
+    getEventTypeBreakdown(supabase, member.organization_id, sinceIso, untilIso),
     getWeeklyFillRate(supabase, member.organization_id, FILL_RATE_WEEKS),
     getExpiringCertifications(supabase, member.organization_id, CERT_HORIZON_DAYS),
-    getAttendanceStat(supabase, member.organization_id, sinceIso),
+    getAttendanceStat(supabase, member.organization_id, sinceIso, untilIso),
   ]);
 
   const totalEvents = eventTypeBreakdown.reduce((sum, d) => sum + d.count, 0);
