@@ -7,6 +7,9 @@ import { generateSeriesOccurrences, type EventSeriesRow } from "@/lib/eventSerie
 // next scheduled run. Uses the caller's own RLS-respecting session — org
 // admins already have insert rights on events/event_positions, so no
 // service-role client is needed here.
+// Creating a year of a daily series in one press is the worst case here.
+export const maxDuration = 300;
+
 export async function POST(request: Request) {
   const { seriesId } = await request.json();
   if (!seriesId) {

@@ -7,6 +7,11 @@ import { isAuthorizedCronRequest } from "@/lib/cronAuth";
 // requests with this bearer token automatically when CRON_SECRET is set —
 // this route intentionally has no per-org scoping, since it walks every
 // active series across every organization in one pass.
+// A year-deep horizon means the first pass after a series is created (or
+// after the horizon was widened) writes a lot of rows at once, across every
+// active series in one run.
+export const maxDuration = 300;
+
 export async function GET(request: Request) {
   if (!isAuthorizedCronRequest(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

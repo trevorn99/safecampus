@@ -314,9 +314,14 @@ export async function generateThreatReport(admin: SupabaseClient, organizationId
     // deliberate: the alternative is trimming a safety brief's inputs
     // silently, and an org admin seeing this error is the signal that
     // something needs looking at.
+    // `tools` is deliberately not passed: count_tokens rejects server tools
+    // outright ("Server tools are not supported in the count_tokens
+    // endpoint"), which 400'd every generation. No loss — the guard exists to
+    // catch a prompt bloated by customer-controlled input, and the tool
+    // definitions are a fixed handful of tokens that no organization can
+    // influence.
     const { input_tokens: promptTokens } = await anthropic.messages.countTokens({
       model: MODEL,
-      tools,
       messages,
     });
     if (promptTokens > MAX_PROMPT_TOKENS) {

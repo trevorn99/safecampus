@@ -5,9 +5,13 @@ import { utcToZonedWallTime, zonedWallTimeToUtc, type WallTime } from "@/lib/tim
 import { resolveTimeZone } from "@/lib/resolveTimeZone";
 
 // How far ahead a single generation pass creates events. The daily cron
-// re-runs this for every active series, so occurrences just beyond this
-// horizon get created on a later run rather than all at once.
-const GENERATION_HORIZON_DAYS = 60;
+// re-runs this for every active series, so the window rolls forward a day at
+// a time and a series never runs out — a year is always visible without
+// anyone renewing anything by hand.
+//
+// A year of a daily series is 365 events plus their positions, which is why
+// the inserts below are batched rather than issued one occurrence at a time.
+const GENERATION_HORIZON_DAYS = 365;
 
 // rrule operates on "floating" dates — plain calendar/clock component
 // containers with no real timezone meaning (see its own README). That's
@@ -81,6 +85,7 @@ export async function generateSeriesOccurrences(
   if (missing.length === 0) return { created: 0 };
 
   let templatePositions: Array<{
+    id: string;
     team_id: string | null;
     title: string;
     location_id: string | null;
@@ -91,16 +96,19 @@ export async function generateSeriesOccurrences(
   if (series.template_id) {
     const { data } = await supabase
       .from("template_positions")
-      .select("team_id, title, location_id, start_offset_minutes, end_offset_minutes, slots")
+      .select("id, team_id, title, location_id, start_offset_minutes, end_offset_minutes, slots")
       .eq("template_id", series.template_id);
     templatePositions = data ?? [];
   }
 
-  let created = 0;
-  for (const occurrence of missing) {
-    const { data: newEvent, error } = await supabase
-      .from("events")
-      .insert({
+  // One insert for every occurrence, then one for all their positions —
+  // rather than two round trips per occurrence. At a 60-day horizon the
+  // per-occurrence version was merely wasteful; at a year it would run for
+  // hundreds of round trips per series and time the function out.
+  const { data: insertedEvents, error: insertError } = await supabase
+    .from("events")
+    .insert(
+      missing.map((occurrence) => ({
         organization_id: series.organization_id,
         location_id: series.location_id,
         title: series.title,
@@ -109,29 +117,43 @@ export async function generateSeriesOccurrences(
         end_time: new Date(occurrence.getTime() + series.duration_minutes * 60_000).toISOString(),
         series_id: series.id,
         template_id: series.template_id,
-      })
-      .select("id")
-      .single();
-    if (error || !newEvent) continue;
-    created += 1;
+      })),
+    )
+    .select("id, start_time");
 
-    if (templatePositions.length > 0) {
-      const startMs = occurrence.getTime();
-      const positions = templatePositions.map((tp) => ({
-        event_id: newEvent.id,
-        team_id: tp.team_id,
-        title: tp.title,
-        location_id: tp.location_id,
-        start_time: new Date(startMs + tp.start_offset_minutes * 60_000).toISOString(),
-        end_time:
-          tp.end_offset_minutes != null
-            ? new Date(startMs + tp.end_offset_minutes * 60_000).toISOString()
-            : null,
-        slots: tp.slots,
-      }));
-      await supabase.from("event_positions").insert(positions);
-    }
+  // Swallowed, not thrown: the cron walks every active series in one pass,
+  // and one organization's bad series shouldn't stop everyone else's from
+  // being generated.
+  if (insertError || !insertedEvents) return { created: 0 };
+
+  if (templatePositions.length > 0) {
+    await supabase.from("event_positions").insert(
+      insertedEvents.flatMap((event) => {
+        const startMs = new Date(event.start_time).getTime();
+        return templatePositions.map((tp) => ({
+          event_id: event.id,
+          // The link back to the series' position. Without it the
+          // "apply to every future event in this series" paths can't find an
+          // occurrence at all: assignAcrossSeries matches siblings on this
+          // column, and both assign forms hide their series checkbox when
+          // it's null. AddSeriesPositionForm has always set it; generated
+          // occurrences never did, so the feature only worked on events that
+          // already existed when a position was added.
+          template_position_id: tp.id,
+          team_id: tp.team_id,
+          title: tp.title,
+          location_id: tp.location_id,
+          start_time: new Date(startMs + tp.start_offset_minutes * 60_000).toISOString(),
+          end_time:
+            tp.end_offset_minutes != null
+              ? new Date(startMs + tp.end_offset_minutes * 60_000).toISOString()
+              : null,
+          slots: tp.slots,
+        }));
+      }),
+    );
   }
 
+  const created = insertedEvents.length;
   return { created };
 }
