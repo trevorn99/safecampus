@@ -47,14 +47,26 @@ export default async function LocationMapPage({
 
   const { data: templatePositions } = await supabase
     .from("template_positions")
-    .select("id, title")
-    .or(`location_id.eq.${locationId},location_id.is.null`);
+    // The template's name comes along so the picker can tell two positions
+    // with the same title apart — "Lobby" on the Sunday Service template and
+    // "Lobby" on the Midweek one are different positions and pin differently.
+    .select("id, title, event_templates(name)")
+    .or(`location_id.eq.${locationId},location_id.is.null`)
+    .returns<{ id: string; title: string; event_templates: { name: string } | null }[]>();
 
   const positionTitles = new Map((templatePositions ?? []).map((position) => [position.id, position.title]));
   const pinnedPositionIds = new Set((pins ?? []).map((pin) => pin.template_position_id));
-  const availablePositions = (templatePositions ?? []).filter(
-    (position) => !pinnedPositionIds.has(position.id),
-  );
+  const availablePositions = (templatePositions ?? [])
+    .filter((position) => !pinnedPositionIds.has(position.id))
+    .map((position) => ({
+      id: position.id,
+      title: position.title,
+      templateName: position.event_templates?.name ?? null,
+    }))
+    .sort(
+      (a, b) =>
+        (a.templateName ?? "").localeCompare(b.templateName ?? "") || a.title.localeCompare(b.title),
+    );
 
   return (
     <>
@@ -76,10 +88,7 @@ export default async function LocationMapPage({
             yPct: Number(pin.y_pct),
             title: positionTitles.get(pin.template_position_id) ?? "Unknown position",
           }))}
-          availablePositions={availablePositions.map((position) => ({
-            id: position.id,
-            title: position.title,
-          }))}
+          availablePositions={availablePositions}
         />
       </main>
     </>

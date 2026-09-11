@@ -8,7 +8,7 @@ import styles from "@/styles/ui.module.css";
 import mapStyles from "./map.module.css";
 
 type Pin = { id: string; xPct: number; yPct: number; title: string };
-type Position = { id: string; title: string };
+type Position = { id: string; title: string; templateName: string | null };
 
 export function MapEditor({
   organizationId,
@@ -174,6 +174,7 @@ export function MapEditor({
             {availablePositions.map((position) => (
               <option key={position.id} value={position.id}>
                 {position.title}
+                {position.templateName ? ` — ${position.templateName}` : ""}
               </option>
             ))}
           </select>
