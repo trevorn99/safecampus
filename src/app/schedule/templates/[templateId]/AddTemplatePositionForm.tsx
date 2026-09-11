@@ -3,17 +3,27 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { PostSelect, type PostOption } from "@/components/PostSelect";
 import styles from "@/styles/ui.module.css";
 
 type Option = { id: string; name: string };
 
-export function AddTemplatePositionForm({ templateId, teams }: { templateId: string; teams: Option[] }) {
+export function AddTemplatePositionForm({
+  templateId,
+  teams,
+  posts,
+}: {
+  templateId: string;
+  teams: Option[];
+  posts: PostOption[];
+}) {
   const router = useRouter();
   const [title, setTitle] = useState("");
   const [teamId, setTeamId] = useState("");
   const [startOffset, setStartOffset] = useState("0");
   const [endOffset, setEndOffset] = useState("");
   const [slots, setSlots] = useState("1");
+  const [postId, setPostId] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -30,6 +40,7 @@ export function AddTemplatePositionForm({ templateId, teams }: { templateId: str
       start_offset_minutes: Number(startOffset),
       end_offset_minutes: endOffset ? Number(endOffset) : null,
       slots: Number(slots),
+      post_id: postId || null,
     });
 
     setLoading(false);
@@ -42,6 +53,7 @@ export function AddTemplatePositionForm({ templateId, teams }: { templateId: str
     setStartOffset("0");
     setEndOffset("");
     setSlots("1");
+    setPostId("");
     router.refresh();
   }
 
@@ -113,6 +125,7 @@ export function AddTemplatePositionForm({ templateId, teams }: { templateId: str
         />
       </div>
       <div className={styles.actions}>
+        <PostSelect id="templatePositionPost" value={postId} posts={posts} onChange={setPostId} disabled={loading} />
         <button type="submit" className={`${styles.button} ${styles.buttonPrimary}`} disabled={loading}>
           {loading ? "Adding…" : "Add position"}
         </button>

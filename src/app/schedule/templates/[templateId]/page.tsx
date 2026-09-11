@@ -6,6 +6,7 @@ import { AddTemplatePositionForm } from "./AddTemplatePositionForm";
 import { DeleteTemplatePositionButton } from "./DeleteTemplatePositionButton";
 import { DeleteTemplateButton } from "./DeleteTemplateButton";
 import { TemplateDefaultsForm } from "./TemplateDefaultsForm";
+import { listPostOptions } from "@/lib/posts";
 import styles from "@/styles/ui.module.css";
 
 function formatOffset(minutes: number) {
@@ -36,7 +37,7 @@ export default async function TemplateDetailPage({
     supabase.from("event_types").select("name").eq("organization_id", member.organization_id).order("name"),
     supabase
       .from("template_positions")
-      .select("id, title, team_id, start_offset_minutes, end_offset_minutes, slots")
+      .select("id, title, team_id, post_id, start_offset_minutes, end_offset_minutes, slots")
       .eq("template_id", templateId)
       .order("start_offset_minutes"),
   ]);
@@ -56,6 +57,7 @@ export default async function TemplateDetailPage({
   }
 
   const teamName = new Map((teams ?? []).map((t) => [t.id, t.name]));
+  const postOptions = await listPostOptions(supabase, member.organization_id);
 
   return (
     <>
@@ -98,13 +100,16 @@ export default async function TemplateDetailPage({
                     {position.end_offset_minutes != null ? ` – ${formatOffset(position.end_offset_minutes)}` : ""}
                     {position.team_id ? ` · ${teamName.get(position.team_id) ?? "Unknown team"}` : ""}
                     {` · ${position.slots} needed`}
+                    {position.post_id
+                      ? ` · ${postOptions.find((p) => p.id === position.post_id)?.name ?? "Unknown post"}`
+                      : ""}
                   </p>
                 </div>
                 <DeleteTemplatePositionButton positionId={position.id} />
               </li>
             ))}
           </ul>
-          <AddTemplatePositionForm templateId={template.id} teams={teams ?? []} />
+          <AddTemplatePositionForm templateId={template.id} teams={teams ?? []} posts={postOptions} />
         </div>
 
         <DeleteTemplateButton templateId={template.id} name={template.name} />

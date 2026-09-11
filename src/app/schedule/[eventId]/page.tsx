@@ -15,6 +15,7 @@ import { DeleteEventButton } from "./DeleteEventButton";
 import { formatEventTimeRange } from "@/lib/formatDateTime";
 import { resolveTimeZone } from "@/lib/resolveTimeZone";
 import { eventTypeLabel } from "@/lib/eventTypes";
+import { listPostOptions } from "@/lib/posts";
 import styles from "@/styles/ui.module.css";
 
 type AssignmentRow = { id: string; member_id: string; status: string; event_position_id: string };
@@ -72,6 +73,7 @@ export default async function EventDetailPage({
   }
 
   const timeZone = await resolveTimeZone(supabase, member.organization_id, event.location_id);
+  const postOptions = await listPostOptions(supabase, member.organization_id);
 
   const positionIds = (positions ?? []).map((p) => p.id);
   let assignments: AssignmentRow[] = [];
@@ -267,6 +269,7 @@ export default async function EventDetailPage({
               teams={teams ?? []}
               locations={locations ?? []}
               timeZone={timeZone}
+              posts={postOptions}
             />
           </div>
         )}
