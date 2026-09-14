@@ -174,9 +174,12 @@ export async function generateSeriesOccurrences(
     // the horizon rolls forward instead of every generated event arriving
     // unfilled. Someone removed from one occurrence stays removed only
     // there; this is what an admin changes to stop it recurring.
+    // Scoped to this series: several series can share a template, and their
+    // regulars are separate lists even though the positions are the same.
     const { data: standing } = await supabase
       .from("template_position_assignments")
       .select("template_position_id, member_id")
+      .eq("series_id", series.id)
       .in(
         "template_position_id",
         templatePositions.map((tp) => tp.id),

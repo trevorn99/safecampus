@@ -18,7 +18,13 @@ export type StandingPosition = {
   assigned: { assignmentId: string; memberId: string; name: string }[];
 };
 
-export function StandingAssignments({ positions }: { positions: StandingPosition[] }) {
+export function StandingAssignments({
+  seriesId,
+  positions,
+}: {
+  seriesId: string;
+  positions: StandingPosition[];
+}) {
   const router = useRouter();
   const [pendingId, setPendingId] = useState("");
   const [error, setError] = useState("");
@@ -30,7 +36,7 @@ export function StandingAssignments({ positions }: { positions: StandingPosition
     const supabase = createClient();
     const { error: insertError } = await supabase
       .from("template_position_assignments")
-      .insert({ template_position_id: templatePositionId, member_id: memberId });
+      .insert({ series_id: seriesId, template_position_id: templatePositionId, member_id: memberId });
     if (insertError) {
       setPendingId("");
       setError(insertError.message);
@@ -43,6 +49,7 @@ export function StandingAssignments({ positions }: { positions: StandingPosition
     const { error: fanOutError, skippedFull } = await assignToFutureOccurrences(
       supabase,
       memberId,
+      seriesId,
       templatePositionId,
     );
     setPendingId("");
@@ -85,7 +92,12 @@ export function StandingAssignments({ positions }: { positions: StandingPosition
     // Symmetric with add(): leaving them on every occurrence already
     // generated would mean removing someone from the roster still had them
     // covering up to a year of shifts.
-    const { error: fanOutError } = await unassignFromFutureOccurrences(supabase, memberId, templatePositionId);
+    const { error: fanOutError } = await unassignFromFutureOccurrences(
+      supabase,
+      memberId,
+      seriesId,
+      templatePositionId,
+    );
     setPendingId("");
     if (fanOutError) {
       setError(`Removed from the regulars, but the upcoming events couldn't be updated: ${fanOutError}`);
