@@ -7,6 +7,8 @@
   --muted: #5b6560;
   --accent: #178f80;
   --accent-strong: #0f7568;
+  /* Tinted ground for 'this one is yours' states, light enough to sit under --ink. */
+  --accent-soft: #e2f0ec;
   --accent-contrast: #f2fbf9;
   --danger: #a4432f;
   --danger-bg: #f6e6e1;
@@ -34,6 +36,7 @@
     --muted: #98a1ab;
     --accent: #2ed1b6;
     --accent-strong: #55dfc7;
+    --accent-soft: #16302b;
     --accent-contrast: #14211d;
     --danger: #d68870;
     --danger-bg: #2c1f1a;

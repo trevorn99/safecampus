@@ -676,6 +676,14 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* The viewer's own events. A left edge and a tinted ground rather than a
+   different fill: the chip already inverts to --accent on hover, and two
+   competing background colours would fight over which state is showing. */
+.calendarEventMine {
+  background: var(--accent-soft);
+  border-left: 3px solid var(--accent-strong);
+  font-weight: 600;
+}
 .calendarEvent:hover {
   background: var(--accent);
   color: var(--accent-contrast);

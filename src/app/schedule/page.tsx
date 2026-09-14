@@ -16,7 +16,7 @@ type MyAssignment = {
     title: string;
     start_time: string;
     end_time: string | null;
-    events: { title: string } | { title: string }[] | null;
+    events: { id: string; title: string } | { id: string; title: string }[] | null;
   } | null;
 };
 
@@ -37,17 +37,37 @@ export default async function SchedulePage() {
       .gte("start_time", rangeStartIso)
       .lt("start_time", rangeEndExclusiveIso)
       .order("start_time"),
+    // Bounded at the database rather than filtered afterwards. This fetched
+    // every assignment the member had ever held and threw away the past ones
+    // in JS — which was fine when a series generated two months ahead, and
+    // isn't now that one standing roster entry on a weekly series is fifty-two
+    // rows.
     supabase
       .from("assignments")
-      .select("id, status, event_positions(id, title, start_time, events(title))")
+      .select("id, status, event_positions!inner(id, title, start_time, events(id, title))")
       .eq("member_id", member.id)
+      .gte("event_positions.start_time", new Date().toISOString())
       .returns<MyAssignment[]>(),
     resolveTimeZone(supabase, member.organization_id, null),
   ]);
 
   const upcomingAssignments = (myAssignments ?? [])
-    .filter((a) => a.event_positions && new Date(a.event_positions.start_time) >= new Date())
+    .filter((a) => a.event_positions)
     .sort((a, b) => (a.event_positions!.start_time > b.event_positions!.start_time ? 1 : -1));
+
+  // A year of a weekly commitment is not a list anyone reads. Showing the
+  // next few and counting the rest keeps the page about what's coming up.
+  const VISIBLE_ASSIGNMENTS = 8;
+  const visibleAssignments = upcomingAssignments.slice(0, VISIBLE_ASSIGNMENTS);
+  const hiddenAssignmentCount = upcomingAssignments.length - visibleAssignments.length;
+
+  const assignedEventIds = [
+    ...new Set(
+      upcomingAssignments
+        .map((a) => firstOf(a.event_positions?.events)?.id)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  ];
 
   return (
     <>
@@ -62,9 +82,14 @@ export default async function SchedulePage() {
           <div className={styles.card}>
             <div className={styles.cardHeader}>
               <h2 className={styles.cardTitle}>Your upcoming assignments</h2>
+              <p className={styles.helperText}>
+                {hiddenAssignmentCount > 0
+                  ? `The next ${visibleAssignments.length} of ${upcomingAssignments.length} — the rest are further out on the calendar below.`
+                  : `${upcomingAssignments.length} coming up.`}
+              </p>
             </div>
             <ul className={styles.list}>
-              {upcomingAssignments.map((assignment) => {
+              {visibleAssignments.map((assignment) => {
                 const position = assignment.event_positions!;
                 const eventTitle = firstOf(position.events)?.title ?? "Event";
                 return (
@@ -101,6 +126,7 @@ export default async function SchedulePage() {
             minMonth={minMonthIso}
             maxMonth={maxMonthIso}
             timeZone={timeZone}
+            assignedEventIds={assignedEventIds}
             canCreateEvents={isAdmin}
           />
         </div>

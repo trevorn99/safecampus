@@ -76,6 +76,7 @@ export function EventCalendar({
   minMonth,
   maxMonth,
   timeZone,
+  assignedEventIds = [],
   canCreateEvents = false,
 }: {
   events: CalendarEvent[];
@@ -83,8 +84,11 @@ export function EventCalendar({
   minMonth: string;
   maxMonth: string;
   timeZone: string;
+  /** Events the viewer is on. Theirs are the ones they scan a month for. */
+  assignedEventIds?: string[];
   canCreateEvents?: boolean;
 }) {
+  const assigned = new Set(assignedEventIds);
   const todayDate = new Date(today);
   const [monthStart, setMonthStart] = useState(startOfMonth(todayDate));
   const [selectedDay, setSelectedDay] = useState(todayDate);
@@ -103,9 +107,17 @@ export function EventCalendar({
   const days = buildGrid(monthStart);
   const monthLabel = monthStart.toLocaleDateString(undefined, { month: "long", year: "numeric" });
 
+  // The viewer's own events first, each group still in time order. A day
+  // panel normally reads chronologically, and breaking that is deliberate:
+  // the question someone opens a day to answer is "am I on for this", and
+  // the answer shouldn't depend on where their shift happens to fall among
+  // everyone else's.
   const selectedDayEvents = (eventsByDay.get(dayKey(selectedDay)) ?? [])
     .slice()
-    .sort((a, b) => a.start_time.localeCompare(b.start_time));
+    .sort((a, b) => {
+      const mine = Number(assigned.has(b.id)) - Number(assigned.has(a.id));
+      return mine !== 0 ? mine : a.start_time.localeCompare(b.start_time);
+    });
   const selectedDayLabel = selectedDay.toLocaleDateString(undefined, {
     weekday: "long",
     month: "long",
@@ -170,7 +182,11 @@ export function EventCalendar({
                 <Link
                   key={event.id}
                   href={`/schedule/${event.id}`}
-                  className={styles.calendarEvent}
+                  className={
+                    assigned.has(event.id)
+                      ? `${styles.calendarEvent} ${styles.calendarEventMine}`
+                      : styles.calendarEvent
+                  }
                   onClick={(e) => e.stopPropagation()}
                 >
                   <span className={styles.calendarEventTitle}>{event.title}</span>
@@ -204,6 +220,7 @@ export function EventCalendar({
               <Link href={`/schedule/${event.id}`} className={styles.itemName}>
                 {event.title}
               </Link>
+              {assigned.has(event.id) && <span className={styles.pill}>You&apos;re on this</span>}
               <div className={styles.tagRow}>
                 {event.type && <span className={styles.pillMuted}>{eventTypeLabel(event.type)}</span>}
                 <span className={styles.itemMeta}>{formatEventTime(event, timeZone)}</span>

@@ -1,6 +1,6 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { utcToZonedWallTime } from "@/lib/timezone";
+import { localDayNumber, formatLocalDateTime } from "@/lib/localDay";
 import { sendSms } from "@/lib/sms";
 import { escapeHtml, renderBrandedEmail, sendEmail, unsubscribeUrlFor } from "@/lib/email";
 
@@ -79,22 +79,6 @@ export type DueReminder = {
   phone: string | null;
   email: string | null;
 };
-
-function localDayNumber(date: Date, timeZone: string): number {
-  const wall = utcToZonedWallTime(date, timeZone);
-  return Math.floor(Date.UTC(wall.year, wall.month - 1, wall.day) / 86_400_000);
-}
-
-function formatLocalDateTime(date: Date, timeZone: string): string {
-  return new Intl.DateTimeFormat("en-US", {
-    timeZone,
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(date);
-}
 
 function smsBody(due: DueReminder): string {
   return due.daysAhead === 3
