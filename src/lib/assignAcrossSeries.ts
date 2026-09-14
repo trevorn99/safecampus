@@ -6,16 +6,23 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 // off the event start, and "future" should mean the shift itself hasn't begun.
 async function futurePositions(
   supabase: SupabaseClient,
+  seriesId: string,
   templatePositionId: string,
   excludePositionId?: string,
 ): Promise<{ id: string; slots: number }[]> {
+  // Scoped to one series, not just one template position. Several series can
+  // be built from the same template, so matching on template_position_id
+  // alone reached every occurrence of every one of them — assigning someone
+  // to the 2nd Sunday service also put them on the 3rd, and removing them
+  // took them off both.
   const query = supabase
     .from("event_positions")
-    .select("id, slots")
+    .select("id, slots, events!inner(series_id)")
     .eq("template_position_id", templatePositionId)
+    .eq("events.series_id", seriesId)
     .gte("start_time", new Date().toISOString());
   const { data } = excludePositionId ? await query.neq("id", excludePositionId) : await query;
-  return data ?? [];
+  return (data ?? []).map((row) => ({ id: row.id as string, slots: row.slots as number }));
 }
 
 // Puts a member on every future occurrence of a recurring position that's
@@ -31,10 +38,11 @@ async function futurePositions(
 export async function assignToFutureOccurrences(
   supabase: SupabaseClient,
   memberId: string,
+  seriesId: string,
   templatePositionId: string,
   excludePositionId?: string,
 ): Promise<{ assigned: number; skippedFull: number; error: string | null }> {
-  const positions = await futurePositions(supabase, templatePositionId, excludePositionId);
+  const positions = await futurePositions(supabase, seriesId, templatePositionId, excludePositionId);
   if (positions.length === 0) return { assigned: 0, skippedFull: 0, error: null };
 
   const positionIds = positions.map((position) => position.id);
@@ -88,9 +96,10 @@ export async function assignToFutureOccurrences(
 export async function unassignFromFutureOccurrences(
   supabase: SupabaseClient,
   memberId: string,
+  seriesId: string,
   templatePositionId: string,
 ): Promise<{ error: string | null }> {
-  const positionIds = (await futurePositions(supabase, templatePositionId)).map((position) => position.id);
+  const positionIds = (await futurePositions(supabase, seriesId, templatePositionId)).map((position) => position.id);
   if (positionIds.length === 0) return { error: null };
 
   const { error } = await supabase
@@ -115,10 +124,10 @@ export async function assignAcrossSeries(
   const { error: rosterError } = await supabase
     .from("template_position_assignments")
     .upsert(
-      { template_position_id: templatePositionId, member_id: memberId },
-      { onConflict: "template_position_id,member_id" },
+      { series_id: seriesId, template_position_id: templatePositionId, member_id: memberId },
+      { onConflict: "series_id,template_position_id,member_id" },
     );
   if (rosterError) return { assigned: 0, skippedFull: 0, error: rosterError.message };
 
-  return assignToFutureOccurrences(supabase, memberId, templatePositionId, excludePositionId);
+  return assignToFutureOccurrences(supabase, memberId, seriesId, templatePositionId, excludePositionId);
 }

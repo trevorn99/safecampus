@@ -92,6 +92,7 @@ export default async function SeriesDetailPage({
     ? await supabase
         .from("template_position_assignments")
         .select("id, template_position_id, member_id")
+        .eq("series_id", seriesId)
         .in("template_position_id", templatePositionIds)
     : { data: [] as { id: string; template_position_id: string; member_id: string }[] };
 
@@ -174,7 +175,7 @@ export default async function SeriesDetailPage({
               this list alone.
             </p>
           </div>
-          <StandingAssignments positions={standingPositions} />
+          <StandingAssignments seriesId={series.id} positions={standingPositions} />
         </div>
 
         <div className={styles.card}>
