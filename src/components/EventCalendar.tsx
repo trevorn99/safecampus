@@ -104,6 +104,24 @@ export function EventCalendar({
     eventsByDay.set(key, list);
   }
 
+  // Rendered once, used by both the grid and the agenda below. Two copies of
+  // this markup would drift the moment either changed.
+  function eventChip(event: CalendarEvent) {
+    return (
+      <Link
+        key={event.id}
+        href={`/schedule/${event.id}`}
+        className={
+          assigned.has(event.id) ? `${styles.calendarEvent} ${styles.calendarEventMine}` : styles.calendarEvent
+        }
+        onClick={(e) => e.stopPropagation()}
+      >
+        <span className={styles.calendarEventTitle}>{event.title}</span>
+        <span className={styles.calendarEventTime}>{formatEventTime(event, timeZone)}</span>
+      </Link>
+    );
+  }
+
   const days = buildGrid(monthStart);
   const monthLabel = monthStart.toLocaleDateString(undefined, { month: "long", year: "numeric" });
 
@@ -178,27 +196,47 @@ export function EventCalendar({
               >
                 {day.getDate()}
               </button>
-              {visible.map((event) => (
-                <Link
-                  key={event.id}
-                  href={`/schedule/${event.id}`}
-                  className={
-                    assigned.has(event.id)
-                      ? `${styles.calendarEvent} ${styles.calendarEventMine}`
-                      : styles.calendarEvent
-                  }
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <span className={styles.calendarEventTitle}>{event.title}</span>
-                  <span className={styles.calendarEventTime}>
-                    {formatEventTime(event, timeZone)}
-                  </span>
-                </Link>
-              ))}
+              {visible.map((event) => eventChip(event))}
               {extra > 0 && <span className={styles.calendarMore}>+{extra} more</span>}
             </div>
           );
         })}
+      </div>
+
+      {/* Phone widths get this instead of the grid — seven columns in 375px
+          gives 50px cells, which can hold a chip but not a readable one.
+          Both are rendered and CSS picks: deciding in JS would need the
+          viewport at render time, which the server hasn't got, so the first
+          paint would be wrong and then jump. */}
+      <div className={styles.calendarAgenda}>
+        {days
+          .filter((day) => day.getMonth() === monthStart.getMonth() && (eventsByDay.get(dayKey(day)) ?? []).length > 0)
+          .map((day) => (
+            <div key={dayKey(day)} className={styles.calendarAgendaDay}>
+              <p className={styles.calendarAgendaDate}>
+                {day.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}
+                {isSameDay(day, todayDate) && <span className={styles.pill}>Today</span>}
+              </p>
+              {(eventsByDay.get(dayKey(day)) ?? [])
+                .slice()
+                .sort((a, b) => {
+                  const mine = Number(assigned.has(b.id)) - Number(assigned.has(a.id));
+                  return mine !== 0 ? mine : a.start_time.localeCompare(b.start_time);
+                })
+                .map((event) => eventChip(event))}
+            </div>
+          ))}
+        {days.every(
+          (day) => day.getMonth() !== monthStart.getMonth() || (eventsByDay.get(dayKey(day)) ?? []).length === 0,
+        ) && <p className={styles.helperText}>Nothing scheduled this month.</p>}
+        {canCreateEvents && (
+          <Link
+            href={`/schedule/new?date=${toDateInputValue(todayDate)}`}
+            className={`${styles.button} ${styles.buttonSecondary}`}
+          >
+            + New event
+          </Link>
+        )}
       </div>
 
       <div className={styles.calendarDayPanel}>

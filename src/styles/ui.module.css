@@ -1207,3 +1207,53 @@
     animation: none;
   }
 }
+
+/* --- Calendar on a phone ------------------------------------------------ */
+/* A month grid needs about 700px to be readable: seven columns in 375px
+   leaves 50px cells, which fit a chip but not a legible one. Below that the
+   grid and the day panel give way to an agenda — the same events, one per
+   row, at full width. Both are in the DOM and CSS chooses, because deciding
+   in JS would need the viewport at render time, which the server hasn't got. */
+.calendarAgenda {
+  display: none;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+.calendarAgendaDay {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.calendarAgendaDate {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--ink);
+  padding-bottom: 0.3rem;
+  border-bottom: 1px solid var(--border);
+}
+
+@media (max-width: 720px) {
+  .calendarGrid,
+  .calendarDayPanel {
+    display: none;
+  }
+  .calendarAgenda {
+    display: flex;
+  }
+  /* Full-width rows have room for the whole title, so the truncation the
+     grid needs would only hide text that fits. */
+  .calendarAgenda .calendarEvent {
+    padding: 0.5rem 0.65rem;
+    font-size: 0.85rem;
+  }
+  .calendarAgenda .calendarEventTitle {
+    white-space: normal;
+    overflow: visible;
+  }
+  .calendarAgenda .calendarEventTime {
+    font-size: 0.75rem;
+  }
+}
