@@ -5,6 +5,10 @@ import { AppNav, type NavEntry } from "@/components/AppNav";
 function buildNav(isAdmin: boolean, isPlatformAdmin: boolean): NavEntry[] {
   const items: NavEntry[] = [
     { href: "/dashboard", label: "Dashboard" },
+    // Top level and ungated: it's the one thing a volunteer opens on a phone
+    // while walking in, and burying it under Schedule would cost a tap at
+    // exactly the wrong moment.
+    { href: "/checkin", label: "Check in" },
     {
       label: "Schedule",
       items: [
