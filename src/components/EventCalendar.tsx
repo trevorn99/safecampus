@@ -107,9 +107,17 @@ export function EventCalendar({
   const days = buildGrid(monthStart);
   const monthLabel = monthStart.toLocaleDateString(undefined, { month: "long", year: "numeric" });
 
+  // The viewer's own events first, each group still in time order. A day
+  // panel normally reads chronologically, and breaking that is deliberate:
+  // the question someone opens a day to answer is "am I on for this", and
+  // the answer shouldn't depend on where their shift happens to fall among
+  // everyone else's.
   const selectedDayEvents = (eventsByDay.get(dayKey(selectedDay)) ?? [])
     .slice()
-    .sort((a, b) => a.start_time.localeCompare(b.start_time));
+    .sort((a, b) => {
+      const mine = Number(assigned.has(b.id)) - Number(assigned.has(a.id));
+      return mine !== 0 ? mine : a.start_time.localeCompare(b.start_time);
+    });
   const selectedDayLabel = selectedDay.toLocaleDateString(undefined, {
     weekday: "long",
     month: "long",
