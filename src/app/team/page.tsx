@@ -5,6 +5,7 @@ import { getAvatarUrlMap } from "@/lib/avatars";
 import { CancelInviteButton } from "./CancelInviteButton";
 import { SendInviteButton } from "./SendInviteButton";
 import { TeamMembershipManager } from "./TeamMembershipManager";
+import { expiryState, formatDateOnly } from "@/lib/certificationDates";
 import styles from "@/styles/ui.module.css";
 
 const ROLE_LABEL: Record<string, string> = {
@@ -30,23 +31,6 @@ function todayIsoDate(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-// issued_at/expires_at are `date` columns, so they arrive as "YYYY-MM-DD"
-// with no time and no zone. Feeding that to new Date() parses it as UTC
-// midnight, which renders as the previous day for anyone west of Greenwich —
-// so the parts are formatted directly instead.
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-function formatDateOnly(value: string): string {
-  const [year, month, day] = value.split("-").map(Number);
-  return `${day} ${MONTHS[month - 1]} ${year}`;
-}
-
-// Comparing "YYYY-MM-DD" strings is the same as comparing the dates, and
-// avoids inventing a timezone for a value that has none.
-function expiryState(expiresAt: string | null, today: string, soon: string): "none" | "expired" | "soon" | "valid" {
-  if (!expiresAt) return "none";
-  if (expiresAt < today) return "expired";
-  return expiresAt <= soon ? "soon" : "valid";
-}
 type Member = {
   id: string;
   name: string;

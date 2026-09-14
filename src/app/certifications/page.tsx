@@ -1,6 +1,8 @@
 import { requireMembership } from "@/lib/session";
 import { AppHeader } from "@/components/AppHeader";
 import { UploadCertificationForm } from "./UploadCertificationForm";
+import { EditCertificationForm } from "./EditCertificationForm";
+import { formatDateOnly } from "@/lib/certificationDates";
 import { ORG_FILES_BUCKET } from "@/lib/supabase/storage";
 import styles from "@/styles/ui.module.css";
 
@@ -79,9 +81,13 @@ export default async function CertificationsPage() {
         <div>
           <p className={styles.itemName}>{cert.type}</p>
           <p className={styles.itemMeta}>
-            {cert.issued_at ? `Issued ${cert.issued_at}` : "Issue date not set"}
-            {cert.expires_at ? ` · Expires ${cert.expires_at}` : ""}
+            {cert.issued_at ? `Issued ${formatDateOnly(cert.issued_at)}` : "Issue date not set"}
+            {cert.expires_at ? ` · Expires ${formatDateOnly(cert.expires_at)}` : " · No expiry"}
           </p>
+          {/* Editable by whoever the policy allows — your own always, anyone's
+              if you're an org admin. Deleting stays admin-only, matching the
+              policies rather than guessing at them. */}
+          <EditCertificationForm certification={cert} canDelete={isAdmin} />
         </div>
         {cert.document_id && signedUrls.has(cert.document_id) && (
           <a
