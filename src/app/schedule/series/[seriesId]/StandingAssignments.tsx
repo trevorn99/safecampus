@@ -34,9 +34,18 @@ export function StandingAssignments({
     setPendingId(templatePositionId);
     setError("");
     const supabase = createClient();
+    // Upsert rather than insert: the end state wanted is "this person is a
+    // regular on this position", and they may already be one — a page left
+    // open while somebody else edited the same series is enough. Colliding
+    // with the unique key is that same end state, not a failure, so it
+    // shouldn't be reported as one. The fan-out below still runs, which is
+    // what actually reaches the occurrences.
     const { error: insertError } = await supabase
       .from("template_position_assignments")
-      .insert({ series_id: seriesId, template_position_id: templatePositionId, member_id: memberId });
+      .upsert(
+        { series_id: seriesId, template_position_id: templatePositionId, member_id: memberId },
+        { onConflict: "series_id,template_position_id,member_id", ignoreDuplicates: true },
+      );
     if (insertError) {
       setPendingId("");
       setError(insertError.message);
