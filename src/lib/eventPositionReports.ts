@@ -54,6 +54,114 @@ function positionRowsHtml(
     .join("");
 }
 
+type ComposedReport = { subject: string; text: string; html: string };
+
+// Everything between "which event" and "an email about it". Shared so the
+// scheduled report three days out and the one an admin asks for are the same
+// document — a report that differs depending on how it was triggered is
+// worse than no report.
+export async function composePositionReport(
+  admin: SupabaseClient,
+  event: EventRow,
+  origin: string,
+  unsubscribeUrl: string,
+): Promise<ComposedReport | null> {
+  const org = event.organizations;
+  if (!org) return null;
+
+  const { data: positions } = await admin
+    .from("event_positions")
+    .select("id, title, slots, start_time, team_id")
+    .eq("event_id", event.id)
+    .order("start_time")
+    .returns<PositionRow[]>();
+
+  // An event with no positions has nothing to report on.
+  if (!positions || positions.length === 0) return null;
+
+  const { data: assignments } = await admin
+    .from("assignments")
+    .select("event_position_id, status, members(name)")
+    .in(
+      "event_position_id",
+      positions.map((position) => position.id),
+    )
+    // Declined assignments don't hold a slot anywhere else in the app, so
+    // counting them here would report a position as covered when it isn't.
+    .neq("status", "declined")
+    .returns<{ event_position_id: string; status: string; members: { name: string } | null }[]>();
+
+  const namesByPosition = new Map<string, string[]>();
+  for (const assignment of assignments ?? []) {
+    const list = namesByPosition.get(assignment.event_position_id) ?? [];
+    list.push(assignment.members?.name ?? "Unknown member");
+    namesByPosition.set(assignment.event_position_id, list);
+  }
+
+  const totalSlots = positions.reduce((sum, position) => sum + position.slots, 0);
+  const totalFilled = positions.reduce(
+    (sum, position) => sum + Math.min((namesByPosition.get(position.id) ?? []).length, position.slots),
+    0,
+  );
+  const shortCount = positions.filter(
+    (position) => (namesByPosition.get(position.id) ?? []).length < position.slots,
+  ).length;
+
+  const eventStart = new Date(event.start_time);
+  const when = formatLocalDateTime(eventStart, org.timezone);
+  const eventUrl = `${origin}/schedule/${event.id}`;
+  const summary =
+    shortCount === 0
+      ? `All ${totalSlots} slots are covered.`
+      : `${totalFilled} of ${totalSlots} slots covered — ${shortCount} ${shortCount === 1 ? "position is" : "positions are"} short.`;
+
+  const html = renderBrandedEmail({
+    origin,
+    eyebrow: org.name,
+    bodyHtml: `<p style="margin:0 0 6px;font-size:16px;line-height:1.5;color:#1c2430">
+              <strong>${escapeHtml(event.title)}</strong>
+            </p>
+            <p style="margin:0 0 18px;font-size:14px;line-height:1.6;color:#5b6670">
+              ${escapeHtml(when)} · ${escapeHtml(event.locations?.name ?? "Organization-wide")}<br />${escapeHtml(summary)}
+            </p>
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #dfe4df;border-radius:8px;border-collapse:separate;margin-bottom:22px">
+              <tr>
+                <th align="left" style="padding:8px 10px;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:#5b6670">Position</th>
+                <th align="left" style="padding:8px 10px;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:#5b6670">Filled</th>
+                <th align="left" style="padding:8px 10px;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:#5b6670">Who</th>
+              </tr>
+              ${positionRowsHtml(positions, namesByPosition, org.timezone)}
+            </table>`,
+    cta: { label: "Open the event", url: eventUrl },
+    footerHtml: `You&rsquo;re getting this because you&rsquo;re an org admin at ${escapeHtml(org.name)}.
+            <a href="${escapeHtml(unsubscribeUrl)}" style="color:#5b6670;text-decoration:underline">Unsubscribe from schedule emails</a>.`,
+  });
+
+  const text = [
+    org.name,
+    "",
+    event.title,
+    `${when} · ${event.locations?.name ?? "Organization-wide"}`,
+    summary,
+    "",
+    ...positions.map((position) => {
+      const names = namesByPosition.get(position.id) ?? [];
+      return `- ${position.title} (${formatLocalDateTime(new Date(position.start_time), org.timezone)}): ${names.length} of ${position.slots}${
+        names.length > 0 ? ` — ${names.join(", ")}` : " — nobody assigned"
+      }`;
+    }),
+    "",
+    `Open the event: ${eventUrl}`,
+    "",
+    `Unsubscribe from schedule emails: ${unsubscribeUrl}`,
+  ].join("\n");
+
+  const shortLabel =
+    shortCount === 0 ? "fully covered" : `${shortCount} position${shortCount === 1 ? "" : "s"} short`;
+
+  return { subject: `${event.title} — ${shortLabel}`, text, html };
+}
+
 export async function sendEventPositionReports(
   admin: SupabaseClient,
   origin: string,
@@ -81,44 +189,6 @@ export async function sendEventPositionReports(
     if (localDayNumber(eventStart, org.timezone) - localDayNumber(now, org.timezone) !== REPORT_DAYS_AHEAD) {
       continue;
     }
-
-    const { data: positions } = await admin
-      .from("event_positions")
-      .select("id, title, slots, start_time, team_id")
-      .eq("event_id", event.id)
-      .order("start_time")
-      .returns<PositionRow[]>();
-
-    // An event with no positions has nothing to report on.
-    if (!positions || positions.length === 0) continue;
-
-    const { data: assignments } = await admin
-      .from("assignments")
-      .select("event_position_id, status, members(name)")
-      .in(
-        "event_position_id",
-        positions.map((position) => position.id),
-      )
-      // Declined assignments don't hold a slot anywhere else in the app, so
-      // counting them here would report a position as covered when it isn't.
-      .neq("status", "declined")
-      .returns<{ event_position_id: string; status: string; members: { name: string } | null }[]>();
-
-    const namesByPosition = new Map<string, string[]>();
-    for (const assignment of assignments ?? []) {
-      const list = namesByPosition.get(assignment.event_position_id) ?? [];
-      list.push(assignment.members?.name ?? "Unknown member");
-      namesByPosition.set(assignment.event_position_id, list);
-    }
-
-    const totalSlots = positions.reduce((sum, position) => sum + position.slots, 0);
-    const totalFilled = positions.reduce(
-      (sum, position) => sum + Math.min((namesByPosition.get(position.id) ?? []).length, position.slots),
-      0,
-    );
-    const shortCount = positions.filter(
-      (position) => (namesByPosition.get(position.id) ?? []).length < position.slots,
-    ).length;
 
     // Org admins of this organization, who have joined and still want
     // schedule email. This is an operational report rather than a personal
@@ -151,66 +221,21 @@ export async function sendEventPositionReports(
       .eq("related_id", event.id);
     const told = new Set((alreadySent ?? []).map((row) => row.member_id));
 
-    const when = formatLocalDateTime(eventStart, org.timezone);
-    const eventUrl = `${origin}/schedule/${event.id}`;
-    const summary =
-      shortCount === 0
-        ? `All ${totalSlots} slots are covered.`
-        : `${totalFilled} of ${totalSlots} slots covered — ${shortCount} ${shortCount === 1 ? "position is" : "positions are"} short.`;
-
     for (const recipient of recipients ?? []) {
       if (told.has(recipient.id) || !recipient.email) continue;
 
       const unsubscribe = unsubscribeUrlFor(origin, recipient.id);
-      const html = renderBrandedEmail({
-        origin,
-        eyebrow: org.name,
-        bodyHtml: `<p style="margin:0 0 6px;font-size:16px;line-height:1.5;color:#1c2430">
-              <strong>${escapeHtml(event.title)}</strong> is in ${REPORT_DAYS_AHEAD} days.
-            </p>
-            <p style="margin:0 0 18px;font-size:14px;line-height:1.6;color:#5b6670">
-              ${escapeHtml(when)} · ${escapeHtml(event.locations?.name ?? "Organization-wide")}<br />${escapeHtml(summary)}
-            </p>
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #dfe4df;border-radius:8px;border-collapse:separate;margin-bottom:22px">
-              <tr>
-                <th align="left" style="padding:8px 10px;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:#5b6670">Position</th>
-                <th align="left" style="padding:8px 10px;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:#5b6670">Filled</th>
-                <th align="left" style="padding:8px 10px;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:#5b6670">Who</th>
-              </tr>
-              ${positionRowsHtml(positions, namesByPosition, org.timezone)}
-            </table>`,
-        cta: { label: "Open the event", url: eventUrl },
-        footerHtml: `You&rsquo;re getting this because you&rsquo;re an org admin at ${escapeHtml(org.name)}.
-            <a href="${escapeHtml(unsubscribe.url)}" style="color:#5b6670;text-decoration:underline">Unsubscribe from schedule emails</a>.`,
-      });
-
-      const text = [
-        org.name,
-        "",
-        `${event.title} is in ${REPORT_DAYS_AHEAD} days.`,
-        `${when} · ${event.locations?.name ?? "Organization-wide"}`,
-        summary,
-        "",
-        ...positions.map((position) => {
-          const names = namesByPosition.get(position.id) ?? [];
-          return `- ${position.title} (${formatLocalDateTime(new Date(position.start_time), org.timezone)}): ${names.length} of ${position.slots}${
-            names.length > 0 ? ` — ${names.join(", ")}` : " — nobody assigned"
-          }`;
-        }),
-        "",
-        `Open the event: ${eventUrl}`,
-        "",
-        `Unsubscribe from schedule emails: ${unsubscribe.url}`,
-      ].join("\n");
+      const report = await composePositionReport(admin, event, origin, unsubscribe.url);
+      if (!report) continue;
 
       const result = await sendEmail({
         to: recipient.email,
-        subject:
-          shortCount === 0
-            ? `${event.title} in ${REPORT_DAYS_AHEAD} days — fully covered`
-            : `${event.title} in ${REPORT_DAYS_AHEAD} days — ${shortCount} position${shortCount === 1 ? "" : "s"} short`,
-        text,
-        html,
+        // The scheduled one leads with how far out the event is; the subject
+        // is the only part that differs from an on-demand report, because
+        // that's the only part where "in three days" is news.
+        subject: `In ${REPORT_DAYS_AHEAD} days — ${report.subject}`,
+        text: report.text,
+        html: report.html,
         unsubscribeUrl: unsubscribe.oneClick ? unsubscribe.url : null,
       });
 
@@ -229,4 +254,58 @@ export async function sendEventPositionReports(
   }
 
   return { reportsSent: sent };
+}
+
+// The same report, when an admin asks for it rather than waiting for the
+// three-day run. Always sends: they pressed a button, so "you already got
+// this one" is not a useful answer.
+export async function sendPositionReportOnDemand(
+  admin: SupabaseClient,
+  eventId: string,
+  memberId: string,
+  origin: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const { data: event } = await admin
+    .from("events")
+    .select(
+      "id, title, start_time, organization_id, location_id, organizations(id, name, timezone, email_enabled), locations(name)",
+    )
+    .eq("id", eventId)
+    .maybeSingle<EventRow>();
+  if (!event || !event.organizations) return { ok: false, error: "Event not found" };
+
+  const { data: member } = await admin
+    .from("members")
+    .select("id, email, organization_id")
+    .eq("id", memberId)
+    .maybeSingle();
+  if (!member?.email) return { ok: false, error: "Your account has no email address on file" };
+  if (member.organization_id !== event.organization_id) return { ok: false, error: "Event not found" };
+
+  const unsubscribe = unsubscribeUrlFor(origin, member.id);
+  const report = await composePositionReport(admin, event, origin, unsubscribe.url);
+  if (!report) return { ok: false, error: "This event has no positions to report on" };
+
+  const result = await sendEmail({
+    to: member.email,
+    subject: report.subject,
+    text: report.text,
+    html: report.html,
+    unsubscribeUrl: unsubscribe.oneClick ? unsubscribe.url : null,
+  });
+
+  // related_id deliberately null: the dedup index is partial on it, so an
+  // on-demand report can be asked for repeatedly without colliding with the
+  // scheduled one or with itself.
+  await admin.from("notifications").insert({
+    organization_id: event.organization_id,
+    member_id: member.id,
+    channel: "email",
+    recipient: member.email,
+    template: `${POSITION_REPORT_TEMPLATE}_on_demand`,
+    status: result.ok ? "sent" : "failed",
+    sent_at: result.ok ? new Date().toISOString() : null,
+  });
+
+  return result.ok ? { ok: true } : { ok: false, error: result.error ?? "The email could not be sent" };
 }
