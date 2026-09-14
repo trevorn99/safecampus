@@ -112,11 +112,12 @@ export default async function HelpPage() {
             <strong>Cancelled dates</strong> list on the series page.
           </p>
           <p className={styles.docBody}>
-            Each recurring position has a <strong>standing roster</strong> — &quot;who normally covers
-            this&quot; on the series page. People on it are put on every upcoming occurrence and on each new
-            one as it&apos;s generated, so an assignment lasts until it&apos;s changed there rather than
-            having to be redone every time the schedule extends. Taking someone off a single event covers
-            just that week and leaves the roster alone.
+            Each recurring position has its <strong>regulars</strong> — &quot;who normally covers this&quot;
+            on the series page. Not to be confused with the team roster, which is who belongs to a team;
+            regulars are who fills one particular position week after week. People listed there are put on
+            every upcoming occurrence and on each new one as it&apos;s generated, so an assignment lasts
+            until it&apos;s changed there rather than having to be redone every time the schedule extends.
+            Taking someone off a single event covers just that week and leaves the regulars alone.
           </p>
           <p className={styles.docBody}>
             On an event&apos;s page, admins assign members to open positions (only members on that

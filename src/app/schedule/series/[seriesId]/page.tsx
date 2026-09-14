@@ -166,10 +166,12 @@ export default async function SeriesDetailPage({
           <div className={styles.cardHeader}>
             <h2 className={styles.cardTitle}>Who normally covers this</h2>
             <p className={styles.helperText}>
-              People here are put on every upcoming occurrence — the ones already on the calendar and the ones
-              generated months from now — so an assignment lasts until it&apos;s changed here. Removing someone
-              takes them off every future occurrence too. Past events are never touched, and taking someone off a
-              single event on the schedule only covers that week, leaving this list alone.
+              The regulars for each position — who fills it week after week. Distinct from the team roster,
+              which is who belongs to a team; this is who covers this particular position. People here are put
+              on every upcoming occurrence, including ones generated months from now, so an assignment lasts
+              until it&apos;s changed here. Removing someone takes them off every future occurrence too. Past
+              events are never touched, and taking someone off a single event only covers that week, leaving
+              this list alone.
             </p>
           </div>
           <StandingAssignments positions={standingPositions} />
@@ -180,7 +182,7 @@ export default async function SeriesDetailPage({
             <h2 className={styles.cardTitle}>Cancelled dates</h2>
             <p className={styles.helperText}>
               Occurrences someone deleted from the schedule. The series skips these when it generates. Restoring
-              one brings the event back with its template positions and whoever is on the standing roster above —
+              one brings the event back with its template positions and its regulars from above —
               the assignments that were on the cancelled event itself don&apos;t return.
             </p>
           </div>
