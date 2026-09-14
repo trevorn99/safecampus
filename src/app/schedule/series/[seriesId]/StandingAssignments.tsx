@@ -60,13 +60,25 @@ export function StandingAssignments({ positions }: { positions: StandingPosition
     setPendingId(assignmentId);
     setError("");
     const supabase = createClient();
-    const { error: deleteError } = await supabase
+    // .select() so the number of rows actually removed comes back. A DELETE
+    // that row-level security filters out is not an error — it succeeds
+    // having matched nothing — so without this a rejected delete and a
+    // successful one are indistinguishable, and the row just sits there.
+    const { data: deleted, error: deleteError } = await supabase
       .from("template_position_assignments")
       .delete()
-      .eq("id", assignmentId);
+      .eq("id", assignmentId)
+      .select("id");
     if (deleteError) {
       setPendingId("");
       setError(deleteError.message);
+      return;
+    }
+    if (!deleted || deleted.length === 0) {
+      setPendingId("");
+      setError(
+        "That didn't remove — you may not have permission on this position. Org admins, and the lead of the position's own team, can change its regulars.",
+      );
       return;
     }
 
@@ -107,16 +119,15 @@ export function StandingAssignments({ positions }: { positions: StandingPosition
               </div>
               <div className={styles.tagRow}>
                 {position.assigned.map((assignment) => (
-                  <span key={assignment.assignmentId} className={styles.pill}>
-                    {assignment.name}{" "}
+                  <span key={assignment.assignmentId} className={styles.tagRow}>
+                    <span className={styles.pill}>{assignment.name}</span>
                     <button
                       type="button"
-                      className={styles.linkButton}
+                      className={`${styles.button} ${styles.buttonSecondary}`}
                       disabled={pendingId === assignment.assignmentId}
                       onClick={() => remove(assignment.assignmentId, position.id, assignment.memberId)}
-                      aria-label={`Remove ${assignment.name} from ${position.title}`}
                     >
-                      ×
+                      {pendingId === assignment.assignmentId ? "Removing…" : `Remove ${assignment.name}`}
                     </button>
                   </span>
                 ))}
