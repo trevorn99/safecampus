@@ -76,6 +76,7 @@ export function EventCalendar({
   minMonth,
   maxMonth,
   timeZone,
+  assignedEventIds = [],
   canCreateEvents = false,
 }: {
   events: CalendarEvent[];
@@ -83,8 +84,11 @@ export function EventCalendar({
   minMonth: string;
   maxMonth: string;
   timeZone: string;
+  /** Events the viewer is on. Theirs are the ones they scan a month for. */
+  assignedEventIds?: string[];
   canCreateEvents?: boolean;
 }) {
+  const assigned = new Set(assignedEventIds);
   const todayDate = new Date(today);
   const [monthStart, setMonthStart] = useState(startOfMonth(todayDate));
   const [selectedDay, setSelectedDay] = useState(todayDate);
@@ -170,7 +174,11 @@ export function EventCalendar({
                 <Link
                   key={event.id}
                   href={`/schedule/${event.id}`}
-                  className={styles.calendarEvent}
+                  className={
+                    assigned.has(event.id)
+                      ? `${styles.calendarEvent} ${styles.calendarEventMine}`
+                      : styles.calendarEvent
+                  }
                   onClick={(e) => e.stopPropagation()}
                 >
                   <span className={styles.calendarEventTitle}>{event.title}</span>
@@ -204,6 +212,7 @@ export function EventCalendar({
               <Link href={`/schedule/${event.id}`} className={styles.itemName}>
                 {event.title}
               </Link>
+              {assigned.has(event.id) && <span className={styles.pill}>You&apos;re on this</span>}
               <div className={styles.tagRow}>
                 {event.type && <span className={styles.pillMuted}>{eventTypeLabel(event.type)}</span>}
                 <span className={styles.itemMeta}>{formatEventTime(event, timeZone)}</span>

@@ -37,7 +37,8 @@ export default async function DashboardPage() {
 
   const { todayIso, minMonthIso, maxMonthIso, rangeStartIso, rangeEndExclusiveIso } = calendarWindow();
 
-  const [{ data: memberRow }, { data: events }, { data: latestReport }, timeZone] = await Promise.all([
+  const [{ data: memberRow }, { data: events }, { data: latestReport }, { data: myAssignedEvents }, timeZone] =
+    await Promise.all([
     supabase.from("members").select("profile_picture_url").eq("id", member.id).single(),
     supabase
       .from("events")
@@ -57,8 +58,25 @@ export default async function DashboardPage() {
       .order("generated_at", { ascending: false })
       .limit(1)
       .maybeSingle(),
+    // Only the window the calendar draws, and only this member's — the point
+    // is colouring their own events, not listing them.
+    supabase
+      .from("assignments")
+      .select("event_positions!inner(events!inner(id, start_time))")
+      .eq("member_id", member.id)
+      .gte("event_positions.events.start_time", rangeStartIso)
+      .lt("event_positions.events.start_time", rangeEndExclusiveIso)
+      .returns<{ event_positions: { events: { id: string; start_time: string } | null } | null }[]>(),
     resolveTimeZone(supabase, member.organization_id, null),
   ]);
+
+  const assignedEventIds = [
+    ...new Set(
+      (myAssignedEvents ?? [])
+        .map((row) => row.event_positions?.events?.id)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  ];
 
   const avatarUrls = await getAvatarUrlMap(supabase, [memberRow?.profile_picture_url]);
   const avatarUrl = memberRow?.profile_picture_url
@@ -117,6 +135,7 @@ export default async function DashboardPage() {
             minMonth={minMonthIso}
             maxMonth={maxMonthIso}
             timeZone={timeZone}
+            assignedEventIds={assignedEventIds}
             canCreateEvents={isAdmin}
           />
         </div>
