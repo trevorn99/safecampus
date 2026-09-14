@@ -40,8 +40,19 @@ export function StandingAssignments({ positions }: { positions: StandingPosition
     // The roster row alone only reaches occurrences generated from here on.
     // Events already on the calendar need the assignment written too, or
     // adding someone appears to do nothing until the horizon next advances.
-    await assignToFutureOccurrences(supabase, memberId, templatePositionId);
+    const { error: fanOutError, skippedFull } = await assignToFutureOccurrences(
+      supabase,
+      memberId,
+      templatePositionId,
+    );
     setPendingId("");
+    if (fanOutError) {
+      setError(`Added to the regulars, but the upcoming events couldn't be updated: ${fanOutError}`);
+      return;
+    }
+    if (skippedFull > 0) {
+      setError(`${skippedFull} upcoming ${skippedFull === 1 ? "occurrence was" : "occurrences were"} already full and were left alone.`);
+    }
     router.refresh();
   }
 
@@ -62,8 +73,12 @@ export function StandingAssignments({ positions }: { positions: StandingPosition
     // Symmetric with add(): leaving them on every occurrence already
     // generated would mean removing someone from the roster still had them
     // covering up to a year of shifts.
-    await unassignFromFutureOccurrences(supabase, memberId, templatePositionId);
+    const { error: fanOutError } = await unassignFromFutureOccurrences(supabase, memberId, templatePositionId);
     setPendingId("");
+    if (fanOutError) {
+      setError(`Removed from the regulars, but the upcoming events couldn't be updated: ${fanOutError}`);
+      return;
+    }
     router.refresh();
   }
 

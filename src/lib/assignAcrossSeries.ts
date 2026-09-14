@@ -33,9 +33,9 @@ export async function assignToFutureOccurrences(
   memberId: string,
   templatePositionId: string,
   excludePositionId?: string,
-): Promise<{ assigned: number; skippedFull: number }> {
+): Promise<{ assigned: number; skippedFull: number; error: string | null }> {
   const positions = await futurePositions(supabase, templatePositionId, excludePositionId);
-  if (positions.length === 0) return { assigned: 0, skippedFull: 0 };
+  if (positions.length === 0) return { assigned: 0, skippedFull: 0, error: null };
 
   const positionIds = positions.map((position) => position.id);
   const { data: existing } = await supabase
@@ -69,12 +69,16 @@ export async function assignToFutureOccurrences(
     // ignoreDuplicates so a concurrent assignment of the same person doesn't
     // fail the whole batch against the unique index — the row it would have
     // written already exists, which is the outcome we wanted anyway.
-    await supabase
+    const { error } = await supabase
       .from("assignments")
       .upsert(toInsert, { onConflict: "event_position_id,member_id", ignoreDuplicates: true });
+    // Surfaced rather than swallowed: this used to fail silently, so a
+    // rejected write looked identical to "nothing needed doing" — the roster
+    // entry appeared and not one occurrence changed.
+    if (error) return { assigned: 0, skippedFull, error: error.message };
   }
 
-  return { assigned: toInsert.length, skippedFull };
+  return { assigned: toInsert.length, skippedFull, error: null };
 }
 
 // The mirror of the above, for when someone comes off the standing roster.
@@ -85,11 +89,16 @@ export async function unassignFromFutureOccurrences(
   supabase: SupabaseClient,
   memberId: string,
   templatePositionId: string,
-): Promise<void> {
+): Promise<{ error: string | null }> {
   const positionIds = (await futurePositions(supabase, templatePositionId)).map((position) => position.id);
-  if (positionIds.length === 0) return;
+  if (positionIds.length === 0) return { error: null };
 
-  await supabase.from("assignments").delete().eq("member_id", memberId).in("event_position_id", positionIds);
+  const { error } = await supabase
+    .from("assignments")
+    .delete()
+    .eq("member_id", memberId)
+    .in("event_position_id", positionIds);
+  return { error: error?.message ?? null };
 }
 
 // Used by the "also assign to every future event in this series" checkbox on
@@ -102,13 +111,14 @@ export async function assignAcrossSeries(
   seriesId: string,
   templatePositionId: string,
   excludePositionId: string,
-): Promise<void> {
-  await supabase
+): Promise<{ assigned: number; skippedFull: number; error: string | null }> {
+  const { error: rosterError } = await supabase
     .from("template_position_assignments")
     .upsert(
       { template_position_id: templatePositionId, member_id: memberId },
       { onConflict: "template_position_id,member_id" },
     );
+  if (rosterError) return { assigned: 0, skippedFull: 0, error: rosterError.message };
 
-  await assignToFutureOccurrences(supabase, memberId, templatePositionId, excludePositionId);
+  return assignToFutureOccurrences(supabase, memberId, templatePositionId, excludePositionId);
 }
