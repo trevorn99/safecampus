@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendShiftReminders } from "@/lib/shiftReminders";
+import { sendEventPositionReports } from "@/lib/eventPositionReports";
 import { isAuthorizedCronRequest } from "@/lib/cronAuth";
 
 // Triggered daily by Vercel Cron (see vercel.json), same auth pattern as
@@ -24,5 +25,11 @@ export async function GET(request: Request) {
   const origin = new URL(request.url).origin;
   const result = await sendShiftReminders(admin, origin);
 
-  return NextResponse.json({ ok: true, ...result });
+  // Same run as the reminders, and deliberately so: the report covers the
+  // same three-days-out window, so the morning a team is told they're on is
+  // the morning the admins are told what's still uncovered. Run after, not
+  // alongside — a failure here shouldn't cost anyone their reminder.
+  const reports = await sendEventPositionReports(admin, origin);
+
+  return NextResponse.json({ ok: true, ...result, ...reports });
 }
