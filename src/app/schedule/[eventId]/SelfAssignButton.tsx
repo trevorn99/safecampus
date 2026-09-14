@@ -41,7 +41,18 @@ export function SelfAssignButton({
     }
 
     if (applyToSeries && canApplyToSeries) {
-      await assignAcrossSeries(supabase, memberId, seriesId!, templatePositionId!, positionId);
+      const { error: seriesError } = await assignAcrossSeries(
+        supabase,
+        memberId,
+        seriesId!,
+        templatePositionId!,
+        positionId,
+      );
+      if (seriesError) {
+        setLoading(false);
+        setError(`Assigned to this event, but the rest of the series failed: ${seriesError}`);
+        return;
+      }
     }
 
     setLoading(false);

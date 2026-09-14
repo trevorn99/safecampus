@@ -40,8 +40,19 @@ export function StandingAssignments({ positions }: { positions: StandingPosition
     // The roster row alone only reaches occurrences generated from here on.
     // Events already on the calendar need the assignment written too, or
     // adding someone appears to do nothing until the horizon next advances.
-    await assignToFutureOccurrences(supabase, memberId, templatePositionId);
+    const { error: fanOutError, skippedFull } = await assignToFutureOccurrences(
+      supabase,
+      memberId,
+      templatePositionId,
+    );
     setPendingId("");
+    if (fanOutError) {
+      setError(`Added to the regulars, but the upcoming events couldn't be updated: ${fanOutError}`);
+      return;
+    }
+    if (skippedFull > 0) {
+      setError(`${skippedFull} upcoming ${skippedFull === 1 ? "occurrence was" : "occurrences were"} already full and were left alone.`);
+    }
     router.refresh();
   }
 
@@ -49,21 +60,37 @@ export function StandingAssignments({ positions }: { positions: StandingPosition
     setPendingId(assignmentId);
     setError("");
     const supabase = createClient();
-    const { error: deleteError } = await supabase
+    // .select() so the number of rows actually removed comes back. A DELETE
+    // that row-level security filters out is not an error — it succeeds
+    // having matched nothing — so without this a rejected delete and a
+    // successful one are indistinguishable, and the row just sits there.
+    const { data: deleted, error: deleteError } = await supabase
       .from("template_position_assignments")
       .delete()
-      .eq("id", assignmentId);
+      .eq("id", assignmentId)
+      .select("id");
     if (deleteError) {
       setPendingId("");
       setError(deleteError.message);
+      return;
+    }
+    if (!deleted || deleted.length === 0) {
+      setPendingId("");
+      setError(
+        "That didn't remove — you may not have permission on this position. Org admins, and the lead of the position's own team, can change its regulars.",
+      );
       return;
     }
 
     // Symmetric with add(): leaving them on every occurrence already
     // generated would mean removing someone from the roster still had them
     // covering up to a year of shifts.
-    await unassignFromFutureOccurrences(supabase, memberId, templatePositionId);
+    const { error: fanOutError } = await unassignFromFutureOccurrences(supabase, memberId, templatePositionId);
     setPendingId("");
+    if (fanOutError) {
+      setError(`Removed from the regulars, but the upcoming events couldn't be updated: ${fanOutError}`);
+      return;
+    }
     router.refresh();
   }
 
@@ -92,16 +119,15 @@ export function StandingAssignments({ positions }: { positions: StandingPosition
               </div>
               <div className={styles.tagRow}>
                 {position.assigned.map((assignment) => (
-                  <span key={assignment.assignmentId} className={styles.pill}>
-                    {assignment.name}{" "}
+                  <span key={assignment.assignmentId} className={styles.tagRow}>
+                    <span className={styles.pill}>{assignment.name}</span>
                     <button
                       type="button"
-                      className={styles.linkButton}
+                      className={`${styles.button} ${styles.buttonSecondary}`}
                       disabled={pendingId === assignment.assignmentId}
                       onClick={() => remove(assignment.assignmentId, position.id, assignment.memberId)}
-                      aria-label={`Remove ${assignment.name} from ${position.title}`}
                     >
-                      ×
+                      {pendingId === assignment.assignmentId ? "Removing…" : `Remove ${assignment.name}`}
                     </button>
                   </span>
                 ))}
