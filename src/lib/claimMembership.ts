@@ -20,23 +20,27 @@ export async function claimUnlinkedMembership(
   // Service-role: the row has no user_id yet, so it isn't inside any org
   // this session can see — "read own org roster" is keyed on the caller's
   // own memberships, and they have none.
+  //
+  // Deliberately fetches more than one. A single row is the answer; several
+  // means two organisations have each pre-added this address, and there is
+  // nothing in a sign-in to say which one the person meant.
   const { data: candidates } = await admin
     .from("members")
     .select("id, organization_id")
     .is("user_id", null)
     .eq("email", normalized)
     .order("created_at", { ascending: true })
-    .limit(1);
+    .limit(2);
 
-  const match = candidates?.[0];
-  if (!match) return null;
+  // Ambiguous: claim nothing rather than the oldest. Guessing puts someone
+  // inside an organisation they may have no connection to, with sight of its
+  // roster and schedule — a wrong guess here is a data-exposure bug, not an
+  // inconvenience. They land on /onboarding instead, and an admin can invite
+  // them directly, which names the organisation unambiguously.
+  if (!candidates || candidates.length !== 1) return null;
 
-  // Only ever one row, even if two orgs pre-added the same person: the app
-  // treats a user as belonging to a single organization (session.ts looks
-  // membership up with maybeSingle()), so claiming both would break every
-  // page instead of being a feature. The other org's row stays unclaimed
-  // and keeps working as a roster entry.
-  //
+  const match = candidates[0];
+
   // The `.is("user_id", null)` guard is repeated on the update so two
   // simultaneous sign-ins can't both claim the same row.
   const { data: claimed } = await admin

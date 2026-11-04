@@ -4,6 +4,7 @@ import { Avatar } from "@/components/Avatar";
 import { getAvatarUrlMap } from "@/lib/avatars";
 import { CancelInviteButton } from "./CancelInviteButton";
 import { SendInviteButton } from "./SendInviteButton";
+import { EditMemberForm } from "./EditMemberForm";
 import { TeamMembershipManager } from "./TeamMembershipManager";
 import { expiryState, formatDateOnly } from "@/lib/certificationDates";
 import styles from "@/styles/ui.module.css";
@@ -173,10 +174,25 @@ export default async function TeamPage() {
               {VERIFICATION_LABEL[teamMember.identity_verification_status] ?? teamMember.identity_verification_status}
             </span>
           )}
+          {isAdmin && (
+            <EditMemberForm
+              memberId={teamMember.id}
+              name={teamMember.name}
+              email={teamMember.email}
+              linked={Boolean(teamMember.user_id)}
+            />
+          )}
           {isAdmin && teamMember.status === "pending" && (
             <>
-              {!teamMember.user_id && teamMember.email && (
-                <SendInviteButton memberId={teamMember.id} name={teamMember.name} />
+              {/* Shown whether or not they've been invited: an invitation
+                  that went to spam left an admin watching "Invite pending"
+                  with nothing they could do about it. */}
+              {teamMember.email && (
+                <SendInviteButton
+                  memberId={teamMember.id}
+                  name={teamMember.name}
+                  alreadyInvited={Boolean(teamMember.user_id)}
+                />
               )}
               <CancelInviteButton
                 memberId={teamMember.id}

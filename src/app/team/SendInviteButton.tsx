@@ -7,13 +7,22 @@ import styles from "@/styles/ui.module.css";
 // For roster entries added without an invite. Everything they're already
 // scheduled for stays put — this just sends the sign-in link their row will
 // attach to.
-export function SendInviteButton({ memberId, name }: { memberId: string; name: string }) {
+export function SendInviteButton({
+  memberId,
+  name,
+  alreadyInvited,
+}: {
+  memberId: string;
+  name: string;
+  /** Already has an account, so this resends rather than invites. */
+  alreadyInvited: boolean;
+}) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   async function handleSend() {
-    if (!window.confirm(`Send ${name} an invite email now?`)) return;
+    if (!window.confirm(alreadyInvited ? `Send ${name} a fresh sign-in link?` : `Send ${name} an invite email now?`)) return;
     setLoading(true);
     setError("");
 
@@ -48,7 +57,7 @@ export function SendInviteButton({ memberId, name }: { memberId: string; name: s
         disabled={loading}
         onClick={handleSend}
       >
-        {loading ? "Sending…" : "Send invite"}
+        {loading ? "Sending…" : alreadyInvited ? "Resend invite" : "Send invite"}
       </button>
       {error && (
         <p className={styles.errorText} role="alert">
