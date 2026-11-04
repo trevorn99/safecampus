@@ -2,9 +2,11 @@ import "server-only";
 import { randomBytes, createHash } from "crypto";
 import { cookies } from "next/headers";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { TRUST_DURATION_DAYS } from "@/lib/mfaTrust";
 
 export const TRUSTED_DEVICE_COOKIE = "sc_trusted_device";
-const TRUST_DURATION_MS = 30 * 24 * 60 * 60 * 1000;
+
+const TRUST_DURATION_MS = TRUST_DURATION_DAYS * 24 * 60 * 60 * 1000;
 
 function hashToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");

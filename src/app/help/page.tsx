@@ -197,7 +197,7 @@ export default async function HelpPage() {
             From <strong>Account</strong>, everyone can set a profile picture (with a zoom/pan cropper) and
             manage two-factor authentication: an authenticator app (TOTP) or a passkey (Face ID, Touch ID,
             Windows Hello, or a security key) — you can enroll both. At sign-in, checking &quot;don&apos;t
-            ask again on this device for 30 days&quot; skips the prompt on that device going forward; it can
+            ask again on this device for 90 days&quot; skips the prompt on that device going forward; it can
             be undone for all devices at once from the same Account page.
           </p>
           <p className={styles.docBody}>

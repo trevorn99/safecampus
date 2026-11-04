@@ -3,6 +3,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { TRUST_DURATION_DAYS } from "@/lib/mfaTrust";
 import styles from "@/styles/ui.module.css";
 
 export default function MfaChallengePage() {
@@ -104,7 +105,7 @@ export default function MfaChallengePage() {
             checked={rememberDevice}
             onChange={(event) => setRememberDevice(event.target.checked)}
           />
-          Don&apos;t ask again on this device for 30 days
+          Don&apos;t ask again on this device for {TRUST_DURATION_DAYS} days
         </label>
 
         {webauthnFactorId && !usingPasskey && (
