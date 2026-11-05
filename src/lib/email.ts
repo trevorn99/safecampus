@@ -191,7 +191,8 @@ export function renderBrandedEmail({
                  question a filter does. -->
             <div style="margin-top:12px;padding-top:12px;border-top:1px solid #e8ece8;color:#8a9490">
               SafeCampus — scheduling and coordination for safety teams.
-              <a href="https://safecampus.net" style="color:#8a9490;text-decoration:underline">safecampus.net</a>
+              <a href="https://safecampus.net" style="color:#8a9490;text-decoration:underline">safecampus.net</a> ·
+              <a href="mailto:admin@safecampus.net" style="color:#8a9490;text-decoration:underline">admin@safecampus.net</a>
             </div>
           </td>
         </tr>

@@ -101,7 +101,8 @@ export async function POST(request: Request) {
         `safely ignore this email; no account exists until you accept. If you're unsure whether it's genuine,`,
         `contact ${orgName} directly rather than using this link.`,
         "",
-        "SafeCampus — scheduling and coordination for safety teams. https://safecampus.net",
+        "SafeCampus — scheduling and coordination for safety teams.",
+        "https://safecampus.net · admin@safecampus.net",
       ].join("\n"),
       html: renderBrandedEmail({
         origin,
