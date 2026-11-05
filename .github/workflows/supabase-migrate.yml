@@ -27,33 +27,39 @@ jobs:
           # morning. Bump this deliberately.
           version: 2.117.0
 
-      # `link` is back, and this time it's load-bearing for a different
-      # reason than before. Supabase's direct database connections are
-      # IPv6-only and GitHub runners have no IPv6, so --project-ref alone
-      # fails with "IPv6 is not supported on your current network" — linking
-      # is what resolves and caches the IPv4 pooler URL the job then uses.
+      # Connects by URL rather than by project reference, which sidesteps
+      # both ways this job has broken.
       #
-      # It was removed in September because it failed on a Management API
-      # privileges error. That may have been a CLI-side problem since fixed;
-      # if it returns, the fallback is --db-url with the pooler connection
-      # string, which needs no Management API call at all.
-      - name: Link project
-        run: supabase link --project-ref "$SUPABASE_PROJECT_ID"
+      # --project-ref alone makes the CLI open a direct database connection,
+      # and those are IPv6-only; GitHub runners have no IPv6, so it fails
+      # with "IPv6 is not supported on your current network". The documented
+      # remedy is `supabase link`, which resolves and caches the IPv4 pooler
+      # URL — but link calls the Management API, needs SUPABASE_ACCESS_TOKEN,
+      # and that token is what broke this job twice: once revoked, once
+      # expired, each time silently until a migration was needed.
+      #
+      # A pooler URL is IPv4 and needs no Management API call, so there is no
+      # token to expire and nothing to link. SUPABASE_DB_URL is the Session
+      # pooler connection string from Supabase: Project Settings > Database >
+      # Connection string > Session pooler, with the password filled in and
+      # percent-encoded if it contains punctuation.
+      - name: Check the connection string is set
+        run: |
+          if [ -z "$SUPABASE_DB_URL" ]; then
+            echo "SUPABASE_DB_URL is not set for this environment."
+            echo "Add it as an environment secret: Supabase > Project Settings >"
+            echo "Database > Connection string > Session pooler, password filled in."
+            exit 1
+          fi
         env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
 
       - name: Migration status
-        run: supabase migration list --project-ref "$SUPABASE_PROJECT_ID"
+        run: supabase migration list --db-url "$SUPABASE_DB_URL"
         env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
 
       - name: Push migrations
-        run: supabase db push --project-ref "$SUPABASE_PROJECT_ID"
+        run: supabase db push --db-url "$SUPABASE_DB_URL"
         env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
