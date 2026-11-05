@@ -76,25 +76,43 @@ export async function POST(request: Request) {
     }
 
     const actionLink = link.properties.action_link;
+    // Written for a recipient who has never heard of SafeCampus and for the
+    // filter deciding whether this is junk — the same information answers
+    // both. Who invited them, what the product is, why this arrived, and
+    // what to do if it wasn't expected. A two-line "you've been invited,
+    // click here" reads as phishing to a person and scores as junk to
+    // Proofpoint, which is what was happening.
     const result = await sendEmail({
       to: target.email,
-      subject: `Your invitation to ${orgName} on SafeCampus`,
+      subject: `${orgName} invited you to join their safety team on SafeCampus`,
       text: [
-        orgName,
+        `You've been invited to join ${orgName} on SafeCampus`,
         "",
-        `${orgName} invited you to join their safety team on SafeCampus.`,
+        `${orgName} has invited you to create a SafeCampus account.`,
         "",
-        `Sign in here: ${actionLink}`,
+        "SafeCampus is the scheduling tool their safety team uses: it's where you'll see the shifts you're",
+        "signed up for, confirm or decline them, and keep your certifications up to date.",
         "",
-        "This link works once. If it has expired, ask an admin to send another.",
+        `Accept your SafeCampus invitation: ${actionLink}`,
+        "",
+        "This link signs you in — there's no password to choose. It works once.",
+        "",
+        `This invitation was sent by SafeCampus on behalf of ${orgName}. If you weren't expecting it you can`,
+        `safely ignore this email; no account exists until you accept. If you're unsure whether it's genuine,`,
+        `contact ${orgName} directly rather than using this link.`,
+        "",
+        "SafeCampus — scheduling and coordination for safety teams. https://safecampus.net",
       ].join("\n"),
       html: renderBrandedEmail({
         origin,
         eyebrow: orgName,
-        bodyHtml: `<p style="margin:0 0 18px;font-size:16px;line-height:1.5;color:#1c2430">${escapeHtml(orgName)} invited you to join their safety team on SafeCampus.</p>
-            <p style="margin:0 0 22px;font-size:14px;line-height:1.6;color:#5b6670">There&rsquo;s no password to choose — this link signs you straight in.</p>`,
-        cta: { label: "Sign in to SafeCampus", url: actionLink },
-        footerHtml: `This link works once. If it has expired, ask an admin to send another.`,
+        bodyHtml: `<p style="margin:0 0 14px;font-size:17px;font-weight:700;line-height:1.4;color:#1c2430">You&rsquo;ve been invited to join ${escapeHtml(orgName)} on SafeCampus</p>
+            <p style="margin:0 0 14px;font-size:15px;line-height:1.55;color:#1c2430">${escapeHtml(orgName)} has invited you to create a SafeCampus account.</p>
+            <p style="margin:0 0 22px;font-size:14px;line-height:1.6;color:#5b6670">SafeCampus is the scheduling tool their safety team uses — it&rsquo;s where you&rsquo;ll see the shifts you&rsquo;re signed up for, confirm or decline them, and keep your certifications up to date. This link signs you in; there&rsquo;s no password to choose, and it works once.</p>`,
+        cta: { label: "Accept your SafeCampus invitation", url: actionLink },
+        footerHtml: `This invitation was sent by SafeCampus on behalf of ${escapeHtml(orgName)}, to ${escapeHtml(target.email)}.
+            If you weren&rsquo;t expecting it you can safely ignore this email — no account exists until you accept.
+            If you&rsquo;re unsure whether it&rsquo;s genuine, contact ${escapeHtml(orgName)} directly rather than using this link.`,
       }),
     });
 

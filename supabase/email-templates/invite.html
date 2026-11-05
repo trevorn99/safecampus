@@ -19,23 +19,36 @@
         </tr>
         <tr>
           <td style="padding:28px">
-            <p style="margin:0 0 18px;font-size:16px;line-height:1.5;color:#1c2430">
-              {{ if .Data.organization_name }}{{ .Data.organization_name }} has invited you{{ else }}You&rsquo;ve been invited{{ end }}
-              to join their safety team on SafeCampus &mdash; where the team&rsquo;s schedule, roster and certifications live.
+            <p style="margin:0 0 14px;font-size:17px;font-weight:700;line-height:1.4;color:#1c2430">
+              You&rsquo;ve been invited to join {{ if .Data.organization_name }}{{ .Data.organization_name }}{{ else }}a safety team{{ end }} on SafeCampus
+            </p>
+            <p style="margin:0 0 14px;font-size:15px;line-height:1.55;color:#1c2430">
+              {{ if .Data.organization_name }}{{ .Data.organization_name }} has{{ else }}They have{{ end }} invited you to create a SafeCampus account.
             </p>
             <p style="margin:0 0 22px;font-size:14px;line-height:1.6;color:#5b6670">
-              Accepting takes one click. There&rsquo;s no password to choose &mdash; SafeCampus emails you a link whenever you sign in.
+              SafeCampus is the scheduling tool their safety team uses &mdash; it&rsquo;s where you&rsquo;ll see the
+              shifts you&rsquo;re signed up for, confirm or decline them, and keep your certifications up to date.
+              This link signs you in; there&rsquo;s no password to choose.
             </p>
             <table role="presentation" cellpadding="0" cellspacing="0" border="0">
               <tr><td style="background:#0f7568;border-radius:8px">
-                <a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:11px 20px;font-size:14px;font-weight:600;color:#ffffff;text-decoration:none">Accept the invitation</a>
+                <a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:11px 20px;font-size:14px;font-weight:600;color:#ffffff;text-decoration:none">Accept your SafeCampus invitation</a>
               </td></tr>
             </table>
           </td>
         </tr>
         <tr>
           <td style="padding:16px 28px 22px;border-top:1px solid #dfe4df;font-size:12px;line-height:1.6;color:#5b6670">
-            This invitation was sent to {{ .Email }}. If you weren&rsquo;t expecting it, you can safely ignore this email.
+            This invitation was sent by SafeCampus on behalf of
+            {{ if .Data.organization_name }}{{ .Data.organization_name }}{{ else }}the inviting organization{{ end }},
+            to {{ .Email }}. If you weren&rsquo;t expecting it you can safely ignore this email &mdash; no account
+            exists until you accept. If you&rsquo;re unsure whether it&rsquo;s genuine, contact
+            {{ if .Data.organization_name }}{{ .Data.organization_name }}{{ else }}them{{ end }} directly rather
+            than using this link.
+            <div style="margin-top:12px;padding-top:12px;border-top:1px solid #e8ece8;color:#8a9490">
+              SafeCampus &mdash; scheduling and coordination for safety teams.
+              <a href="https://safecampus.net" style="color:#8a9490;text-decoration:underline">safecampus.net</a>
+            </div>
           </td>
         </tr>
       </table>

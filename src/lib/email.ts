@@ -63,6 +63,16 @@ export async function sendEmail({
         { type: "text/html", value: html },
       ],
       ...(Object.keys(headers).length > 0 ? { headers } : {}),
+      // Click tracking rewrites every link to a sendgrid.net redirect, so
+      // the address under an "Accept your invitation" button belongs to a
+      // domain the recipient has never heard of and the sender can't
+      // authenticate. Filters read that the way you'd expect, and an
+      // invitation is exactly the message that can't afford it. Open
+      // tracking goes too: it adds a pixel for data nothing here reads.
+      tracking_settings: {
+        click_tracking: { enable: false, enable_text: false },
+        open_tracking: { enable: false },
+      },
     }),
   });
 
@@ -174,6 +184,15 @@ export function renderBrandedEmail({
         <tr>
           <td style="padding:16px 28px 22px;border-top:1px solid #dfe4df;font-size:12px;line-height:1.6;color:#5b6670">
             ${footerHtml}
+            <!-- Who sent this and where it came from, on every message.
+                 A transactional email with no identifiable sender behind the
+                 branding is one of the things content filters weigh, and a
+                 recipient who can't tell what SafeCampus is has the same
+                 question a filter does. -->
+            <div style="margin-top:12px;padding-top:12px;border-top:1px solid #e8ece8;color:#8a9490">
+              SafeCampus — scheduling and coordination for safety teams.
+              <a href="https://safecampus.net" style="color:#8a9490;text-decoration:underline">safecampus.net</a>
+            </div>
           </td>
         </tr>
       </table>
