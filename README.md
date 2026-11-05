@@ -42,13 +42,14 @@ Apply migrations to the dev project first, verify, then promote the same files t
 `.github/workflows/supabase-migrate.yml` runs `supabase db push` on every push to `dev` or `main`, targeting a different Supabase project per branch via GitHub Environments. `dev` applies immediately; `main` waits for approval if the environment has a reviewer rule. To activate it:
 
 1. In the repo's Settings → Environments, create two environments: `dev` and `production`.
-2. In each, add secrets `SUPABASE_PROJECT_ID` (Settings → General → Reference ID in that Supabase project) and `SUPABASE_DB_PASSWORD` (the database password set when the project was created).
-3. Add a repository-level secret `SUPABASE_ACCESS_TOKEN` (Supabase account → Access Tokens) — this one's account-scoped, not project-scoped, so it's shared across both environments.
+2. In each, add the secret `SUPABASE_DB_URL`: Supabase → Project Settings → Database → Connection string → **Session pooler**, with the password filled in (percent-encode any punctuation in it).
 4. Optional but recommended before this touches real data: add a required-reviewer protection rule to the `production` environment, so a push to `main` pauses for approval before the migration actually runs.
 
 Until these secrets exist, the workflow will run and fail harmlessly on push — it doesn't block anything else in CI.
 
-The workflow pins an exact CLI version rather than `latest`, and passes `--project-ref` instead of running `supabase link`. Both are deliberate: a CLI release once changed what `link` required and broke every run overnight with unchanged secrets.
+The workflow pins an exact CLI version rather than `latest`, and connects with `--db-url` rather than `--project-ref` or `supabase link`. Both are deliberate, and both were learned the hard way.
+
+`--project-ref` makes the CLI open a *direct* database connection, and those are IPv6-only — GitHub runners have no IPv6, so it fails with "IPv6 is not supported on your current network". The documented remedy is `supabase link`, which caches the IPv4 pooler URL, but link calls the Management API and so depends on `SUPABASE_ACCESS_TOKEN`. That token broke this job twice — once revoked, once expired — and each time silently, discovered only when a migration was needed. A pooler URL is IPv4 and needs no Management API call, so there's no token to expire and nothing to link.
 
 If migrations were ever applied by hand through the Supabase SQL editor, the CLI won't know about them and `db push` will try to re-run everything. Tell it the truth once per project:
 
