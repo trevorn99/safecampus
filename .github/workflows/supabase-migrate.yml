@@ -27,11 +27,23 @@ jobs:
           # morning. Bump this deliberately.
           version: 2.117.0
 
-      # No `supabase link` step: it authenticates against a Management API
-      # endpoint this job doesn't otherwise need, and it was the only thing
-      # failing. `migration list` and `db push` both take --project-ref, which
-      # also makes the target visible in the command rather than in link state
-      # written to disk by an earlier step.
+      # `link` is back, and this time it's load-bearing for a different
+      # reason than before. Supabase's direct database connections are
+      # IPv6-only and GitHub runners have no IPv6, so --project-ref alone
+      # fails with "IPv6 is not supported on your current network" — linking
+      # is what resolves and caches the IPv4 pooler URL the job then uses.
+      #
+      # It was removed in September because it failed on a Management API
+      # privileges error. That may have been a CLI-side problem since fixed;
+      # if it returns, the fallback is --db-url with the pooler connection
+      # string, which needs no Management API call at all.
+      - name: Link project
+        run: supabase link --project-ref "$SUPABASE_PROJECT_ID"
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+
       - name: Migration status
         run: supabase migration list --project-ref "$SUPABASE_PROJECT_ID"
         env:
