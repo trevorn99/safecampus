@@ -90,5 +90,5 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${origin}${next}`);
   }
 
-  return NextResponse.redirect(await resolveSignedInRedirect(supabase, origin));
+  return NextResponse.redirect(await resolveSignedInRedirect(supabase, origin, "email_link"));
 }

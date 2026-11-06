@@ -14,7 +14,7 @@ export async function GET(request: Request) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error) {
-      return NextResponse.redirect(await resolveSignedInRedirect(supabase, origin));
+      return NextResponse.redirect(await resolveSignedInRedirect(supabase, origin, "google"));
     }
   }
 

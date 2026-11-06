@@ -18,5 +18,5 @@ export async function GET(request: Request) {
   if (!user) {
     return NextResponse.redirect(`${origin}/login?error=auth`);
   }
-  return NextResponse.redirect(await resolveSignedInRedirect(supabase, origin));
+  return NextResponse.redirect(await resolveSignedInRedirect(supabase, origin, "email_code"));
 }

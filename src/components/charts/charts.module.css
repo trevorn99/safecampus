@@ -7,6 +7,12 @@
   width: 100%;
   height: auto;
   display: block;
+  /* An SVG scales as one picture, text included, so on a phone the axis
+     labels shrank to about 5px. Below this width the chart keeps legible
+     text and scrolls sideways inside its card (.chartFigure) instead; above
+     the max it stops growing taller on a wide monitor. */
+  min-width: 520px;
+  max-width: 760px;
 }
 
 .chartLabel {
@@ -62,4 +68,83 @@
    colorless so it never competes with the real categorical hues. */
 .seriesOther {
   fill: var(--muted);
+}
+
+/* Hover target for a column: the whole slot, invisible. */
+.hitArea {
+  fill: transparent;
+}
+
+/* Tall segmented bar (RegistrationBar). Same validated slots as .series1-3,
+   as backgrounds; the 2px gap between blocks is the container's gap
+   showing the card surface through. Labels inside are white on all three
+   hues, per the palette's text-on-fill rule. */
+.segmentBar {
+  display: flex;
+  gap: 2px;
+  height: 28px;
+}
+.segment {
+  min-width: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  overflow: visible;
+  outline-offset: 2px;
+}
+.segmentValue {
+  padding: 0 0.5rem;
+  font-size: 12px;
+  font-weight: 600;
+  color: #ffffff;
+  white-space: nowrap;
+}
+.segment1 {
+  background: #2a78d6;
+}
+.segment2 {
+  background: #eb6834;
+}
+.segment3 {
+  background: #1baf7a;
+}
+@media (prefers-color-scheme: dark) {
+  .segment1 {
+    background: #3987e5;
+  }
+  .segment2 {
+    background: #d95926;
+  }
+  .segment3 {
+    background: #199e70;
+  }
+}
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1rem;
+  margin-top: 0.6rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.legendSwatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+/* Time charts open on their most recent end. When a chart is wider than a
+   phone it scrolls inside its card, and a scroll area starts at its left —
+   the oldest data — hiding the days that matter most. An rtl scroll area
+   starts at its right end instead; the chart inside stays ltr. */
+.chartFigureLatest {
+  direction: rtl;
+}
+.chartFigureLatest > svg {
+  direction: ltr;
 }
