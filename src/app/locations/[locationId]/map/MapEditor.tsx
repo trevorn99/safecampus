@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { ORG_FILES_BUCKET, orgFilePath } from "@/lib/supabase/storage";
 import styles from "@/styles/ui.module.css";
 import mapStyles from "./map.module.css";
+import { useConfirm } from "@/components/ConfirmDialog";
 
 type Pin = { id: string; xPct: number; yPct: number; title: string; postId: string };
 type Position = { id: string; title: string; templateName: string | null };
@@ -124,12 +125,17 @@ export function MapEditor({
     router.refresh();
   }
 
+  const confirm = useConfirm();
+
   async function handleDeleteMap() {
     if (!map) return;
     if (
-      !window.confirm(
-        `Delete the "${map.name}" map? Its pins go with it. The posts themselves stay — they're the places, not the drawing.`,
-      )
+      !(await confirm({
+        title: `Delete the “${map.name}” map?`,
+        message: "Its pins go with it. The posts themselves stay — they're the places, not the drawing.",
+        confirmLabel: "Delete map",
+        tone: "danger",
+      }))
     ) {
       return;
     }

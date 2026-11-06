@@ -4,14 +4,22 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import styles from "@/styles/ui.module.css";
+import { useConfirm } from "@/components/ConfirmDialog";
 
 export function DeleteTeamButton({ teamId, name }: { teamId: string; name: string }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const confirm = useConfirm();
+
   async function handleDelete() {
-    if (!window.confirm(`Delete ${name}? This removes everyone's assignment to this team.`)) return;
+    if (!(await confirm({
+        title: `Delete ${name}?`,
+        message: "Everyone's assignment to this team is removed. The people themselves stay on the roster.",
+        confirmLabel: "Delete team",
+        tone: "danger",
+      }))) return;
     setLoading(true);
     setError("");
 

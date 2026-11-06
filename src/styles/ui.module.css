@@ -1702,3 +1702,63 @@ ol.docBody {
     flex-direction: column;
   }
 }
+
+/* Confirmation dialog (components/ConfirmDialog.tsx). */
+.confirmDialog {
+  width: min(440px, calc(100% - 2rem));
+  margin: auto;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-md);
+}
+.confirmDialog::backdrop {
+  background: rgb(0 0 0 / 0.55);
+}
+.confirmBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.5rem;
+}
+.confirmTitle {
+  font-size: 1.1rem;
+  font-weight: 700;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.confirmMessage {
+  font-size: 0.92rem;
+  line-height: 1.6;
+  color: var(--muted);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+.confirmActions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 0.5rem;
+}
+/* Destructive confirm. Text takes the surface colour, so it's white on
+   the light theme's deep red and dark on the dark theme's light red —
+   readable on both. */
+.buttonDanger {
+  background: var(--danger);
+  color: var(--surface);
+}
+.buttonDanger:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+@media (max-width: 480px) {
+  /* Thumb-sized and stacked, the action on top. */
+  .confirmActions {
+    flex-direction: column-reverse;
+  }
+  .confirmActions .button {
+    width: 100%;
+  }
+}

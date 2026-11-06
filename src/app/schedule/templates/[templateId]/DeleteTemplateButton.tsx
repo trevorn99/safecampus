@@ -4,13 +4,21 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import styles from "@/styles/ui.module.css";
+import { useConfirm } from "@/components/ConfirmDialog";
 
 export function DeleteTemplateButton({ templateId, name }: { templateId: string; name: string }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
+  const confirm = useConfirm();
+
   async function handleDelete() {
-    if (!window.confirm(`Delete the "${name}" template? This also removes all of its positions.`)) return;
+    if (!(await confirm({
+        title: `Delete the “${name}” template?`,
+        message: "All of its positions are removed too.",
+        confirmLabel: "Delete template",
+        tone: "danger",
+      }))) return;
     setLoading(true);
     const supabase = createClient();
     await supabase.from("event_templates").delete().eq("id", templateId);

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import styles from "@/styles/ui.module.css";
+import { useConfirm } from "@/components/ConfirmDialog";
 
 // Also available after the fact, and for a series occurrence — the checkbox
 // on the create form only covers one-off events, since announcing a year of
@@ -14,8 +15,14 @@ export function NotifyTeamButton({ eventId }: { eventId: string }) {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
+  const confirm = useConfirm();
+
   async function notify() {
-    if (!window.confirm("Email the team about this event? Anyone already told about it is skipped.")) return;
+    if (!(await confirm({
+        title: "Email the team about this event?",
+        message: "Anyone already told about it is skipped.",
+        confirmLabel: "Send email",
+      }))) return;
     setLoading(true);
     setMessage("");
     setError("");

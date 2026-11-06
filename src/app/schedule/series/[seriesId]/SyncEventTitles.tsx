@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import styles from "@/styles/ui.module.css";
+import { useConfirm } from "@/components/ConfirmDialog";
 
 // Shown when upcoming events in a series carry a different name from the
 // series itself — what a rename left behind before renames carried over to
@@ -23,11 +24,15 @@ export function SyncEventTitles({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const confirm = useConfirm();
+
   async function handleSync() {
     if (
-      !window.confirm(
-        `Rename ${count} upcoming ${count === 1 ? "event" : "events"} to “${title}”? Past events keep their name.`,
-      )
+      !(await confirm({
+        title: `Rename ${count} upcoming ${count === 1 ? "event" : "events"} to “${title}”?`,
+        message: "Past events keep their name. Times, places and who's assigned don't change.",
+        confirmLabel: "Rename",
+      }))
     ) {
       return;
     }

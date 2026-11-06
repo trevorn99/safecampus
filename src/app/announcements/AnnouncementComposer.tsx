@@ -3,6 +3,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import styles from "@/styles/ui.module.css";
+import { useConfirm } from "@/components/ConfirmDialog";
 
 type Team = { id: string; name: string };
 type Audience = "organization" | "teams" | "team_leads";
@@ -59,6 +60,8 @@ export function AnnouncementComposer({ isOrgAdmin, teams }: { isOrgAdmin: boolea
     setTeamIds((current) => (current.includes(id) ? current.filter((t) => t !== id) : [...current, id]));
   }
 
+  const confirm = useConfirm();
+
   async function send(event: FormEvent) {
     event.preventDefault();
     if (needsTeams) {
@@ -67,7 +70,12 @@ export function AnnouncementComposer({ isOrgAdmin, teams }: { isOrgAdmin: boolea
     }
     const reach = preview?.recipients ?? 0;
     const textNote = sendText && preview?.texts ? `, ${preview.texts} of them by text too` : "";
-    if (!window.confirm(`Send “${subject.trim()}” to ${reach} ${reach === 1 ? "person" : "people"}${textNote}?`)) return;
+    const confirmed = await confirm({
+      title: `Send “${subject.trim()}”?`,
+      message: `It's emailed to ${reach} ${reach === 1 ? "person" : "people"}${textNote}, and shows on their dashboard until they dismiss it. It can't be recalled once sent.`,
+      confirmLabel: "Send announcement",
+    });
+    if (!confirmed) return;
 
     setBusy(true);
     setError("");
