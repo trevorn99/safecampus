@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createStripeClient, tierForSeatCount, TIER_PRICE_IDS } from "@/lib/stripe";
+import { MIN_CARRIED_TRIAL_MS } from "@/lib/billing";
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -30,7 +31,7 @@ export async function POST(request: Request) {
 
   const { data: org } = await supabase
     .from("organizations")
-    .select("name, stripe_customer_id")
+    .select("name, stripe_customer_id, stripe_subscription_id, subscription_status, trial_ends_at")
     .eq("id", member.organization_id)
     .single();
 
@@ -47,6 +48,33 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
+
+  // A second checkout would start a second subscription on the same
+  // customer and bill twice. An org already subscribed — including one that
+  // subscribed during its trial and hasn't been charged yet — manages its
+  // plan through the billing portal instead.
+  if (
+    org?.stripe_subscription_id &&
+    ["active", "past_due", "trialing"].includes(org.subscription_status ?? "")
+  ) {
+    return NextResponse.json(
+      { error: "Your organization is already subscribed. Use Manage billing to change your plan." },
+      { status: 409 },
+    );
+  }
+
+  // Subscribing during the free trial used to start billing on the spot and
+  // throw the rest of the trial away — a good reason to put off
+  // subscribing until the last minute, or until after the lockout. The
+  // remaining trial now carries over: the card is saved now and first
+  // charged when the trial would have ended. Stripe requires a Checkout
+  // trial to end at least 48 hours out, so with less left than that
+  // billing simply starts today, which the billing page says up front.
+  const trialEndsAt = org?.trial_ends_at ? new Date(org.trial_ends_at).getTime() : null;
+  const carryTrial =
+    org?.subscription_status === "trialing" &&
+    trialEndsAt !== null &&
+    trialEndsAt - Date.now() > MIN_CARRIED_TRIAL_MS;
 
   const stripe = createStripeClient();
   const admin = createAdminClient();
@@ -73,7 +101,10 @@ export async function POST(request: Request) {
     success_url: `${origin}/billing?checkout=success`,
     cancel_url: `${origin}/billing?checkout=cancelled`,
     client_reference_id: member.organization_id,
-    subscription_data: { metadata: { organization_id: member.organization_id } },
+    subscription_data: {
+      metadata: { organization_id: member.organization_id },
+      ...(carryTrial && trialEndsAt !== null ? { trial_end: Math.floor(trialEndsAt / 1000) } : {}),
+    },
   });
 
   return NextResponse.json({ url: session.url });

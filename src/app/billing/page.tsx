@@ -2,6 +2,7 @@ import { requireMembership } from "@/lib/session";
 import { AppHeader } from "@/components/AppHeader";
 import { BillingActions } from "./BillingActions";
 import { AddonToggle } from "./AddonToggle";
+import { MIN_CARRIED_TRIAL_MS } from "@/lib/billing";
 import { SEAT_CAPS, TIER_LABEL, tierForSeatCount, createStripeClient, type PlanTier } from "@/lib/stripe";
 import styles from "@/styles/ui.module.css";
 
@@ -29,7 +30,7 @@ export default async function BillingPage() {
     supabase
       .from("organizations")
       .select(
-        "subscription_status, trial_ends_at, stripe_customer_id, paywall_exempt, plan_tier, threat_intel_enabled, identity_verification_enabled",
+        "subscription_status, trial_ends_at, stripe_customer_id, stripe_subscription_id, paywall_exempt, plan_tier, threat_intel_enabled, identity_verification_enabled",
       )
       .eq("id", member.organization_id)
       .single(),
@@ -67,7 +68,23 @@ export default async function BillingPage() {
 
   const currentTier = (org?.plan_tier as PlanTier | null) ?? tierForSeatCount(seatCount ?? 1);
   const overCap = !tierForSeatCount(seatCount ?? 1);
-  const hasSubscription = org?.subscription_status === "active" || org?.subscription_status === "past_due";
+  // Subscribed during the free trial: Stripe holds the subscription as
+  // "trialing" until its first charge, which is the same status the app's
+  // own trial uses. Without telling the two apart the page kept offering
+  // Subscribe to an organization that already had, inviting a second
+  // subscription, and kept the add-ons locked.
+  const subscribedInTrial = org?.subscription_status === "trialing" && Boolean(org?.stripe_subscription_id);
+  const hasSubscription =
+    org?.subscription_status === "active" || org?.subscription_status === "past_due" || subscribedInTrial;
+  // Whether subscribing now keeps the rest of the trial (see the checkout
+  // route) — the page says which before anyone pays.
+  const trialCarries =
+    org?.subscription_status === "trialing" &&
+    trialEndsAt !== null &&
+    // eslint-disable-next-line react-hooks/purity -- a server component, rendered per request
+    trialEndsAt.getTime() - Date.now() > MIN_CARRIED_TRIAL_MS;
+  const longDate = (date: Date) =>
+    date.toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
 
   const invoices =
     isAdmin && org?.stripe_customer_id
@@ -108,9 +125,18 @@ export default async function BillingPage() {
             </h2>
             {org?.subscription_status === "trialing" && !org.paywall_exempt && trialEndsAt && (
               <p className={styles.itemMeta}>
-                {trialExpired
-                  ? `Trial ended ${trialEndsAt.toLocaleDateString()}.`
-                  : `Trial ends ${trialEndsAt.toLocaleDateString()}.`}
+                {subscribedInTrial
+                  ? `You're subscribed. Your plan starts and your card is first charged on ${longDate(trialEndsAt)}, when the trial ends.`
+                  : trialExpired
+                    ? `Trial ended ${longDate(trialEndsAt)}.`
+                    : `Trial ends ${longDate(trialEndsAt)}.`}
+              </p>
+            )}
+            {isAdmin && org?.subscription_status === "trialing" && !subscribedInTrial && !trialExpired && !org.paywall_exempt && !overCap && (
+              <p className={styles.itemMeta}>
+                {trialCarries && trialEndsAt
+                  ? `Subscribe any time — you keep the rest of your trial and won't be charged until ${longDate(trialEndsAt)}.`
+                  : "Subscribing now starts your plan, and billing, today."}
               </p>
             )}
             <p className={styles.itemMeta}>
