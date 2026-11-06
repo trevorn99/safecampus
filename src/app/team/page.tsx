@@ -2,7 +2,7 @@ import { requireMembership } from "@/lib/session";
 import { AppHeader } from "@/components/AppHeader";
 import { Avatar } from "@/components/Avatar";
 import { getAvatarUrlMap } from "@/lib/avatars";
-import { CancelInviteButton } from "./CancelInviteButton";
+import { RemoveMemberButton } from "./RemoveMemberButton";
 import { SendInviteButton } from "./SendInviteButton";
 import { EditMemberForm } from "./EditMemberForm";
 import { TeamMembershipManager } from "./TeamMembershipManager";
@@ -194,12 +194,18 @@ export default async function TeamPage() {
                   alreadyInvited={Boolean(teamMember.user_id)}
                 />
               )}
-              <CancelInviteButton
-                memberId={teamMember.id}
-                name={teamMember.name}
-                invited={Boolean(teamMember.user_id)}
-              />
             </>
+          )}
+          {/* Every member, not only pending ones: active members used to
+              have no way out of the roster at all. */}
+          {isAdmin && (
+            <RemoveMemberButton
+              memberId={teamMember.id}
+              name={teamMember.name}
+              status={teamMember.status}
+              invited={Boolean(teamMember.user_id)}
+              isSelf={teamMember.id === member.id}
+            />
           )}
         </div>
         {(() => {
