@@ -35,8 +35,15 @@ export async function GET(request: Request) {
   const tokenHash = searchParams.get("token_hash");
   const type = searchParams.get("type");
 
-  if (!tokenHash || !type || !EMAIL_OTP_TYPES.has(type as EmailOtpType)) {
-    return NextResponse.redirect(`${origin}/login?error=link`);
+  // What the dead link was for, so /login can say "that invitation" rather
+  // than "that sign-in link" to someone who has never signed in and doesn't
+  // yet think of themselves as having an account. Only ever one of the
+  // values below, never the raw parameter.
+  const valid = Boolean(type) && EMAIL_OTP_TYPES.has(type as EmailOtpType);
+  const failed = `${origin}/login?error=link${valid ? `&kind=${type}` : ""}`;
+
+  if (!tokenHash || !valid) {
+    return NextResponse.redirect(failed);
   }
 
   const supabase = await createClient();
@@ -48,7 +55,7 @@ export async function GET(request: Request) {
   if (error) {
     // Expired, already used, or not a real token — all the same thing to the
     // person holding it, and all fixed the same way: ask for a new link.
-    return NextResponse.redirect(`${origin}/login?error=link`);
+    return NextResponse.redirect(failed);
   }
 
   // Relative paths only. `next` comes from a URL in an email, so an absolute

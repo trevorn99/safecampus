@@ -42,25 +42,53 @@ function GoogleIcon() {
 }
 
 // Why someone landed back here rather than signed in. /auth/confirm and
-// /auth/callback both redirect to /login with a reason, and until now
+// /auth/callback both redirect to /login with a reason, and until recently
 // nothing read it — an expired invitation dropped the recipient on a blank
 // sign-in form with no explanation, which reads as "that link was fake".
+//
+// The copy names the scanner case on purpose. These links are single-use,
+// and corporate mail filters open links to inspect them, so an invitation
+// can be spent before its recipient ever clicks it. Someone told only "that
+// link has expired" when they received it four minutes ago concludes
+// something is broken, or that the mail was never genuine; the recovery is
+// the same either way, so the message leads with it.
 //
 // Separate component inside a Suspense boundary because useSearchParams
 // opts the tree out of prerendering up to the nearest boundary, and /login
 // is a static page; without the boundary the production build fails.
-const SIGN_IN_ERRORS: Record<string, string> = {
-  link: "That sign-in link has expired or has already been used. Enter your email below and we'll send a fresh one.",
-  auth: "We couldn't complete that sign-in. Enter your email below and we'll send a new link.",
+const SCANNER_NOTE =
+  "Security scanners on some mail systems open links automatically, which can use one up before you get to it.";
+
+const NOTICES: Record<string, { lead: string; detail: string }> = {
+  // An invitation, for someone who has never signed in and would not
+  // recognise their invitation described as a "sign-in link".
+  invite: {
+    lead: "That invitation link has already been used, or has expired.",
+    detail: `${SCANNER_NOTE} Enter your email below and we'll send a new link — it signs you in and accepts the invitation just the same.`,
+  },
+  link: {
+    lead: "That sign-in link has already been used, or has expired.",
+    detail: `${SCANNER_NOTE} Enter your email below and we'll send a fresh one.`,
+  },
+  auth: {
+    lead: "We couldn't finish signing you in.",
+    detail: "Enter your email below and we'll send a new link.",
+  },
 };
 
 function SignInNotice() {
-  const reason = useSearchParams().get("error");
-  const message = reason ? SIGN_IN_ERRORS[reason] : null;
-  if (!message) return null;
+  const params = useSearchParams();
+  const reason = params.get("error");
+  if (!reason) return null;
+
+  // Looked up in a fixed map, never rendered from the URL itself.
+  const key = reason === "link" && params.get("kind") === "invite" ? "invite" : reason;
+  const notice = NOTICES[key];
+  if (!notice) return null;
+
   return (
     <p className={styles.errorText} role="alert">
-      {message}
+      <strong>{notice.lead}</strong> {notice.detail}
     </p>
   );
 }
