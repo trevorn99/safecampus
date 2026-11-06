@@ -41,160 +41,286 @@ function GoogleIcon() {
   );
 }
 
-// Why someone landed back here rather than signed in. /auth/confirm and
-// /auth/callback both redirect to /login with a reason, and until recently
-// nothing read it — an expired invitation dropped the recipient on a blank
-// sign-in form with no explanation, which reads as "that link was fake".
+// Sign-in is a typed code, not a link.
 //
-// The copy names the scanner case on purpose. These links are single-use,
-// and corporate mail filters open links to inspect them, so an invitation
-// can be spent before its recipient ever clicks it. Someone told only "that
-// link has expired" when they received it four minutes ago concludes
-// something is broken, or that the mail was never genuine; the recovery is
-// the same either way, so the message leads with it.
+// Emailed links are single-use credentials, and corporate mail filters
+// (Proofpoint among them) open every link in a message to inspect it — so a
+// link could be spent before its recipient ever clicked it, and they'd land
+// here told it had "expired" minutes after it arrived. A code has to be
+// read and typed by a person; nothing that merely fetches URLs can use it.
 //
-// Separate component inside a Suspense boundary because useSearchParams
-// opts the tree out of prerendering up to the nearest boundary, and /login
-// is a static page; without the boundary the production build fails.
-const SCANNER_NOTE =
-  "Security scanners on some mail systems open links automatically, which can use one up before you get to it.";
+// That only holds if the email contains no link that carries the same
+// credential. The Supabase templates in supabase/email-templates/ show the
+// code alone, and the invitation's button opens this page rather than
+// signing anyone in — opening it does nothing a scanner could exploit,
+// which is also why this page never sends a code on load.
 
+// Old links still in inboxes land here via /auth/confirm when they fail.
+// Looked up in a fixed map, never rendered from the URL itself.
 const NOTICES: Record<string, { lead: string; detail: string }> = {
-  // An invitation, for someone who has never signed in and would not
-  // recognise their invitation described as a "sign-in link".
   invite: {
     lead: "That invitation link has already been used, or has expired.",
-    detail: `${SCANNER_NOTE} Enter your email below and we'll send a new link — it signs you in and accepts the invitation just the same.`,
+    detail: "Enter your email below and we'll send you a code — it signs you in and accepts the invitation just the same.",
   },
   link: {
     lead: "That sign-in link has already been used, or has expired.",
-    detail: `${SCANNER_NOTE} Enter your email below and we'll send a fresh one.`,
+    detail: "Sign-in now uses a code instead of a link. Enter your email below and we'll send one.",
   },
   auth: {
     lead: "We couldn't finish signing you in.",
-    detail: "Enter your email below and we'll send a new link.",
+    detail: "Enter your email below and we'll send you a code.",
   },
 };
 
-function SignInNotice() {
-  const params = useSearchParams();
-  const reason = params.get("error");
-  if (!reason) return null;
+type OtpKind = "email" | "invite";
 
-  // Looked up in a fixed map, never rendered from the URL itself.
-  const key = reason === "link" && params.get("kind") === "invite" ? "invite" : reason;
-  const notice = NOTICES[key];
-  if (!notice) return null;
-
-  return (
-    <p className={styles.errorText} role="alert">
-      <strong>{notice.lead}</strong> {notice.detail}
-    </p>
-  );
+function friendlyVerifyError(message: string): string {
+  return /expired|invalid/i.test(message)
+    ? "That code isn't right, or it has expired. Check the most recent email from SafeCampus, or send yourself a new code."
+    : message;
 }
 
-export default function LoginPage() {
-  const [email, setEmail] = useState("");
-  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
-  const [errorMessage, setErrorMessage] = useState("");
+function LoginForm() {
+  const params = useSearchParams();
+  const fromInvite = params.get("invite") === "1";
+  const prefilled = (params.get("email") ?? "").trim();
+  // What the invitation's code was minted as. A hint, not a credential:
+  // verification tries the other kind too, so a wrong value costs nothing.
+  const hintedKind: OtpKind = params.get("t") === "invite" ? "invite" : "email";
 
-  async function handleSubmit(event: FormEvent) {
-    event.preventDefault();
-    setStatus("sending");
+  const [email, setEmail] = useState(prefilled);
+  const [step, setStep] = useState<"email" | "code">(fromInvite && prefilled ? "code" : "email");
+  const [code, setCode] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [info, setInfo] = useState("");
+
+  const reason = params.get("error");
+  const noticeKey = reason === "link" && params.get("kind") === "invite" ? "invite" : reason;
+  const notice = step === "email" && noticeKey ? NOTICES[noticeKey] : null;
+
+  async function sendCode() {
+    const address = email.trim().toLowerCase();
+    setBusy(true);
+    setError("");
+    setInfo("");
     const supabase = createClient();
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
+    const { error: sendError } = await supabase.auth.signInWithOtp({
+      email: address,
+      // Only matters while a project still has the old link template
+      // pasted in; with the code template there is no link to follow.
       options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
     });
-    if (error) {
-      setStatus("error");
-      setErrorMessage(error.message);
-      return;
+    setBusy(false);
+    if (sendError) {
+      setError(sendError.message);
+      return false;
     }
-    setStatus("sent");
+    setEmail(address);
+    setCode("");
+    setStep("code");
+    setInfo(`We emailed a code to ${address}.`);
+    return true;
+  }
+
+  async function handleEmailSubmit(event: FormEvent) {
+    event.preventDefault();
+    await sendCode();
+  }
+
+  async function handleCodeSubmit(event: FormEvent) {
+    event.preventDefault();
+    const token = code.replace(/\D/g, "");
+    const address = email.trim().toLowerCase();
+    setBusy(true);
+    setError("");
+
+    const supabase = createClient();
+    // "email" covers sign-in and signup codes, which is everything sent
+    // from this page and invitations to existing accounts; "invite" covers
+    // invitations that created the account. Trying both means the page
+    // never has to trust the URL to say which it was.
+    const order: OtpKind[] = hintedKind === "invite" ? ["invite", "email"] : ["email", "invite"];
+    let lastError = "";
+    for (const type of order) {
+      const { error: verifyError } = await supabase.auth.verifyOtp({ email: address, token, type });
+      if (!verifyError) {
+        // The session cookie is set; the server decides where to go next
+        // (MFA, activating the membership, claiming a roster entry). A full
+        // navigation, not router.push: /auth/continue is a route handler
+        // that answers with a redirect, which client-side routing can't
+        // follow.
+        window.location.assign(new URL("/auth/continue", window.location.origin).toString());
+        return;
+      }
+      lastError = verifyError.message;
+    }
+
+    setBusy(false);
+    setError(friendlyVerifyError(lastError));
   }
 
   async function handleGoogleSignIn() {
-    setStatus("sending");
+    setBusy(true);
+    setError("");
     const supabase = createClient();
-    const { error } = await supabase.auth.signInWithOAuth({
+    const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo: `${window.location.origin}/auth/callback` },
     });
     // On success this navigates away to Google; we only get here on failure.
-    if (error) {
-      setStatus("error");
-      setErrorMessage(error.message);
+    if (oauthError) {
+      setBusy(false);
+      setError(oauthError.message);
     }
   }
 
-  if (status === "sent") {
+  if (step === "code") {
     return (
-      <main className={styles.authShell}>
-        <div className={styles.authCard}>
-          <Brand />
-          <div>
-            <h1 className={styles.title}>Check your email</h1>
-            <p className={styles.subtitle}>We sent a sign-in link to {email}.</p>
-          </div>
-        </div>
-      </main>
-    );
-  }
-
-  return (
-    <main className={styles.authShell}>
-      <div className={styles.authCard}>
-        <Brand />
+      <>
         <div>
-          <h1 className={styles.title}>Sign in</h1>
+          <h1 className={styles.title}>{fromInvite ? "Accept your invitation" : "Enter your code"}</h1>
           <p className={styles.subtitle}>
-            No password needed — we&apos;ll email you a link. New here? The same link creates
-            your account.
+            {fromInvite && !info
+              ? `Type the 6-digit code from your invitation email to ${email}.`
+              : `Type the 6-digit code we emailed to ${email}.`}{" "}
+            It works once and expires after a while.
           </p>
         </div>
 
-        <Suspense fallback={null}>
-          <SignInNotice />
-        </Suspense>
-
-        <button
-          type="button"
-          onClick={handleGoogleSignIn}
-          className={`${styles.button} ${styles.buttonSecondary}`}
-          disabled={status === "sending"}
-        >
-          <GoogleIcon />
-          Continue with Google
-        </button>
-
-        <div className={styles.divider}>
-          <span>or</span>
-        </div>
-
-        <form onSubmit={handleSubmit} className={styles.form}>
+        <form onSubmit={handleCodeSubmit} className={styles.form}>
           <div className={styles.field}>
-            <label className={styles.label} htmlFor="email">
-              Email
+            <label className={styles.label} htmlFor="code">
+              Code
             </label>
             <input
-              id="email"
+              id="code"
               className={styles.input}
-              type="email"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              pattern="[0-9 ]*"
+              maxLength={12}
               required
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
+              autoFocus
+              placeholder="123456"
+              value={code}
+              onChange={(event) => setCode(event.target.value.replace(/[^\d ]/g, ""))}
             />
           </div>
           <button
             type="submit"
             className={`${styles.button} ${styles.buttonPrimary}`}
-            disabled={status === "sending"}
+            disabled={busy || code.replace(/\D/g, "").length < 6}
           >
-            {status === "sending" ? "Sending…" : "Send sign-in link"}
+            {busy ? "Checking…" : "Sign in"}
           </button>
-          {status === "error" && <p className={styles.errorText} role="alert">{errorMessage}</p>}
+          {info && !error && <p className={styles.hint}>{info}</p>}
+          {error && (
+            <p className={styles.errorText} role="alert">
+              {error}
+            </p>
+          )}
         </form>
+
+        <p className={styles.hint}>
+          No code, or it expired?{" "}
+          <button type="button" className={styles.linkButton} disabled={busy} onClick={() => void sendCode()}>
+            Send a new code
+          </button>{" "}
+          ·{" "}
+          <button
+            type="button"
+            className={styles.linkButton}
+            disabled={busy}
+            onClick={() => {
+              setStep("email");
+              setCode("");
+              setError("");
+              setInfo("");
+            }}
+          >
+            Use a different email
+          </button>
+        </p>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <div>
+        <h1 className={styles.title}>Sign in</h1>
+        <p className={styles.subtitle}>
+          No password needed — we&apos;ll email you a 6-digit code. New here? The same code creates
+          your account.
+        </p>
+      </div>
+
+      {notice && (
+        <p className={styles.errorText} role="alert">
+          <strong>{notice.lead}</strong> {notice.detail}
+        </p>
+      )}
+
+      <button
+        type="button"
+        onClick={handleGoogleSignIn}
+        className={`${styles.button} ${styles.buttonSecondary}`}
+        disabled={busy}
+      >
+        <GoogleIcon />
+        Continue with Google
+      </button>
+
+      <div className={styles.divider}>
+        <span>or</span>
+      </div>
+
+      <form onSubmit={handleEmailSubmit} className={styles.form}>
+        <div className={styles.field}>
+          <label className={styles.label} htmlFor="email">
+            Email
+          </label>
+          <input
+            id="email"
+            className={styles.input}
+            type="email"
+            autoComplete="email"
+            required
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+          />
+        </div>
+        <button type="submit" className={`${styles.button} ${styles.buttonPrimary}`} disabled={busy}>
+          {busy ? "Sending…" : "Email me a code"}
+        </button>
+        {error && (
+          <p className={styles.errorText} role="alert">
+            {error}
+          </p>
+        )}
+      </form>
+    </>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <main className={styles.authShell}>
+      <div className={styles.authCard}>
+        <Brand />
+        {/* useSearchParams opts the tree out of prerendering up to the
+            nearest Suspense boundary, and /login is a static page; without
+            the boundary the production build fails. */}
+        <Suspense
+          fallback={
+            <div>
+              <h1 className={styles.title}>Sign in</h1>
+            </div>
+          }
+        >
+          <LoginForm />
+        </Suspense>
         <p className={styles.hint}>
           By continuing, you agree to our <a href="/terms" className={styles.link}>Terms</a> and{" "}
           <a href="/privacy" className={styles.link}>Privacy Policy</a>.
