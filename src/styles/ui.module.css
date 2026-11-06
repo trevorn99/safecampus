@@ -1325,3 +1325,207 @@
   flex-basis: 100%;
   margin: 0;
 }
+
+/* ---------------------------------------------------------------------
+   Phone layout.
+
+   Until this, three things adapted to a small screen — the homepage hero,
+   the calendar and roster rows — and everything else was the desktop
+   layout squeezed. The worst of it: the nav ran off the right edge, so
+   on a phone nothing after "Dashboard" could be reached without typing a
+   URL.
+   --------------------------------------------------------------------- */
+
+/* The mobile menu drops down from the header, positioned against it. */
+.appHeader {
+  position: relative;
+}
+.appNavWrap {
+  display: flex;
+  align-items: center;
+}
+.mobileNavControls {
+  display: none;
+  align-items: center;
+  gap: 0.5rem;
+}
+.mobileNavMenu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  padding: 0.5rem 1rem 1rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  box-shadow: var(--shadow-md);
+  max-height: calc(100dvh - 4rem);
+  overflow-y: auto;
+}
+.mobileNavGroup {
+  display: flex;
+  flex-direction: column;
+  margin-top: 0.4rem;
+  padding-top: 0.4rem;
+  border-top: 1px solid var(--border);
+}
+.mobileNavHeading {
+  padding: 0.35rem 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+/* 44px rows: the minimum comfortable touch target. */
+.mobileNavLink {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 0.5rem;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.mobileNavLink[aria-current="page"] {
+  background: var(--surface-muted);
+  color: var(--accent-strong);
+}
+
+/* Every screen size. A row of buttons wraps rather than running out of
+   its card, and a long email or event name breaks rather than widening
+   the page. */
+.actions {
+  flex-wrap: wrap;
+}
+.itemName,
+.itemMeta {
+  overflow-wrap: anywhere;
+}
+.siteNav .button {
+  white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+  .appNav,
+  .appHeaderSignOut {
+    display: none;
+  }
+  .mobileNavControls {
+    display: flex;
+  }
+  .appHeaderInner {
+    padding: 0.65rem 1rem;
+  }
+  .appHeaderLeft {
+    flex: 1;
+    min-width: 0;
+    gap: 0.6rem;
+  }
+  .appNavWrap {
+    margin-left: auto;
+  }
+
+  /* Desktop padding (page 1.5rem + card 1.75rem a side) left about 285px
+     of a 390px phone for content. */
+  .appMain {
+    padding: 1.25rem 1rem 2rem;
+    gap: 1rem;
+  }
+  .card {
+    padding: 1.15rem;
+    gap: 1rem;
+    border-radius: var(--radius-md);
+  }
+  .pageTitle {
+    font-size: 1.4rem;
+  }
+
+  /* iOS Safari zooms the whole page into any field whose text is under
+     16px the moment it's tapped, and doesn't zoom back out — so every
+     form, the sign-in code box included, used to jump. */
+  .input,
+  .select,
+  .textarea {
+    font-size: 16px;
+  }
+  .button {
+    min-height: 44px;
+  }
+  .buttonCompact {
+    min-height: 40px;
+  }
+
+  .siteHeaderInner {
+    padding: 0.75rem 1rem;
+  }
+  .siteNav {
+    gap: 1rem;
+  }
+}
+.mobileNavGroup:first-child {
+  margin-top: 0;
+  border-top: none;
+}
+
+/* The full nav row needs about 1150px for a platform admin (ten entries
+   plus the wordmark and Sign out), which only exists once the header
+   reaches its 1200px maximum — so it switches to the Menu button well
+   above phone width. On a 1280px laptop the row used to run past the edge
+   and cut off Sign out. The rest of the phone layout still starts at
+   720px. Measured, not estimated: see the overflow check in the commit
+   that introduced this. */
+.appNav {
+  gap: 0.85rem;
+}
+.appHeaderLeft {
+  gap: 1.1rem;
+}
+@media (max-width: 1240px) {
+  .appNav,
+  .appHeaderSignOut {
+    display: none;
+  }
+  .mobileNavControls {
+    display: flex;
+  }
+  .appHeaderLeft {
+    flex: 1;
+    min-width: 0;
+    gap: 0.6rem;
+  }
+  .appNavWrap {
+    margin-left: auto;
+  }
+}
+
+/* The public header — logo, Beta, Features, Sign in — is wider than a
+   390px phone, which pushed Sign in off the edge. The homepage repeats
+   "See features" directly under the header, so that link is the one to
+   drop. */
+@media (max-width: 480px) {
+  .siteNav .navLink {
+    display: none;
+  }
+  .siteNav .button {
+    padding: 0.5rem 0.9rem;
+    min-height: 40px;
+  }
+}
+/* At 320px (the smallest phones still in use) the Beta badge is the one
+   thing in either header that can go without losing anything. */
+@media (max-width: 360px) {
+  .siteHeaderBrand .devBadge,
+  .appHeaderLeft .devBadge {
+    display: none;
+  }
+}

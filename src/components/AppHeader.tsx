@@ -87,9 +87,9 @@ export function AppHeader({
             Safe<span className={styles.wordmarkAccent}>Campus</span>
           </Link>
           <span className={styles.devBadge}>Beta</span>
-          <AppNav items={items} />
+          <AppNav items={items} checkInHref="/checkin" />
         </div>
-        <form action="/auth/signout" method="post">
+        <form action="/auth/signout" method="post" className={styles.appHeaderSignOut}>
           <button type="submit" className={styles.navLink}>
             Sign out
           </button>
