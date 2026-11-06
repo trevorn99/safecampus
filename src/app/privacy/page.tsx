@@ -106,7 +106,7 @@ export default function PrivacyPage() {
         <ul>
           <li>To provide, maintain, and secure the Service, including authenticating you and enforcing your organization&apos;s access boundaries.</li>
           <li>To operate features you or your organization use — scheduling, certifications, maps, billing, integrations.</li>
-          <li>To send account, security, and service-related communications (e.g. sign-in codes, MFA prompts, invitation emails, shift reminders, new-event announcements, and position reports).</li>
+          <li>To send account, security, and service-related communications (e.g. sign-in codes, MFA prompts, invitation emails, shift reminders, new-event announcements, position reports, and announcements your organization&apos;s admins or team leads send).</li>
           <li>To respond to support requests.</li>
           <li>To detect, investigate, and prevent fraud, abuse, and security incidents.</li>
           <li>To comply with legal obligations.</li>

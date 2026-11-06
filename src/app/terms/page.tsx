@@ -95,8 +95,8 @@ export default function TermsPage() {
           SafeCampus sends email about the schedule — shift reminders, new-event announcements, and
           position reports to organization admins — alongside account email such as invitations and
           sign-in codes. Members can stop schedule email at any time from their account settings or
-          the unsubscribe link in each message; account email is sent regardless, since the Service
-          can&apos;t be used without it.
+          the unsubscribe link in each message. Account email, and announcements an organization&apos;s
+          admins or team leads send to its members, are sent regardless of those settings.
         </p>
         <p>
           If your organization enables SMS notifications, you&apos;re responsible for obtaining

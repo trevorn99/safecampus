@@ -1644,3 +1644,61 @@ ol.docBody {
     text-align: left;
   }
 }
+
+/* Announcements: the message keeps the line breaks it was written with. */
+.announcementItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.9rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.announcementItem:last-child {
+  border-bottom: none;
+}
+.announcementBody {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 0.92rem;
+  line-height: 1.6;
+  color: var(--ink);
+}
+.announcementBanner {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.announcementBannerItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1rem 1.15rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border));
+  border-left: 4px solid var(--accent);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+.announcementBannerText {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+}
+/* A preview, not the whole message: three lines, then "Read in full". */
+.announcementBannerBody {
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: var(--ink);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+@media (max-width: 720px) {
+  .announcementBannerItem {
+    flex-direction: column;
+  }
+}

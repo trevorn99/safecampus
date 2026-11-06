@@ -6,6 +6,7 @@ import { EventCalendar } from "@/components/EventCalendar";
 import { getAvatarUrlMap } from "@/lib/avatars";
 import { calendarWindow } from "@/lib/calendarWindow";
 import { resolveTimeZone } from "@/lib/resolveTimeZone";
+import { AnnouncementBanner, type BannerAnnouncement } from "./AnnouncementBanner";
 import styles from "@/styles/ui.module.css";
 
 // A report older than this reads as "just part of the page" rather than
@@ -32,12 +33,18 @@ function isWithinRecentWindow(iso: string): boolean {
   return Date.now() - new Date(iso).getTime() < RECENT_REPORT_WINDOW_DAYS * 24 * 60 * 60 * 1000;
 }
 
+// Outside the component: the React lint rules forbid reading the clock
+// during render, and this is a server component rendered once per request.
+function bannerCutoff(): number {
+  return Date.now() - 14 * 24 * 60 * 60 * 1000;
+}
+
 export default async function DashboardPage() {
   const { supabase, member, organizationName, isAdmin, isPlatformAdmin } = await requireMembership();
 
   const { todayIso, minMonthIso, maxMonthIso, rangeStartIso, rangeEndExclusiveIso } = calendarWindow();
 
-  const [{ data: memberRow }, { data: events }, { data: latestReport }, { data: myAssignedEvents }, timeZone] =
+  const [{ data: memberRow }, { data: events }, { data: latestReport }, { data: myAssignedEvents }, timeZone, { data: unread }] =
     await Promise.all([
     supabase.from("members").select("profile_picture_url").eq("id", member.id).single(),
     supabase
@@ -68,7 +75,23 @@ export default async function DashboardPage() {
       .lt("event_positions.events.start_time", rangeEndExclusiveIso)
       .returns<{ event_positions: { events: { id: string; start_time: string } | null } | null }[]>(),
     resolveTimeZone(supabase, member.organization_id, null),
+    supabase
+      .from("announcement_recipients")
+      .select("announcements(id, subject, body, sender_name, created_at)")
+      .eq("member_id", member.id)
+      .is("dismissed_at", null)
+      .returns<{ announcements: { id: string; subject: string; body: string; sender_name: string; created_at: string } | null }[]>(),
   ]);
+
+  // The newest three from the last two weeks. Older ones stay on the
+  // Announcements page; a banner months later is noise, not news.
+  const twoWeeksAgo = bannerCutoff();
+  const bannerItems: BannerAnnouncement[] = (unread ?? [])
+    .map((row) => row.announcements)
+    .filter((a): a is NonNullable<typeof a> => Boolean(a) && new Date(a!.created_at).getTime() >= twoWeeksAgo)
+    .sort((a, b) => b.created_at.localeCompare(a.created_at))
+    .slice(0, 3)
+    .map((a) => ({ id: a.id, subject: a.subject, body: a.body, senderName: a.sender_name, createdAt: a.created_at }));
 
   const assignedEventIds = [
     ...new Set(
@@ -109,6 +132,8 @@ export default async function DashboardPage() {
             )}
           </div>
         </div>
+
+        <AnnouncementBanner memberId={member.id} items={bannerItems} />
 
         {isRecentReport && latestReport && (
           <div className={styles.card}>
