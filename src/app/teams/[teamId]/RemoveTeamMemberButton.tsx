@@ -14,24 +14,42 @@ export function RemoveTeamMemberButton({
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   async function handleRemove() {
     if (!window.confirm(`Remove ${memberName} from this team?`)) return;
     setLoading(true);
-    const supabase = createClient();
-    await supabase.from("role_assignments").delete().eq("id", assignmentId);
+    setError("");
+    // .select(): a delete RLS refuses matches zero rows instead of erroring,
+    // so without it a refused removal looked like it had worked.
+    const { data, error: deleteError } = await createClient()
+      .from("role_assignments")
+      .delete()
+      .eq("id", assignmentId)
+      .select("id");
     setLoading(false);
+    if (deleteError || !data || data.length === 0) {
+      setError("That removal wasn't saved. Refresh the page and try again.");
+      return;
+    }
     router.refresh();
   }
 
   return (
-    <button
-      type="button"
-      className={`${styles.button} ${styles.buttonSecondary}`}
-      disabled={loading}
-      onClick={handleRemove}
-    >
-      Remove
-    </button>
+    <>
+      <button
+        type="button"
+        className={`${styles.button} ${styles.buttonSecondary} ${styles.buttonCompact}`}
+        disabled={loading}
+        onClick={handleRemove}
+      >
+        Remove
+      </button>
+      {error && (
+        <p className={styles.errorText} role="alert">
+          {error}
+        </p>
+      )}
+    </>
   );
 }

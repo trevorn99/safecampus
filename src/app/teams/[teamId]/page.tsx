@@ -6,6 +6,7 @@ import { getAvatarUrlMap } from "@/lib/avatars";
 import { EditTeamForm } from "./EditTeamForm";
 import { AddTeamMemberForm } from "./AddTeamMemberForm";
 import { RemoveTeamMemberButton } from "./RemoveTeamMemberButton";
+import { TeamRoleButton } from "./TeamRoleButton";
 import { DeleteTeamButton } from "./DeleteTeamButton";
 import { TeamRequirements } from "./TeamRequirements";
 import styles from "@/styles/ui.module.css";
@@ -135,6 +136,13 @@ export default async function TeamDetailPage({
                           </span>
                         );
                       })}
+                    {isAdmin && (
+                      <TeamRoleButton
+                        assignmentId={row.id}
+                        memberName={rowMember?.name ?? "this member"}
+                        role={row.role}
+                      />
+                    )}
                     {isAdmin && (
                       <RemoveTeamMemberButton
                         assignmentId={row.id}

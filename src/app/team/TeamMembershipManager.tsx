@@ -15,10 +15,12 @@ export function TeamMembershipManager({
   memberId,
   allTeams,
   assignmentIdsByTeam,
+  leadTeamIds,
 }: {
   memberId: string;
   allTeams: Team[];
   assignmentIdsByTeam: Map<string, string[]>;
+  leadTeamIds: string[];
 }) {
   const router = useRouter();
   const [pendingTeamId, setPendingTeamId] = useState<string | null>(null);
@@ -53,6 +55,26 @@ export function TeamMembershipManager({
     router.refresh();
   }
 
+  // Promote to team lead or step back to member, on a team they're already
+  // on. Updates their existing assignment rather than adding a second one.
+  async function setLead(teamId: string, lead: boolean) {
+    setPendingTeamId(teamId);
+    setError("");
+    const { data: changed, error: opError } = await createClient()
+      .from("role_assignments")
+      .update({ role: lead ? "team_lead" : "member" })
+      .in("id", assignmentIdsByTeam.get(teamId) ?? [])
+      .select("id");
+    setPendingTeamId(null);
+    if (opError || !changed || changed.length === 0) {
+      setError(opError?.message ?? "That change wasn't saved. Refresh the page and try again.");
+      return;
+    }
+    router.refresh();
+  }
+
+  const memberOf = allTeams.filter((team) => (assignmentIdsByTeam.get(team.id) ?? []).length > 0);
+
   if (allTeams.length === 0) return null;
 
   // The row owns the Teams button; this is only the panel it opens. Every
@@ -79,6 +101,29 @@ export function TeamMembershipManager({
             );
           })}
       </div>
+      {memberOf.length > 0 && (
+        <>
+          <p className={styles.hint}>
+            Team lead — can send announcements to that team.
+          </p>
+          <div className={styles.tagRow}>
+            {memberOf.map((team) => {
+              const isLead = leadTeamIds.includes(team.id);
+              return (
+                <label key={team.id} className={styles.checkboxRow}>
+                  <input
+                    type="checkbox"
+                    checked={isLead}
+                    disabled={pendingTeamId === team.id}
+                    onChange={() => void setLead(team.id, !isLead)}
+                  />
+                  Lead of {team.name}
+                </label>
+              );
+            })}
+          </div>
+        </>
+      )}
       {error && (
         <p className={styles.errorText} role="alert">
           {error}

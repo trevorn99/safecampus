@@ -28,6 +28,7 @@ export function MemberActions({
   isSelf,
   allTeams,
   assignmentIdsByTeam,
+  leadTeamIds,
 }: {
   memberId: string;
   name: string;
@@ -38,6 +39,8 @@ export function MemberActions({
   isSelf: boolean;
   allTeams: Team[];
   assignmentIdsByTeam: Map<string, string[]>;
+  /** Teams this member leads. */
+  leadTeamIds: string[];
 }) {
   const [panel, setPanel] = useState<"edit" | "teams" | null>(null);
   const toggle = (next: "edit" | "teams") => setPanel((current) => (current === next ? null : next));
@@ -91,6 +94,7 @@ export function MemberActions({
               memberId={memberId}
               allTeams={allTeams}
               assignmentIdsByTeam={assignmentIdsByTeam}
+              leadTeamIds={leadTeamIds}
             />
           )}
         </div>
