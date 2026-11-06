@@ -8,7 +8,7 @@ export default function TermsPage() {
       <main className={styles.legalMain}>
         <div>
           <h1>Terms of Service</h1>
-          <p className={styles.helperText}>Last updated: August 5, 2026</p>
+          <p className={styles.helperText}>Last updated: November 6, 2026</p>
         </div>
 
         <p>
@@ -30,10 +30,12 @@ export default function TermsPage() {
 
         <h2>2. Accounts</h2>
         <p>
-          Sign-in is passwordless (a one-time email link) or via Google OAuth — there&apos;s no
-          password to keep secret, but you&apos;re responsible for keeping access to your email
-          account and any device you&apos;ve enrolled for two-factor authentication or marked as
-          trusted. Notify us promptly if you believe your account has been compromised. Organization
+          Sign-in is passwordless (a one-time code sent to your email) or via Google OAuth —
+          there&apos;s no password to keep secret, but you&apos;re responsible for keeping access to
+          your email account and any device you&apos;ve enrolled for two-factor authentication or
+          marked as trusted. Never share a sign-in code; we will never ask you for one. Notify us
+          promptly through the in-app support form if you believe your account has been
+          compromised. Organization
           admins are responsible for the accuracy of role assignments they make within their
           organization.
         </p>
@@ -44,7 +46,9 @@ export default function TermsPage() {
           active subscription, billed at a flat rate based on your organization&apos;s active member
           count; your plan upgrades automatically as your roster grows past a tier&apos;s cap.
           Payment is processed by Stripe; by subscribing, you authorize us to charge your payment
-          method on a recurring basis until you cancel. Subscriptions can be managed or canceled at
+          method on a recurring basis until you cancel. Optional add-ons, such as Threat
+          Intelligence and Identity Verification, are billed in addition to your plan while enabled
+          and can be turned off at any time. Subscriptions can be managed or canceled at
           any time from within the Service. Fees are non-refundable except where required by law or
           expressly stated otherwise. We may change our pricing prospectively, with notice.
         </p>
@@ -86,7 +90,14 @@ export default function TermsPage() {
           administrators do not otherwise have standing access to organization data.
         </p>
 
-        <h2>8. SMS notifications</h2>
+        <h2>8. Notifications</h2>
+        <p>
+          SafeCampus sends email about the schedule — shift reminders, new-event announcements, and
+          position reports to organization admins — alongside account email such as invitations and
+          sign-in codes. Members can stop schedule email at any time from their account settings or
+          the unsubscribe link in each message; account email is sent regardless, since the Service
+          can&apos;t be used without it.
+        </p>
         <p>
           If your organization enables SMS notifications, you&apos;re responsible for obtaining
           consent from members before entering their phone numbers for that purpose. Members can opt
@@ -101,7 +112,10 @@ export default function TermsPage() {
           policies, training, or emergency procedures, and it does not guarantee any safety
           outcome.</strong> Watchlist and incident-report features help your organization keep a
           record — they do not verify, investigate, or corroborate the accuracy of anything entered
-          into them; that responsibility rests with your organization. THE SERVICE IS PROVIDED
+          into them; that responsibility rests with your organization. Threat Intelligence reports
+          are drafted by an AI model from your organization&apos;s records and public sources; they
+          can be incomplete or wrong, are not verified by SafeCampus, and should be reviewed by your
+          team before anyone acts on them. THE SERVICE IS PROVIDED
           &quot;AS IS&quot; WITHOUT WARRANTIES OF ANY KIND, WHETHER EXPRESS OR IMPLIED, INCLUDING
           WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, OR NON-INFRINGEMENT.
         </p>

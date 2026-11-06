@@ -8,7 +8,7 @@ export default function PrivacyPage() {
       <main className={styles.legalMain}>
         <div>
           <h1>Privacy Policy</h1>
-          <p className={styles.helperText}>Last updated: August 5, 2026</p>
+          <p className={styles.helperText}>Last updated: November 6, 2026</p>
         </div>
 
         <p>
@@ -34,7 +34,7 @@ export default function PrivacyPage() {
           <strong>Account information.</strong> When you sign in, we (via our authentication
           provider) collect your email address and, if you use Google sign-in, basic profile
           information from Google. We don&apos;t store passwords — sign-in is passwordless (a
-          one-time email link) or via Google OAuth.
+          one-time code sent to your email) or via Google OAuth.
         </p>
         <p>
           <strong>Profile and membership information.</strong> Name, email, phone number, and an
@@ -49,7 +49,8 @@ export default function PrivacyPage() {
         </p>
         <p>
           <strong>Scheduling data.</strong> Events, positions, assignments, and your
-          confirm/decline responses.
+          confirm/decline responses, and attendance records — who checked in
+          and out of a shift, and when.
         </p>
         <p>
           <strong>Certifications and compliance records.</strong> Certification types, dates, and
@@ -65,6 +66,15 @@ export default function PrivacyPage() {
         <p>
           <strong>Support requests.</strong> Anything you submit through our support form,
           including optional screenshots.
+        </p>
+        <p>
+          <strong>Identity verification.</strong> If your organization enables identity
+          verification, Stripe (through Stripe Identity) collects an image of a government-issued
+          photo ID and a live selfie, and compares the two, including by facial comparison, to
+          confirm the ID belongs to you. That happens in Stripe&apos;s own hosted flow, under
+          Stripe&apos;s privacy terms: SafeCampus never receives or stores the document, the selfie,
+          or any facial data — only whether verification succeeded, and the reason if it
+          didn&apos;t.
         </p>
         <p>
           <strong>Payment information.</strong> Billing is handled by Stripe. We do not store your
@@ -84,12 +94,19 @@ export default function PrivacyPage() {
           <strong>Usage and device data.</strong> Standard web server logs (IP address, browser
           type, pages visited, timestamps) collected automatically by our hosting provider.
         </p>
+        <p>
+          <strong>Security data.</strong> To limit abuse of sign-in, we record when a sign-in code is
+          requested, stored as one-way hashes of the email address and IP address rather than the
+          values themselves, and use those records only to enforce request limits. If you choose to trust a
+          device when signing in, we set a cookie on it, and keep a matching record, so it can
+          skip two-factor authentication for 90 days; you can revoke it from your account page.
+        </p>
 
         <h2>3. How we use information</h2>
         <ul>
           <li>To provide, maintain, and secure the Service, including authenticating you and enforcing your organization&apos;s access boundaries.</li>
           <li>To operate features you or your organization use — scheduling, certifications, maps, billing, integrations.</li>
-          <li>To send account, security, and service-related communications (e.g. sign-in links, MFA prompts, invite emails, event reminders).</li>
+          <li>To send account, security, and service-related communications (e.g. sign-in codes, MFA prompts, invitation emails, shift reminders, new-event announcements, and position reports).</li>
           <li>To respond to support requests.</li>
           <li>To detect, investigate, and prevent fraud, abuse, and security incidents.</li>
           <li>To comply with legal obligations.</li>
@@ -109,9 +126,22 @@ export default function PrivacyPage() {
         <ul>
           <li><strong>Supabase</strong> — database, authentication, and file storage.</li>
           <li><strong>Vercel</strong> — application hosting.</li>
-          <li><strong>Stripe</strong> — payment processing.</li>
+          <li><strong>Stripe</strong> — payment processing, and identity verification (Stripe Identity) where your organization enables it.</li>
+          <li><strong>Google</strong> — sign-in, if you choose &quot;Continue with Google&quot;.</li>
           <li><strong>SendGrid</strong> — transactional email delivery.</li>
           <li><strong>SignalWire</strong> — SMS delivery, where your organization enables it.</li>
+          <li>
+            <strong>Anthropic</strong> — AI drafting of Threat Intelligence reports, where your
+            organization enables that add-on. To draft a report we send your organization&apos;s
+            name, its locations&apos; names and addresses, and its recent incident reports and active
+            watchlist entries, which can include names and descriptions of people who aren&apos;t
+            SafeCampus users.
+          </li>
+          <li>
+            <strong>X (Twitter)</strong> — public post search for Threat Intelligence, where enabled.
+            The searches contain your organization&apos;s name and its locations&apos; addresses; no
+            member information is sent.
+          </li>
         </ul>
         <p>
           <strong>Planning Center.</strong> If your organization connects its own Planning Center
@@ -187,7 +217,10 @@ export default function PrivacyPage() {
           controlled by the organization using the Service, not by SafeCampus, and is subject to
           additional access restrictions (including a step-up authentication requirement for
           watchlist data). Organizations are responsible for ensuring their own collection and use
-          of this information about third parties complies with applicable law. If you believe
+          of this information about third parties complies with applicable law. If your
+          organization uses Threat Intelligence, recent incident reports and active watchlist
+          entries are also sent to Anthropic to draft its reports, as described in Section 4. If you
+          believe
           information about you has been entered into such a record and would like to make a
           request regarding it, contact the organization that entered it directly — that content
           is theirs to correct or remove, not SafeCampus&apos;s.
@@ -215,7 +248,8 @@ export default function PrivacyPage() {
         <h2>12. Your choices and rights</h2>
         <p>
           You can review and update your own profile information, manage your MFA methods, and
-          manage SMS opt-in/opt-out directly within the Service. For requests to access, correct,
+          manage email and SMS reminders directly within the Service — every schedule email also
+          carries an unsubscribe link. For requests to access, correct,
           or delete personal information beyond what&apos;s self-service in the app, use the
           in-app support form — we&apos;ll work with your organization&apos;s admin
           where the data is under their control. Depending on your location, you may have

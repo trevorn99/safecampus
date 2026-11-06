@@ -4,6 +4,7 @@ import styles from "@/styles/ui.module.css";
 
 const SECTIONS = [
   { id: "roles", label: "Roles & permissions" },
+  { id: "members", label: "Members & invitations" },
   { id: "teams", label: "Teams" },
   { id: "scheduling", label: "Scheduling" },
   { id: "certifications", label: "Certifications" },
@@ -53,8 +54,39 @@ export default async function HelpPage() {
           <p className={styles.docBody}>
             A person can hold different roles in different places — org admin everywhere, or a location
             manager at one campus and a plain member elsewhere. Roles are set when inviting someone from{" "}
-            <strong>Team → Invite a team member</strong>, and org admins/location managers are required to
+            <strong>Team → Add a team member</strong>, and org admins/location managers are required to
             enroll in two-factor authentication before they can use their elevated access.
+          </p>
+        </div>
+
+        <div id="members" className={styles.card}>
+          <div className={styles.cardHeader}>
+            <h2 className={styles.cardTitle}>Members &amp; invitations</h2>
+          </div>
+          <p className={styles.docBody}>
+            Add someone from <strong>Team → Add a team member</strong>. You can send them an invitation
+            straight away, or add them to the roster without one — useful for putting people on the
+            schedule before they&apos;ve joined. Either way they can be put on teams and assigned to
+            positions immediately, and everything carries over once they accept.
+          </p>
+          <p className={styles.docBody}>
+            The invitation email explains who invited them and has an <strong>Accept your
+            invitation</strong> button. It doesn&apos;t expire and contains no password or code. The
+            button opens SafeCampus with their address filled in, where they choose{" "}
+            <strong>Email me my code</strong> and type the 6-digit code that arrives — or{" "}
+            <strong>Continue with Google</strong>, if the invited address is a Google account. Signing in
+            with a <em>different</em> Google address creates a separate account that isn&apos;t linked to
+            the invitation.
+          </p>
+          <p className={styles.docBody}>
+            Each roster row has the same buttons. <strong>Edit</strong> corrects a name or email;{" "}
+            <strong>Teams</strong> adds or removes them from teams; <strong>Send invite</strong> or{" "}
+            <strong>Resend invite</strong> appears until they&apos;ve accepted. <strong>Cancel
+            invite</strong> or <strong>Remove</strong> takes them off the roster — for someone already
+            active, that also deletes their certifications, training and background-check records,
+            attendance history and assignments, while incident reports and documents they filed are kept
+            without their name. The organization&apos;s only org admin can&apos;t be removed, so it can
+            never be left with nobody able to manage it. Someone removed can be added back later.
           </p>
         </div>
 
@@ -71,8 +103,9 @@ export default async function HelpPage() {
           <p className={styles.docBody}>
             The team roster (<strong>Team</strong> in the nav) is organized by team, so you can see at a
             glance who&apos;s on each one — anyone on more than one team shows up in each. Admins can also add
-            or remove someone from any team directly from their row on the roster, via{" "}
-            <strong>Manage teams</strong> — no need to visit each team&apos;s own page.
+            or remove someone from any team directly from their row on the roster, with the{" "}
+            <strong>Teams</strong> button — no need to visit each team&apos;s own page. Someone can be on any
+            number of teams.
           </p>
           <p className={styles.docBody}>
             From a team&apos;s own page, an admin can set required certifications or trainings for that team
@@ -136,6 +169,26 @@ export default async function HelpPage() {
             recurring series, this comes from the series&apos; duration instead). For a training, use the{" "}
             <strong>Attendance</strong> section on that event&apos;s page to check members in and out — a
             simple record of who actually showed up, separate from who was scheduled.
+          </p>
+          <p className={styles.docBody}>
+            Members can also check themselves in on their phone from <strong>Check in</strong>: a shift
+            appears there from 12 hours before it starts until 12 hours after, and the same screen checks
+            them out again. On a phone, it can be added to the home screen like an app.
+          </p>
+          <p className={styles.docBody}>
+            Editing a series from its page changes what&apos;s generated from then on. A new title, type
+            or location also carries over to upcoming events that still have the old one — an event
+            you renamed or moved by hand keeps its own. Tick <strong>Also update this series&apos;
+            upcoming events</strong> to push every field, including times, onto all of them. If a
+            series&apos; upcoming events have ended up with a different name, its page offers to rename
+            them in one step.
+          </p>
+          <p className={styles.docBody}>
+            When creating an event, ticking <strong>Email the team that this event has been
+            added</strong> tells the members of the teams its positions need, or everyone if it has no
+            team-specific positions. Three days before each event, org admins get a position report by
+            email — every position, who&apos;s on it, and what&apos;s still open — and an admin can get one
+            at any time with <strong>Email me the position report</strong> on the event&apos;s page.
           </p>
         </div>
 
@@ -205,8 +258,15 @@ export default async function HelpPage() {
             assigned shift, and optionally a text at the same points. Email is on by default and SMS is
             opt-in (it needs a phone number); the two are independent, so you can have either, both or
             neither. Every reminder email carries an unsubscribe link, and replying STOP to a reminder text
-            turns those off. Sign-in links and invitations aren&apos;t reminders and keep arriving either
+            turns those off. Sign-in codes and invitations aren&apos;t reminders and keep arriving either
             way.
+          </p>
+          <p className={styles.docBody}>
+            To sign in, enter your email and type the 6-digit code we send — there&apos;s no password. A
+            code works once and expires after about an hour, and asking for a new one cancels the last, so
+            use the most recent email. You can ask for a new code once a minute. SafeCampus will never ask
+            you for a code by email, phone or text. If your email is a Google account, <strong>Continue
+            with Google</strong> works too.
           </p>
         </div>
 
@@ -290,6 +350,11 @@ export default async function HelpPage() {
             If something isn&apos;t covered here, use <strong>Support</strong> in the nav to send a request —
             include what you were trying to do, what happened instead, and a screenshot if you have one. Your
             org admin can see the status of every request your organization has sent.
+          </p>
+          <p className={styles.docBody}>
+            Support is also where to ask for anything the app can&apos;t do itself: closing your
+            organization&apos;s account, or a request to see, correct or delete your personal
+            information.
           </p>
         </div>
       </main>
