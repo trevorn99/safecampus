@@ -8,6 +8,10 @@ import styles from "@/styles/ui.module.css";
 // Promote a team member to team lead, or step a lead back to member. The
 // role used to be fixed at the moment someone was added: the only way to
 // promote was to remove them and add them back, which nothing said.
+//
+// No confirmation: it's undone by pressing the same button again, and
+// asking about trivially reversible things trains people to click through
+// the confirmations that matter.
 export function TeamRoleButton({
   assignmentId,
   memberName,
@@ -23,10 +27,6 @@ export function TeamRoleButton({
   const isLead = role === "team_lead";
 
   async function toggle() {
-    const prompt = isLead
-      ? `Make ${memberName} a regular member of this team? They'll no longer be able to send announcements to it.`
-      : `Make ${memberName} a team lead? Team leads can send announcements to this team.`;
-    if (!window.confirm(prompt)) return;
     setLoading(true);
     setError("");
     // .select(): RLS refusing an update returns zero rows rather than an
@@ -50,6 +50,7 @@ export function TeamRoleButton({
         type="button"
         className={`${styles.button} ${styles.buttonSecondary} ${styles.buttonCompact}`}
         disabled={loading}
+        aria-label={isLead ? `Make ${memberName} a regular member` : `Make ${memberName} a team lead`}
         onClick={() => void toggle()}
       >
         {isLead ? "Make member" : "Make team lead"}

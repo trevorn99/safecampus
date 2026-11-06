@@ -17,7 +17,8 @@ export function RemoveTeamMemberButton({
   const [error, setError] = useState("");
 
   async function handleRemove() {
-    if (!window.confirm(`Remove ${memberName} from this team?`)) return;
+    // No confirmation: adding them back is one click, from this page or the
+    // roster. Reserved for what can't be undone.
     setLoading(true);
     setError("");
     // .select(): a delete RLS refuses matches zero rows instead of erroring,
@@ -41,6 +42,7 @@ export function RemoveTeamMemberButton({
         type="button"
         className={`${styles.button} ${styles.buttonSecondary} ${styles.buttonCompact}`}
         disabled={loading}
+        aria-label={`Remove ${memberName} from this team`}
         onClick={handleRemove}
       >
         Remove

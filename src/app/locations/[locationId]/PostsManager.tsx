@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import styles from "@/styles/ui.module.css";
+import { useConfirm } from "@/components/ConfirmDialog";
 
 // Posts are the physical places somebody stands at this location — a door, a
 // camera desk, a corridor. They're deliberately separate from what an event
@@ -56,8 +57,16 @@ export function PostsManager({
     router.refresh();
   }
 
+  const confirm = useConfirm();
+
   async function remove(postId: string, postName: string) {
-    if (!window.confirm(`Remove the "${postName}" post? Its map pin goes with it, and any staffing requirement pointing at it becomes unassigned to a place.`)) {
+    if (!(await confirm({
+        title: `Remove the “${postName}” post?`,
+        message:
+          "Its map pin goes with it, and any staffing requirement pointing at it becomes unassigned to a place.",
+        confirmLabel: "Remove post",
+        tone: "danger",
+      }))) {
       return;
     }
     setLoading(true);

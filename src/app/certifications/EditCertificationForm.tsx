@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import styles from "@/styles/ui.module.css";
+import { useConfirm } from "@/components/ConfirmDialog";
 
 // Editing was permitted by the database from the start — "self or admin
 // updates certifications" — but there was no way to do it, so a typo in an
@@ -67,8 +68,15 @@ export function EditCertificationForm({
     router.refresh();
   }
 
+  const confirm = useConfirm();
+
   async function remove() {
-    if (!window.confirm(`Delete the "${certification.type}" certification? Its file goes with it.`)) return;
+    if (!(await confirm({
+        title: `Delete the “${certification.type}” certification?`,
+        message: "Its file goes with it.",
+        confirmLabel: "Delete certification",
+        tone: "danger",
+      }))) return;
     setLoading(true);
     setError("");
     const supabase = createClient();

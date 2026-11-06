@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import styles from "@/styles/ui.module.css";
+import { useConfirm } from "@/components/ConfirmDialog";
 
 export function DeleteSeriesButton({ seriesId, title }: { seriesId: string; title: string }) {
   const router = useRouter();
@@ -13,6 +14,8 @@ export function DeleteSeriesButton({ seriesId, title }: { seriesId: string; titl
   const [removeUpcoming, setRemoveUpcoming] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  const confirm = useConfirm();
 
   async function handleDelete() {
     setError("");
@@ -26,13 +29,24 @@ export function DeleteSeriesButton({ seriesId, title }: { seriesId: string; titl
       .gte("start_time", nowIso);
     const upcoming = count ?? 0;
 
-    const message = removeUpcoming
-      ? `Delete the "${title}" series and its ${upcoming} upcoming event${upcoming === 1 ? "" : "s"}?\n\n` +
-        `Positions and assignments on those events go too. Past events are kept as history.`
-      : `Delete the "${title}" series but keep its ${upcoming} upcoming event${upcoming === 1 ? "" : "s"}?\n\n` +
-        `Those events stay on the calendar permanently and lose their link to this series, so they can only be ` +
-        `removed one at a time afterwards.`;
-    if (!window.confirm(message)) return;
+    const events = `${upcoming} upcoming event${upcoming === 1 ? "" : "s"}`;
+    const confirmed = await confirm(
+      removeUpcoming
+        ? {
+            title: `Delete the “${title}” series and its ${events}?`,
+            message: "Positions and assignments on those events go too. Past events are kept as history.",
+            confirmLabel: "Delete series",
+            tone: "danger",
+          }
+        : {
+            title: `Delete the “${title}” series but keep its ${events}?`,
+            message:
+              "Those events stay on the calendar permanently and lose their link to this series, so they can only be removed one at a time afterwards.",
+            confirmLabel: "Delete series",
+            tone: "danger",
+          },
+    );
+    if (!confirmed) return;
 
     setLoading(true);
 

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import styles from "@/styles/ui.module.css";
+import { useConfirm } from "@/components/ConfirmDialog";
 
 // Removing someone from the organization, in all three of the shapes that
 // takes: cancelling an invitation that hasn't been accepted, deleting a
@@ -39,25 +40,39 @@ export function RemoveMemberButton({
   const pending = status === "pending";
   const label = pending && invited ? "Cancel invite" : "Remove";
 
-  function confirmText() {
+  function confirmOptions() {
     if (pending && invited) {
-      return `Cancel the invite for ${name}? Their roster entry goes too, along with anything they are scheduled for.`;
+      return {
+        title: `Cancel the invite for ${name}?`,
+        message: "Their roster entry goes too, along with anything they're scheduled for.",
+        confirmLabel: "Cancel invite",
+        cancelLabel: "Keep invite",
+      };
     }
     if (pending) {
-      return `Remove ${name} from the roster? Any positions they are assigned to will be unfilled.`;
+      return {
+        title: `Remove ${name} from the roster?`,
+        message: "Any positions they're assigned to will be unfilled.",
+        confirmLabel: "Remove",
+      };
     }
     const consequences =
-      `Remove ${name} from this organization?\n\n` +
-      `This deletes their roster entry, their certifications, training and background check records, ` +
-      `their attendance history, and everything they are scheduled for. Incident reports and documents ` +
-      `they filed stay, without their name attached.`;
-    return isSelf
-      ? `${consequences}\n\nThis is your own account — you will lose access to this organization immediately.`
-      : consequences;
+      "This deletes their roster entry, their certifications, training and background check records, their " +
+      "attendance history, and everything they're scheduled for. Incident reports and documents they filed " +
+      "stay, without their name attached.";
+    return {
+      title: `Remove ${name} from this organization?`,
+      message: isSelf
+        ? `${consequences}\n\nThis is your own account — you'll lose access to this organization immediately.`
+        : consequences,
+      confirmLabel: isSelf ? "Remove myself" : "Remove member",
+    };
   }
 
+  const confirm = useConfirm();
+
   async function handleRemove() {
-    if (!window.confirm(confirmText())) return;
+    if (!(await confirm({ ...confirmOptions(), tone: "danger" }))) return;
     setLoading(true);
     setError("");
 

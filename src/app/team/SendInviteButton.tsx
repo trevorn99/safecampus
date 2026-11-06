@@ -25,7 +25,8 @@ export function SendInviteButton({
   const [error, setError] = useState("");
 
   async function handleSend() {
-    if (!window.confirm(alreadyInvited ? `Send ${name} their invitation email again?` : `Send ${name} an invitation email now?`)) return;
+    // No confirmation: the button says exactly what it does, and an extra
+    // invitation is harmless.
     setLoading(true);
     setError("");
 
@@ -58,6 +59,7 @@ export function SendInviteButton({
         type="button"
         className={`${styles.button} ${styles.buttonSecondary}${compact ? ` ${styles.buttonCompact}` : ""}`}
         disabled={loading}
+        aria-label={`${alreadyInvited ? "Resend the invitation to" : "Send an invitation to"} ${name}`}
         onClick={handleSend}
       >
         {loading ? "Sending…" : alreadyInvited ? "Resend invite" : "Send invite"}

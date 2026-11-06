@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import styles from "@/styles/ui.module.css";
+import { useConfirm } from "@/components/ConfirmDialog";
 
 export function DeleteEventButton({
   eventId,
@@ -20,14 +21,29 @@ export function DeleteEventButton({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const confirm = useConfirm();
+
   async function handleDelete() {
-    const warning = seriesId
-      ? `Cancel just this ${new Date(startTime).toLocaleDateString()} occurrence of "${title}"?\n\n` +
-        `• The series itself is NOT deleted — every other date carries on.\n` +
-        `• This date's positions and assignments are removed.\n` +
-        `• The series will not recreate this date. You can restore it later from the series page.`
-      : `Delete "${title}"? Its positions and assignments go with it, and this can't be undone.`;
-    if (!window.confirm(warning)) return;
+    const confirmed = await confirm(
+      seriesId
+        ? {
+            title: `Cancel just the ${new Date(startTime).toLocaleDateString()} occurrence of “${title}”?`,
+            message:
+              "• The series itself is not deleted — every other date carries on.\n" +
+              "• This date's positions and assignments are removed.\n" +
+              "• The series won't recreate this date. You can restore it later from the series page.",
+            confirmLabel: "Cancel this date",
+            cancelLabel: "Keep it",
+            tone: "danger",
+          }
+        : {
+            title: `Delete “${title}”?`,
+            message: "Its positions and assignments go with it, and this can't be undone.",
+            confirmLabel: "Delete event",
+            tone: "danger",
+          },
+    );
+    if (!confirmed) return;
 
     setLoading(true);
     setError("");

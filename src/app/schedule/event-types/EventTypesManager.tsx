@@ -42,16 +42,22 @@ export function EventTypesManager({
   }
 
   async function handleDelete(type: EventType) {
-    if (!window.confirm(`Remove "${type.name}" from the list? Events already using it keep this type.`)) return;
+    // No confirmation: events already using the type keep it, and the type
+    // can be added straight back.
     setDeletingId(type.id);
     setError("");
 
     const supabase = createClient();
-    const { error: deleteError } = await supabase.from("event_types").delete().eq("id", type.id);
+    // .select(): a delete RLS refuses matches zero rows rather than erroring.
+    const { data: removed, error: deleteError } = await supabase
+      .from("event_types")
+      .delete()
+      .eq("id", type.id)
+      .select("id");
 
     setDeletingId(null);
-    if (deleteError) {
-      setError(deleteError.message);
+    if (deleteError || !removed || removed.length === 0) {
+      setError(deleteError?.message ?? `"${type.name}" wasn't removed. Refresh the page and try again.`);
       return;
     }
     router.refresh();

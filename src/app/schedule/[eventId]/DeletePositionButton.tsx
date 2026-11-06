@@ -4,13 +4,21 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import styles from "@/styles/ui.module.css";
+import { useConfirm } from "@/components/ConfirmDialog";
 
 export function DeletePositionButton({ positionId, title }: { positionId: string; title: string }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
+  const confirm = useConfirm();
+
   async function handleDelete() {
-    if (!window.confirm(`Delete the "${title}" position? This removes any assignments to it.`)) return;
+    if (!(await confirm({
+        title: `Delete the “${title}” position?`,
+        message: "Anyone assigned to it is taken off.",
+        confirmLabel: "Delete position",
+        tone: "danger",
+      }))) return;
     setLoading(true);
     const supabase = createClient();
     await supabase.from("event_positions").delete().eq("id", positionId);

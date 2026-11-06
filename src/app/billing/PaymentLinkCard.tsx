@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import styles from "@/styles/ui.module.css";
+import { useConfirm } from "@/components/ConfirmDialog";
 
 // For when the person who pays isn't on the team — a treasurer, a business
 // office. They get an email with a link that opens the plan and price and
@@ -52,8 +53,16 @@ export function PaymentLinkCard({
     }
   }
 
+  const confirm = useConfirm();
+
   async function cancel() {
-    if (!window.confirm("Cancel the payment link? It will stop working straight away.")) return;
+    if (!(await confirm({
+        title: "Cancel the payment link?",
+        message: "It stops working straight away. You can send a new one at any time.",
+        confirmLabel: "Cancel link",
+        // Two buttons both starting "Cancel" would be a coin toss.
+        cancelLabel: "Keep link",
+      }))) return;
     await post("/api/billing/payment-link/revoke");
   }
 
