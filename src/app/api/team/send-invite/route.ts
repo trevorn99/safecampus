@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { escapeHtml, renderBrandedEmail, sendEmail } from "@/lib/email";
+import { sendInviteEmail } from "@/lib/inviteEmail";
 
 // Invites someone who's already on the roster — the second half of adding a
 // member without inviting them (/api/team/invite with sendInvite: false).
@@ -44,110 +44,65 @@ export async function POST(request: Request) {
   const origin = new URL(request.url).origin;
   const admin = createAdminClient();
 
-  // organization_name rides along in user_metadata so Supabase's invite
-  // template can say who is inviting them — see
-  // supabase/email-templates/invite.html, which reads {{ .Data.organization_name }}.
-  // Auth is per-project, not per-org, so this metadata is the only way the
-  // template can know.
   const { data: inviteOrg } = await supabase
     .from("organizations")
     .select("name")
     .eq("id", target.organization_id)
     .maybeSingle();
-  const orgName = inviteOrg?.name ?? "your organization";
 
-  // Already invited: Supabase won't invite an address that has an account,
-  // so a resend can't go through inviteUserByEmail. It used to be refused
-  // outright — which left an admin watching "Invite pending" forever with no
-  // way to help someone whose invitation went to spam. generateLink mints a
-  // fresh sign-in link without sending anything, so it goes out through our
-  // own branded email instead of Supabase's template.
-  if (target.user_id) {
-    const { data: link, error: linkError } = await admin.auth.admin.generateLink({
-      type: "magiclink",
-      email: target.email,
-      options: { redirectTo: `${origin}/auth/callback` },
-    });
-    if (linkError || !link?.properties?.action_link) {
+  // Someone already invited can't be invited again — Supabase refuses an
+  // address that has an account — so a resend mints a fresh magic link
+  // instead. It used to be refused outright, which left an admin watching
+  // "Invite pending" forever with no way to help someone whose invitation
+  // went to spam.
+  //
+  // Both kinds send the identical message from lib/inviteEmail.ts: a resend
+  // that looked nothing like the first invitation was no reassurance to
+  // someone trying to work out whether either was genuine.
+  const resend = Boolean(target.user_id);
+  const sent = await sendInviteEmail({
+    admin,
+    origin,
+    orgName: inviteOrg?.name,
+    email: target.email,
+    kind: resend ? "magiclink" : "invite",
+  });
+
+  // The auth account exists as soon as the link is minted, so link it to the
+  // member row even when the mail then failed — otherwise the row stays
+  // unlinked and every later resend hits the "already has an account" wall.
+  if (!resend && !sent.ok && sent.stage === "send" && sent.userId) {
+    await supabase.from("members").update({ user_id: sent.userId }).eq("id", target.id);
+  }
+
+  if (!sent.ok) {
+    if (sent.stage === "link") {
       return NextResponse.json(
-        { error: `Couldn't create a new sign-in link: ${linkError?.message ?? "no link returned"}` },
+        {
+          error: resend
+            ? `Couldn't create a new sign-in link: ${sent.error}`
+            : // The common failure here is an address that already has a
+              // SafeCampus account — someone who signed in on their own
+              // before the org got around to inviting them. Nothing to fix:
+              // their next sign-in claims this row by email
+              // (lib/claimMembership.ts), assignments and all.
+              `Couldn't send the invite: ${sent.error}. If they already have an account, they'll be linked to this roster entry the next time they sign in.`,
+        },
         { status: 502 },
       );
     }
+    return NextResponse.json({ error: `Couldn't send the invitation: ${sent.error}` }, { status: 502 });
+  }
 
-    const actionLink = link.properties.action_link;
-    // Written for a recipient who has never heard of SafeCampus and for the
-    // filter deciding whether this is junk — the same information answers
-    // both. Who invited them, what the product is, why this arrived, and
-    // what to do if it wasn't expected. A two-line "you've been invited,
-    // click here" reads as phishing to a person and scores as junk to
-    // Proofpoint, which is what was happening.
-    const result = await sendEmail({
-      to: target.email,
-      subject: `${orgName} invited you to join their safety team on SafeCampus`,
-      text: [
-        `You've been invited to join ${orgName} on SafeCampus`,
-        "",
-        `${orgName} has invited you to create a SafeCampus account.`,
-        "",
-        "SafeCampus is the scheduling tool their safety team uses: it's where you'll see the shifts you're",
-        "signed up for, confirm or decline them, and keep your certifications up to date.",
-        "",
-        `Accept your SafeCampus invitation: ${actionLink}`,
-        "",
-        "This link signs you in — there's no password to choose. It works once.",
-        "",
-        `This invitation was sent by SafeCampus on behalf of ${orgName}. If you weren't expecting it you can`,
-        `safely ignore this email; no account exists until you accept. If you're unsure whether it's genuine,`,
-        `contact ${orgName} directly rather than using this link.`,
-        "",
-        "SafeCampus — scheduling and coordination for safety teams.",
-        "https://safecampus.net · admin@safecampus.net",
-      ].join("\n"),
-      html: renderBrandedEmail({
-        origin,
-        eyebrow: orgName,
-        bodyHtml: `<p style="margin:0 0 14px;font-size:17px;font-weight:700;line-height:1.4;color:#1c2430">You&rsquo;ve been invited to join ${escapeHtml(orgName)} on SafeCampus</p>
-            <p style="margin:0 0 14px;font-size:15px;line-height:1.55;color:#1c2430">${escapeHtml(orgName)} has invited you to create a SafeCampus account.</p>
-            <p style="margin:0 0 22px;font-size:14px;line-height:1.6;color:#5b6670">SafeCampus is the scheduling tool their safety team uses — it&rsquo;s where you&rsquo;ll see the shifts you&rsquo;re signed up for, confirm or decline them, and keep your certifications up to date. This link signs you in; there&rsquo;s no password to choose, and it works once.</p>`,
-        cta: { label: "Accept your SafeCampus invitation", url: actionLink },
-        footerHtml: `This invitation was sent by SafeCampus on behalf of ${escapeHtml(orgName)}, to ${escapeHtml(target.email)}.
-            If you weren&rsquo;t expecting it you can safely ignore this email — no account exists until you accept.
-            If you&rsquo;re unsure whether it&rsquo;s genuine, contact ${escapeHtml(orgName)} directly rather than using this link.`,
-      }),
-    });
-
-    if (!result.ok) {
-      return NextResponse.json({ error: `Couldn't send the invitation: ${result.error}` }, { status: 502 });
+  if (!resend && sent.userId) {
+    const { error: linkError } = await supabase
+      .from("members")
+      .update({ user_id: sent.userId })
+      .eq("id", target.id);
+    if (linkError) {
+      return NextResponse.json({ error: linkError.message }, { status: 400 });
     }
-    return NextResponse.json({ ok: true, resent: true });
   }
 
-  const { data: invited, error: inviteError } = await admin.auth.admin.inviteUserByEmail(target.email, {
-    redirectTo: `${origin}/auth/callback`,
-    data: { organization_name: inviteOrg?.name ?? null },
-  });
-
-  if (inviteError) {
-    // The common failure here is an address that already has a SafeCampus
-    // account — someone who signed in on their own before the org got around
-    // to inviting them. Nothing to fix: their next sign-in claims this row by
-    // email (lib/claimMembership.ts), assignments and all.
-    return NextResponse.json(
-      {
-        error: `Couldn't send the invite: ${inviteError.message}. If they already have an account, they'll be linked to this roster entry the next time they sign in.`,
-      },
-      { status: 502 },
-    );
-  }
-
-  const { error: linkError } = await supabase
-    .from("members")
-    .update({ user_id: invited.user.id })
-    .eq("id", target.id);
-  if (linkError) {
-    return NextResponse.json({ error: linkError.message }, { status: 400 });
-  }
-
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, resent: resend });
 }

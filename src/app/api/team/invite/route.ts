@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { sendInviteEmail } from "@/lib/inviteEmail";
 
 export async function POST(request: Request) {
   const { organizationId, email, name, role, scopeType, scopeId, sendInvite = true } = await request.json();
@@ -73,30 +74,39 @@ export async function POST(request: Request) {
   const origin = new URL(request.url).origin;
   const admin = createAdminClient();
 
-  // organization_name rides along in user_metadata so Supabase's invite
-  // template can say who is inviting them — see
-  // supabase/email-templates/invite.html, which reads {{ .Data.organization_name }}.
-  // Auth is per-project, not per-org, so this metadata is the only way the
-  // template can know.
   const { data: inviteOrg } = await supabase
     .from("organizations")
     .select("name")
     .eq("id", organizationId)
     .maybeSingle();
 
-  const { data: invited, error: inviteError } = await admin.auth.admin.inviteUserByEmail(normalizedEmail!, {
-    redirectTo: `${origin}/auth/callback`,
-    data: { organization_name: inviteOrg?.name ?? null },
+  // Sent by us, not by Supabase Auth, so this is the same message a resend
+  // sends — same subject, same sender, same wording. See lib/inviteEmail.ts.
+  const sent = await sendInviteEmail({
+    admin,
+    origin,
+    orgName: inviteOrg?.name,
+    email: normalizedEmail!,
+    kind: "invite",
   });
 
-  if (inviteError) {
+  // Link the account to the row whenever one was created, including when the
+  // mail itself failed: the member is then a normal "invite pending" row that
+  // /api/team/send-invite can resend to, rather than a dead end.
+  if (!sent.ok && sent.stage === "send" && sent.userId) {
+    await supabase.from("members").update({ user_id: sent.userId }).eq("id", member.id);
+  }
+
+  if (!sent.ok) {
     return NextResponse.json(
-      { error: `Member record created, but the invite email failed to send: ${inviteError.message}` },
+      { error: `Member record created, but the invite email failed to send: ${sent.error}` },
       { status: 502 },
     );
   }
 
-  await supabase.from("members").update({ user_id: invited.user.id }).eq("id", member.id);
+  if (sent.userId) {
+    await supabase.from("members").update({ user_id: sent.userId }).eq("id", member.id);
+  }
 
   return NextResponse.json({ ok: true, invited: true });
 }

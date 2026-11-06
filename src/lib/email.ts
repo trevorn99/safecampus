@@ -7,9 +7,12 @@ import crypto from "crypto";
 // endpoint, so a dependency-free fetch is simpler than pulling in a full
 // client, and it matches how sendSms already talks to SignalWire.
 //
-// Supabase Auth's own mail (magic links, invite emails) also goes out over
-// this SendGrid account, but through Supabase's custom-SMTP setting in its
-// dashboard — nothing in this file is involved in those.
+// Supabase Auth's own mail — the sign-in link, and the signup confirmation
+// — also goes out over this SendGrid account, but through Supabase's
+// custom-SMTP setting in its dashboard, so nothing in this file is involved
+// in those. Invitations are not among them: they're built by
+// lib/inviteEmail.ts and sent through here, so that a first invitation and
+// a resend are the same message.
 const SENDGRID_ENDPOINT = "https://api.sendgrid.com/v3/mail/send";
 
 export type EmailResult = { ok: boolean; error?: string };
@@ -127,10 +130,11 @@ export function unsubscribeUrlFor(origin: string, memberId: string): { url: stri
 // blocks and external CSS, so nothing here can share ui.module.css and the
 // colours are literal hex rather than the design tokens.
 //
-// Supabase Auth's own mail — sign-in links and invites — cannot call this;
-// those templates live in the Supabase dashboard. Hand-written copies that
-// match it are kept in supabase/email-templates/, and changing the look
-// here means changing them too.
+// The mail Supabase Auth sends itself — the sign-in link, the signup
+// confirmation — cannot call this; those templates live in the Supabase
+// dashboard. Hand-written copies that match it are kept in
+// supabase/email-templates/, and changing the look here means changing them
+// too.
 export function renderBrandedEmail({
   origin,
   eyebrow,
