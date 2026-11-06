@@ -1538,3 +1538,78 @@ ol.docBody {
   flex-direction: column;
   gap: 0.35rem;
 }
+
+/* Assignment status and its Confirm / Decline actions: one rounded shape,
+   one text size and one height for all three, so they read as a set on
+   every screen. Colour carries the meaning — green to accept, red to turn
+   down — and the status takes the colour of the answer once given. */
+.statusChip,
+.statusConfirm,
+.statusDecline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.25rem;
+  padding: 0.35rem 0.95rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-muted);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.statusConfirm,
+.statusDecline {
+  cursor: pointer;
+  transition: filter 0.15s ease;
+}
+.statusConfirm:disabled,
+.statusDecline:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.statusConfirm:hover:not(:disabled),
+.statusDecline:hover:not(:disabled) {
+  filter: brightness(1.12);
+}
+.statusConfirm,
+.statusChipConfirmed {
+  background: var(--success-bg);
+  border-color: color-mix(in srgb, var(--success) 45%, transparent);
+  color: var(--success);
+}
+.statusDecline,
+.statusChipDeclined {
+  background: var(--danger-bg);
+  border-color: color-mix(in srgb, var(--danger) 45%, transparent);
+  color: var(--danger);
+}
+.statusChipConfirmed {
+  composes: statusChip;
+}
+.statusChipDeclined {
+  composes: statusChip;
+}
+/* A status isn't clickable, so it drops the outline the buttons have. */
+.statusChip,
+.statusChipConfirmed,
+.statusChipDeclined {
+  border-color: transparent;
+}
+.tagRow > .errorText {
+  flex-basis: 100%;
+}
+
+@media (max-width: 720px) {
+  /* Same 44px tap height as other buttons on a phone — and the status chip
+     matches it, so the row stays even. */
+  .statusChip,
+  .statusConfirm,
+  .statusDecline {
+    min-height: 44px;
+    padding: 0.4rem 0.8rem;
+  }
+}
