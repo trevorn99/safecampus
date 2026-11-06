@@ -2,6 +2,7 @@ import { requireMembership } from "@/lib/session";
 import { AppHeader } from "@/components/AppHeader";
 import { BillingActions } from "./BillingActions";
 import { AddonToggle } from "./AddonToggle";
+import { PaymentLinkCard } from "./PaymentLinkCard";
 import { MIN_CARRIED_TRIAL_MS } from "@/lib/billing";
 import { SEAT_CAPS, TIER_LABEL, tierForSeatCount, createStripeClient, type PlanTier } from "@/lib/stripe";
 import styles from "@/styles/ui.module.css";
@@ -86,6 +87,20 @@ export default async function BillingPage() {
   const longDate = (date: Date) =>
     date.toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
 
+  // The live payment link, if one was sent. RLS limits this to org admins.
+  const canSendPaymentLink = isAdmin && !hasSubscription && !org?.paywall_exempt && !overCap;
+  const { data: activeLinkRow } = canSendPaymentLink
+    ? await supabase
+        .from("billing_payment_links")
+        .select("payer_email, expires_at")
+        .eq("organization_id", member.organization_id)
+        .is("revoked_at", null)
+        .gt("expires_at", new Date().toISOString())
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle()
+    : { data: null };
+
   const invoices =
     isAdmin && org?.stripe_customer_id
       ? (await createStripeClient().invoices.list({ customer: org.stripe_customer_id, limit: 12 })).data
@@ -154,6 +169,14 @@ export default async function BillingPage() {
             <BillingActions hasStripeCustomer={Boolean(org?.stripe_customer_id)} hasSubscription={hasSubscription} />
           )}
         </div>
+
+        {canSendPaymentLink && (
+          <PaymentLinkCard
+            activeLink={
+              activeLinkRow ? { payerEmail: activeLinkRow.payer_email, expiresAt: activeLinkRow.expires_at } : null
+            }
+          />
+        )}
 
         {isAdmin && (
           <AddonToggle
