@@ -182,11 +182,34 @@ function LoginForm() {
           <h1 className={styles.title}>{fromInvite ? "Accept your invitation" : "Enter your code"}</h1>
           <p className={styles.subtitle}>
             {fromInvite && !info
-              ? `Type the 6-digit code from your invitation email to ${email}.`
-              : `Type the 6-digit code we emailed to ${email}.`}{" "}
-            It works once and expires after a while.
+              ? `Continue with Google, or type the 6-digit code from your invitation email to ${email}. The code works once and expires after a while.`
+              : `Type the 6-digit code we emailed to ${email}. It works once and expires after a while.`}
           </p>
         </div>
+
+        {fromInvite && (
+          <>
+            {/* Supabase attaches a Google sign-in to the existing account
+                when the address matches, so the invitation — already linked
+                to that account — carries over with no code. A different
+                Google address is a different account, hence the wording. */}
+            <button
+              type="button"
+              onClick={handleGoogleSignIn}
+              className={`${styles.button} ${styles.buttonSecondary}`}
+              disabled={busy}
+            >
+              <GoogleIcon />
+              Continue with Google
+            </button>
+            <p className={styles.hint}>
+              Only if {email} is your Google account — then there&apos;s no code to type.
+            </p>
+            <div className={styles.divider}>
+              <span>or enter your code</span>
+            </div>
+          </>
+        )}
 
         <form onSubmit={handleCodeSubmit} className={styles.form}>
           <div className={styles.field}>
