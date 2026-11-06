@@ -13,8 +13,8 @@ jobs:
   migrate:
     runs-on: ubuntu-latest
     # main -> the "production" GitHub Environment, dev -> the "dev" one.
-    # Each environment holds its own SUPABASE_PROJECT_ID / SUPABASE_DB_PASSWORD,
-    # so this same job pushes to the right Supabase project per branch.
+    # Each environment holds its own SUPABASE_DB_URL, so this same job pushes
+    # to the right Supabase project per branch.
     environment: ${{ github.ref == 'refs/heads/main' && 'production' || 'dev' }}
     steps:
       - uses: actions/checkout@v4
@@ -43,6 +43,14 @@ jobs:
       # pooler connection string from Supabase: Project Settings > Database >
       # Connection string > Session pooler, with the password filled in and
       # percent-encoded if it contains punctuation.
+      #
+      # The check below reports the SHAPE of the string only - scheme, user,
+      # host, port, database, and whether a password is present with its
+      # length. It never prints the password itself. It exists because the
+      # failure it catches is otherwise opaque: a string with the
+      # "[YOUR-PASSWORD]" placeholder deleted rather than replaced connects
+      # with an empty password, and all the database says back is
+      # "SASL: SCRAM-SERVER-FIRST-MESSAGE: client password must be a string".
       - name: Check the connection string is set
         run: |
           if [ -z "$SUPABASE_DB_URL" ]; then
@@ -51,6 +59,68 @@ jobs:
             echo "Database > Connection string > Session pooler, password filled in."
             exit 1
           fi
+          python3 - <<'EOF'
+          import os, sys
+          from urllib.parse import urlsplit, unquote
+
+          raw = os.environ["SUPABASE_DB_URL"]
+          problems = []
+
+          if raw != raw.strip():
+              problems.append("has leading or trailing whitespace")
+          try:
+              u = urlsplit(raw.strip())
+              # urlsplit is lazy: the host is only validated on access, and
+              # a bracketed placeholder reads as a malformed IPv6 literal.
+              parts = (u.scheme, u.hostname, u.port, u.username, u.password)
+          except ValueError as exc:
+              if "YOUR-PASSWORD" in raw:
+                  print("SUPABASE_DB_URL still contains the [YOUR-PASSWORD]")
+                  print("placeholder. Replace that whole bracketed word,")
+                  print("brackets included, with the database password.")
+              else:
+                  print(f"Could not parse SUPABASE_DB_URL: {exc}")
+                  print("If the password contains punctuation, percent-encode it:")
+                  print("  @ -> %40   : -> %3A   / -> %2F   ? -> %3F   # -> %23   % -> %25")
+              sys.exit(1)
+
+          if u.scheme not in ("postgres", "postgresql"):
+              problems.append(f"scheme is {u.scheme!r}, expected postgresql")
+          if not u.hostname:
+              problems.append("no host")
+          if not u.username:
+              problems.append("no user")
+          if not u.password:
+              problems.append(
+                  "no password - fill in the part Supabase shows as "
+                  "[YOUR-PASSWORD] (Project Settings > Database > Reset "
+                  "database password if you do not have it)"
+              )
+          elif "YOUR-PASSWORD" in u.password or u.password.startswith("["):
+              problems.append("password is still the [YOUR-PASSWORD] placeholder")
+          elif u.password != unquote(u.password) and "%" not in u.password:
+              problems.append("password looks mis-encoded")
+
+          print(f"scheme:   {u.scheme}")
+          print(f"user:     {u.username}")
+          print(f"host:     {u.hostname}")
+          print(f"port:     {u.port}")
+          print(f"database: {u.path.lstrip('/') or '(none)'}")
+          print(f"password: {'present, ' + str(len(u.password)) + ' chars' if u.password else 'MISSING'}")
+
+          if u.hostname and "pooler.supabase.com" not in u.hostname:
+              print()
+              print(f"Warning: {u.hostname} is not a pooler host. Direct database")
+              print("connections are IPv6-only and GitHub runners have no IPv6.")
+              print("Use the Session pooler string instead.")
+
+          if problems:
+              print()
+              print("SUPABASE_DB_URL is not usable:")
+              for problem in problems:
+                  print(f"  - {problem}")
+              sys.exit(1)
+          EOF
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
 
