@@ -174,7 +174,7 @@ export async function sendInviteEmail({
 
   const actionLink = `${origin}/auth/confirm?token_hash=${encodeURIComponent(
     link.properties.hashed_token,
-  )}&type=${linkKind}`;
+  )}&type=${linkKind === "magiclink" ? "email" : "invite"}&src=invite`;
 
   const result = await sendEmail({
     to: email,

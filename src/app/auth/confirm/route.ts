@@ -40,21 +40,44 @@ export async function GET(request: Request) {
   // yet think of themselves as having an account. Only ever one of the
   // values below, never the raw parameter.
   const valid = Boolean(type) && EMAIL_OTP_TYPES.has(type as EmailOtpType);
-  const failed = `${origin}/login?error=link${valid ? `&kind=${type}` : ""}`;
+  // An invitation sent to an existing account carries a sign-in token, so
+  // its `type` says magiclink; `src` is how the failure message still knows
+  // to call it an invitation.
+  const kind = searchParams.get("src") === "invite" ? "invite" : valid ? type : null;
+  const failed = `${origin}/login?error=link${kind ? `&kind=${kind}` : ""}`;
 
   if (!tokenHash || !valid) {
     return NextResponse.redirect(failed);
   }
 
+  // Sign-in and signup-confirmation tokens are verified as "email", which is
+  // Supabase's documented type for token_hash verification of both. Passing
+  // "magiclink" through looked right and rejected every such link as
+  // expired: the token is stored differently depending on whether the
+  // account has been confirmed yet, and only "email" checks both places.
+  // Mapped here, rather than only in the links, so links already sitting in
+  // inboxes with type=magiclink still work.
+  const verifyType: EmailOtpType =
+    type === "magiclink" || type === "signup" ? "email" : (type as EmailOtpType);
+
   const supabase = await createClient();
   const { error } = await supabase.auth.verifyOtp({
-    type: type as EmailOtpType,
+    type: verifyType,
     token_hash: tokenHash,
   });
 
   if (error) {
     // Expired, already used, or not a real token — all the same thing to the
-    // person holding it, and all fixed the same way: ask for a new link.
+    // person holding it, and all fixed the same way: ask for a new link. But
+    // not the same thing to whoever has to debug it, so the reason goes to
+    // the server log. Never the token itself.
+    console.error("auth/confirm: verifyOtp rejected link", {
+      type,
+      verifyType,
+      code: error.code,
+      status: error.status,
+      message: error.message,
+    });
     return NextResponse.redirect(failed);
   }
 
