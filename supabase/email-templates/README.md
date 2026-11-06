@@ -1,19 +1,20 @@
 # Auth email templates
 
-Supabase Auth sends the sign-in code and the signup confirmation code — not
-this app — so those templates can't come from `src/lib/email.ts` like the
-shift reminder does. They live here as the source of truth, and are
-**pasted into each Supabase project's dashboard by hand**.
+**The app no longer depends on these.** Sign-in codes are minted and mailed
+by the app itself (`src/lib/signInCode.ts`, via `/api/auth/send-code`) over
+the same SendGrid call as every other email, and invitations come from
+`src/lib/inviteEmail.ts` and carry no code at all — the invitee asks for one
+from the sign-in page when they're ready. Nothing in SafeCampus calls
+Supabase's `signInWithOtp` any more.
 
-Invitations are not among them. The app sends those itself through
-`src/lib/inviteEmail.ts`. `invite.html` is kept only for an invite sent from
-the Supabase dashboard by hand, which bypasses the app entirely.
+These templates are what Supabase sends if something does go through it: an
+invite sent by hand from the Supabase dashboard, or a sign-in triggered
+outside the app. Keep them pasted in each project so that mail still looks
+like SafeCampus and still carries a code rather than a link, but nothing a
+member does in the app reaches them.
 
 They are a deliberate copy of `renderBrandedEmail()` in `src/lib/email.ts`,
-and the code box matches `codeBlockHtml()` in `src/lib/inviteEmail.ts`.
-Changing the look in one place means changing it in the others; there is no
-build step that keeps them in sync, because the dashboard is on the far side
-of a process boundary.
+and the code box matches `codeBlockHtml()` there.
 
 ## Codes, not links
 
@@ -46,10 +47,8 @@ Supabase dashboard → Authentication → Emails → Templates, once per project
 Paste the file's whole contents into the message body; subjects are set in
 the same screen.
 
-**Until `magic-link.html` and `confirm-signup.html` are pasted, the switch is
-only half done**: the sign-in page asks for a code while Supabase's default
-template still sends a link. The link still works in the meantime — but it
-is exactly the scanner-vulnerable thing this replaces.
+Pasting them is now optional — the app's own mail doesn't use them — but
+recommended, so that anything Supabase does send carries a code, not a link.
 
 ### Settings that go with it
 
@@ -57,10 +56,9 @@ is exactly the scanner-vulnerable thing this replaces.
   for production, `https://dev.safecampus.net` for dev. The logo and the
   dashboard invite's button are built from it.
 - **Email OTP expiration** (Authentication → Providers → Email): how long a
-  code works. The default is one hour, which is fine for sign-in but short
-  for an invitation someone reads the next morning. Invitations recover on
-  their own — the sign-in page sends a fresh code — so this is a judgement
-  call rather than a requirement.
+  code works, including the app's own codes. The default of one hour is
+  right: a code is now requested at the moment it's needed, and
+  invitations don't carry one, so nothing has to survive overnight.
 - **Email OTP length**: the page and the templates say "6-digit". If this is
   changed, change the copy in `src/app/login/page.tsx` and here.
 

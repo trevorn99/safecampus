@@ -14,9 +14,9 @@ import { escapeHtml, renderBrandedEmail, sendEmail } from "@/lib/email";
 //
 // Neither path lets Supabase send anything now: generateLink mints the link
 // without mailing it, and it goes out over our own SendGrid with click
-// tracking off, like every other email this app sends. It carries a typed
-// code rather than a sign-in link, so a mail scanner opening links can't
-// spend it — see app/login/page.tsx.
+// tracking off, like every other email this app sends. It carries no
+// credential at all: its button opens the sign-in page, where the invitee
+// asks for a code (lib/signInCode.ts) when they're ready to use it.
 
 // Shown when the organization's name can't be read. Deliberately the same
 // in every string below — a message that says "your organization" in the
@@ -38,19 +38,18 @@ export function buildInviteEmail({
   origin,
   orgName,
   email,
-  code,
-  signInUrl,
+  acceptUrl,
 }: {
   origin: string;
   orgName?: string | null;
   email: string;
-  /** The one-time code. The only credential in the message. */
-  code: string;
   /**
-   * Opens the sign-in page with the address filled in. Deliberately not a
-   * credential: a scanner that opens it lands on a form and nothing else.
+   * Opens the sign-in page with the address filled in, where the invitee
+   * asks for a code. Deliberately not a credential: it can sit in an inbox
+   * for weeks, be opened by a scanner, or be forwarded, and none of that
+   * signs anyone in.
    */
-  signInUrl: string;
+  acceptUrl: string;
 }): InviteEmailContent {
   const org = orgName?.trim() || FALLBACK_ORG_NAME;
 
@@ -64,14 +63,11 @@ export function buildInviteEmail({
       "SafeCampus is the scheduling tool their safety team uses: it's where you'll see the shifts you're",
       "signed up for, confirm or decline them, and keep your certifications up to date.",
       "",
-      `Your invitation code: ${code}`,
+      `Accept your invitation: ${acceptUrl}`,
       "",
-      `To accept, open ${signInUrl}`,
-      "and type the code. There's no password to choose. The code works once and expires after a while;",
-      "if it has, the same page will send you a new one.",
-      "",
-      `If ${email} is a Google account, you can choose "Continue with Google" on that page instead`,
-      "and skip the code.",
+      "That page will email you a sign-in code to finish. There's no password to choose, and this",
+      `invitation doesn't expire. If ${email} is a Google account, you can choose "Continue with Google"`,
+      "there instead.",
       "",
       `This invitation was sent by SafeCampus on behalf of ${org}, to ${email}. If you weren't expecting it`,
       `you can safely ignore this email; no account exists until you accept. If you're unsure whether it's`,
@@ -85,31 +81,14 @@ export function buildInviteEmail({
       eyebrow: org,
       bodyHtml: `<p style="margin:0 0 14px;font-size:17px;font-weight:700;line-height:1.4;color:#1c2430">You&rsquo;ve been invited to join ${escapeHtml(org)} on SafeCampus</p>
             <p style="margin:0 0 14px;font-size:15px;line-height:1.55;color:#1c2430">${escapeHtml(org)} has invited you to create a SafeCampus account.</p>
-            <p style="margin:0 0 20px;font-size:14px;line-height:1.6;color:#5b6670">SafeCampus is the scheduling tool their safety team uses &mdash; it&rsquo;s where you&rsquo;ll see the shifts you&rsquo;re signed up for, confirm or decline them, and keep your certifications up to date.</p>
-            ${codeBlockHtml(code, "Your invitation code")}
-            <p style="margin:0 0 14px;font-size:14px;line-height:1.6;color:#5b6670">Open SafeCampus and type this code to accept. There&rsquo;s no password to choose. The code works once and expires after a while &mdash; if it has, the sign-in page will send you a new one.</p>
-            <p style="margin:0 0 20px;font-size:14px;line-height:1.6;color:#5b6670">If ${escapeHtml(email)} is a Google account, you can choose <strong>Continue with Google</strong> on that page instead and skip the code.</p>`,
-      cta: { label: "Open SafeCampus to accept", url: signInUrl },
+            <p style="margin:0 0 14px;font-size:14px;line-height:1.6;color:#5b6670">SafeCampus is the scheduling tool their safety team uses &mdash; it&rsquo;s where you&rsquo;ll see the shifts you&rsquo;re signed up for, confirm or decline them, and keep your certifications up to date.</p>
+            <p style="margin:0 0 22px;font-size:14px;line-height:1.6;color:#5b6670">Accepting takes a minute: we&rsquo;ll email you a sign-in code to finish. There&rsquo;s no password to choose, and this invitation doesn&rsquo;t expire. If ${escapeHtml(email)} is a Google account, you can choose <strong>Continue with Google</strong> instead.</p>`,
+      cta: { label: "Accept your invitation", url: acceptUrl },
       footerHtml: `This invitation was sent by SafeCampus on behalf of ${escapeHtml(org)}, to ${escapeHtml(email)}.
             If you weren&rsquo;t expecting it you can safely ignore this email &mdash; no account exists until you accept.
             If you&rsquo;re unsure whether it&rsquo;s genuine, contact ${escapeHtml(org)} directly, or go to www.safecampus.net yourself rather than using this email.`,
     }),
   };
-}
-
-/**
- * The code, set large enough to read and copy at a glance. Monospace so 0
- * and O, 1 and l can't be confused; letter-spaced so it reads as six
- * characters rather than a number; and selectable text rather than an
- * image, so it survives images being blocked and can be pasted.
- */
-export function codeBlockHtml(code: string, label: string): string {
-  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 20px">
-              <tr><td align="center" style="background:#f4f6f4;border:1px solid #dfe4df;border-radius:10px;padding:18px 12px">
-                <div style="font-size:12px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#5b6670;margin:0 0 8px">${escapeHtml(label)}</div>
-                <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:32px;font-weight:700;letter-spacing:0.3em;color:#1c2430;line-height:1.2">${escapeHtml(code)}</div>
-              </td></tr>
-            </table>`;
 }
 
 export type SendInviteResult =
@@ -188,27 +167,25 @@ export async function sendInviteEmail({
     ({ data: link, error: linkError } = await mint(linkKind));
   }
 
-  // The emailed code (email_otp), never a link carrying the token. Mail
-  // filters open every link in a message to inspect it, and a single-use
-  // link opened by a scanner is spent before its recipient sees it. A code
-  // has to be typed by a person.
-  if (linkError || !link?.properties?.email_otp) {
+  // The link is minted only for what it does to the account: it creates the
+  // auth user (or finds the existing one) so the member row can be linked
+  // to its id now, and the roster shows "Invite pending". Its token is never
+  // sent. The invitee gets a fresh code when they accept, from the sign-in
+  // page — so the invitation can wait as long as it needs to, and holds no
+  // credential while it does.
+  if (linkError || !link?.user?.id) {
     return {
       ok: false,
       stage: "link",
-      error: linkError?.message ?? "no code returned",
+      error: linkError?.message ?? "no account returned",
     };
   }
 
-  // `t` tells the sign-in page which kind of code this is, so it tries that
-  // one first. Not a credential, and the page tries the other kind anyway.
-  const signInUrl = `${origin}/login?invite=1&email=${encodeURIComponent(email)}&t=${
-    linkKind === "invite" ? "invite" : "email"
-  }`;
+  const acceptUrl = `${origin}/login?invite=1&email=${encodeURIComponent(email)}`;
 
   const result = await sendEmail({
     to: email,
-    ...buildInviteEmail({ origin, orgName, email, code: link.properties.email_otp, signInUrl }),
+    ...buildInviteEmail({ origin, orgName, email, acceptUrl }),
   });
 
   if (!result.ok) {
