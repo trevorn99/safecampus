@@ -148,11 +148,17 @@ export default async function TeamPage() {
             <p className={styles.itemName}>{teamMember.name}</p>
             <p className={styles.itemMeta}>{teamMember.email ?? "No email on file"}</p>
             <div className={styles.rosterTags}>
-              {(rolesByMember.get(teamMember.id) ?? []).map((row, index) => (
-                <span key={index} className={styles.pill}>
-                  {ROLE_LABEL[row.role] ?? row.role} · {describeScope(row)}
-                </span>
-              ))}
+              {(rolesByMember.get(teamMember.id) ?? [])
+                // Everyone on the roster is a member, so a plain member role
+                // says nothing: on a team it's shown as just the team's name,
+                // and organization-wide it isn't shown at all. Roles that
+                // carry real authority keep their label.
+                .filter((row) => !(row.role === "member" && row.scope_type === "org"))
+                .map((row, index) => (
+                  <span key={index} className={styles.pill}>
+                    {row.role === "member" ? describeScope(row) : `${ROLE_LABEL[row.role] ?? row.role} · ${describeScope(row)}`}
+                  </span>
+                ))}
               {teamMember.status === "pending" && (
                 <span className={styles.pillMuted}>{teamMember.user_id ? "Invite pending" : "Not invited"}</span>
               )}
