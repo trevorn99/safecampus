@@ -147,13 +147,6 @@ export default function TermsPage() {
           SafeCampus is organized, without regard to conflict-of-laws principles, unless applicable
           law requires otherwise.
         </p>
-
-        <h2>15. Contact us</h2>
-        <p>
-          Questions about these Terms can be sent to{" "}
-          <a href="mailto:legal@safecampus.net">legal@safecampus.net</a>, or submitted through the
-          in-app support form if you already have an account.
-        </p>
       </main>
     </>
   );
