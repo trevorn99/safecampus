@@ -12,15 +12,17 @@ export function EditMemberForm({
   name,
   email,
   linked,
+  onClose,
 }: {
   memberId: string;
   name: string;
   email: string | null;
   /** Whether this member has an account yet; changes what the email means. */
   linked: boolean;
+  /** The row owns the Edit button; this is only the panel it opens. */
+  onClose: () => void;
 }) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
   const [nextName, setNextName] = useState(name);
   const [nextEmail, setNextEmail] = useState(email ?? "");
   const [loading, setLoading] = useState(false);
@@ -51,16 +53,8 @@ export function EditMemberForm({
       setError(data.error ?? "Something went wrong");
       return;
     }
-    setOpen(false);
+    onClose();
     router.refresh();
-  }
-
-  if (!open) {
-    return (
-      <button type="button" className={styles.linkButton} onClick={() => setOpen(true)}>
-        Edit details
-      </button>
-    );
   }
 
   return (
@@ -104,7 +98,7 @@ export function EditMemberForm({
         <button
           type="button"
           className={`${styles.button} ${styles.buttonSecondary}`}
-          onClick={() => setOpen(false)}
+          onClick={() => onClose()}
           disabled={loading}
         >
           Cancel

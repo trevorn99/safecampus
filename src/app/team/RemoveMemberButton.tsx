@@ -20,6 +20,7 @@ export function RemoveMemberButton({
   status,
   invited,
   isSelf,
+  compact = false,
 }: {
   memberId: string;
   name: string;
@@ -28,6 +29,8 @@ export function RemoveMemberButton({
   invited: boolean;
   /** This is the signed-in admin's own roster entry. */
   isSelf: boolean;
+  /** Smaller, for the roster's action cluster. */
+  compact?: boolean;
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -92,7 +95,7 @@ export function RemoveMemberButton({
     <>
       <button
         type="button"
-        className={`${styles.button} ${styles.buttonSecondary}`}
+        className={`${styles.button} ${styles.buttonSecondary}${compact ? ` ${styles.buttonCompact}` : ""}`}
         disabled={loading}
         onClick={handleRemove}
       >

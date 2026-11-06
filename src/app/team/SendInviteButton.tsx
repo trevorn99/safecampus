@@ -11,18 +11,21 @@ export function SendInviteButton({
   memberId,
   name,
   alreadyInvited,
+  compact = false,
 }: {
   memberId: string;
   name: string;
   /** Already has an account, so this resends rather than invites. */
   alreadyInvited: boolean;
+  /** Smaller, for the roster's action cluster. */
+  compact?: boolean;
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   async function handleSend() {
-    if (!window.confirm(alreadyInvited ? `Send ${name} a fresh sign-in link?` : `Send ${name} an invite email now?`)) return;
+    if (!window.confirm(alreadyInvited ? `Send ${name} their invitation email again?` : `Send ${name} an invitation email now?`)) return;
     setLoading(true);
     setError("");
 
@@ -53,7 +56,7 @@ export function SendInviteButton({
     <>
       <button
         type="button"
-        className={`${styles.button} ${styles.buttonSecondary}`}
+        className={`${styles.button} ${styles.buttonSecondary}${compact ? ` ${styles.buttonCompact}` : ""}`}
         disabled={loading}
         onClick={handleSend}
       >
