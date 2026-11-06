@@ -167,7 +167,7 @@ export default function PrivacyPage() {
           and for a reasonable period afterward to comply with legal obligations, resolve disputes,
           and enforce our agreements. Your organization&apos;s admins can delete specific records
           (members, certifications, positions, etc.) directly within the Service. Deleting an
-          organization&apos;s account is handled by contacting us — see Section 14.
+          organization&apos;s account is handled through the in-app support form.
         </p>
 
         <h2>8. Third-party integrations</h2>
@@ -189,8 +189,8 @@ export default function PrivacyPage() {
           watchlist data). Organizations are responsible for ensuring their own collection and use
           of this information about third parties complies with applicable law. If you believe
           information about you has been entered into such a record and would like to make a
-          request regarding it, see Section 14 — we will route your request to the relevant
-          organization, since SafeCampus does not control that content.
+          request regarding it, contact the organization that entered it directly — that content
+          is theirs to correct or remove, not SafeCampus&apos;s.
         </p>
 
         <h2>10. Platform support access</h2>
@@ -216,8 +216,8 @@ export default function PrivacyPage() {
         <p>
           You can review and update your own profile information, manage your MFA methods, and
           manage SMS opt-in/opt-out directly within the Service. For requests to access, correct,
-          or delete personal information beyond what&apos;s self-service in the app, contact us
-          using the information in Section 14 — we&apos;ll work with your organization&apos;s admin
+          or delete personal information beyond what&apos;s self-service in the app, use the
+          in-app support form — we&apos;ll work with your organization&apos;s admin
           where the data is under their control. Depending on your location, you may have
           additional rights under laws like the GDPR or CCPA/CPRA; we&apos;ll honor valid requests
           under those laws to the extent they apply.
@@ -228,13 +228,6 @@ export default function PrivacyPage() {
           We may update this policy as SafeCampus changes. If we make material changes, we&apos;ll
           update the &quot;Last updated&quot; date above and, where appropriate, notify organization
           admins directly.
-        </p>
-
-        <h2>14. Contact us</h2>
-        <p>
-          Questions about this policy, or requests regarding your personal information, can be sent
-          to <a href="mailto:privacy@safecampus.net">privacy@safecampus.net</a>, or submitted through
-          the in-app support form if you already have an account.
         </p>
       </main>
     </>
