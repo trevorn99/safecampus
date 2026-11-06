@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendPositionReportOnDemand } from "@/lib/eventPositionReports";
+import { publicOrigin } from "@/lib/siteUrl";
 
 // Emails the requesting org admin a position report for one event, now,
 // rather than waiting for the scheduled run three days out. Always to the
@@ -44,7 +45,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const origin = new URL(request.url).origin;
+  // Links in email point at the canonical public host, not at whatever
+  // host this request arrived on. See lib/siteUrl.ts.
+  const origin = publicOrigin(new URL(request.url).origin);
   const result = await sendPositionReportOnDemand(createAdminClient(), eventId, member.id, origin);
   if (!result.ok) {
     return NextResponse.json({ error: result.error }, { status: 502 });

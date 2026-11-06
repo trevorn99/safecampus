@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { Suspense, useState, type FormEvent } from "react";
+import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import styles from "@/styles/ui.module.css";
@@ -37,6 +38,30 @@ function GoogleIcon() {
         d="M9 3.58c1.32 0 2.51.46 3.44 1.35l2.58-2.58C13.46.89 11.43 0 9 0A9 9 0 0 0 .9 4.97L3.95 7.3C4.66 5.17 6.65 3.58 9 3.58z"
       />
     </svg>
+  );
+}
+
+// Why someone landed back here rather than signed in. /auth/confirm and
+// /auth/callback both redirect to /login with a reason, and until now
+// nothing read it — an expired invitation dropped the recipient on a blank
+// sign-in form with no explanation, which reads as "that link was fake".
+//
+// Separate component inside a Suspense boundary because useSearchParams
+// opts the tree out of prerendering up to the nearest boundary, and /login
+// is a static page; without the boundary the production build fails.
+const SIGN_IN_ERRORS: Record<string, string> = {
+  link: "That sign-in link has expired or has already been used. Enter your email below and we'll send a fresh one.",
+  auth: "We couldn't complete that sign-in. Enter your email below and we'll send a new link.",
+};
+
+function SignInNotice() {
+  const reason = useSearchParams().get("error");
+  const message = reason ? SIGN_IN_ERRORS[reason] : null;
+  if (!message) return null;
+  return (
+    <p className={styles.errorText} role="alert">
+      {message}
+    </p>
   );
 }
 
@@ -100,6 +125,10 @@ export default function LoginPage() {
             your account.
           </p>
         </div>
+
+        <Suspense fallback={null}>
+          <SignInNotice />
+        </Suspense>
 
         <button
           type="button"
