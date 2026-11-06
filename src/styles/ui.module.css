@@ -1529,3 +1529,12 @@
     display: none;
   }
 }
+
+/* Numbered steps (the home-screen instructions) need room for the numbers
+   inside the card, rather than hanging at its edge. */
+ol.docBody {
+  padding-left: 1.3rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}

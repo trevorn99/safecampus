@@ -1,5 +1,6 @@
 import { requireMembership } from "@/lib/session";
 import { AppHeader } from "@/components/AppHeader";
+import { InstallInstructions } from "@/components/InstallInstructions";
 import styles from "@/styles/ui.module.css";
 
 const SECTIONS = [
@@ -16,6 +17,7 @@ const SECTIONS = [
   { id: "threat-intelligence", label: "Threat Intelligence" },
   { id: "identity-verification", label: "Identity verification" },
   { id: "billing", label: "Billing" },
+  { id: "install", label: "Install on your phone" },
   { id: "support", label: "Getting help" },
 ];
 
@@ -339,8 +341,22 @@ export default async function HelpPage() {
               organizations. Manage your subscription, see billing history, and download invoices from{" "}
               <strong>Billing</strong>. Your plan upgrades automatically as your roster grows past a cap.
             </p>
+            <p className={styles.docBody}>
+              You can subscribe during the trial without losing what&apos;s left of it: your card is saved straight
+              away and first charged when the trial ends. With less than about two days left, billing starts when you
+              subscribe, and the Billing page says which before you pay.
+            </p>
+            <p className={styles.docBody}>
+              If someone outside SafeCampus pays your bills — a treasurer or business office — use{" "}
+              <strong>Someone else paying?</strong> on the Billing page to email them a payment link. They don&apos;t
+              need an account: the link shows the plan and price, then opens Stripe&apos;s secure checkout, and
+              receipts go to them. It works for 14 days; sending a new one replaces it, and you can cancel it at any
+              time. The link pays for the subscription and nothing else — it gives no access to SafeCampus.
+            </p>
           </div>
         )}
+
+        <InstallInstructions id="install" />
 
         <div id="support" className={styles.card}>
           <div className={styles.cardHeader}>
