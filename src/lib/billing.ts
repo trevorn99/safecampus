@@ -10,6 +10,13 @@ import {
   IDENTITY_VERIFICATION_PRICE_ID,
 } from "@/lib/stripe";
 
+// How much free trial has to be left for subscribing to carry it over
+// rather than start billing at once. Stripe's floor for a Checkout trial is
+// 48 hours; the extra hour keeps a slow checkout from crossing it between
+// our check and Stripe's. Shared with /billing so what the page promises is
+// what checkout does.
+export const MIN_CARRIED_TRIAL_MS = 49 * 60 * 60 * 1000;
+
 // Stripe subscription statuses collapsed onto organizations.subscription_status.
 const STATUS_MAP: Record<Stripe.Subscription.Status, string> = {
   trialing: "trialing",
@@ -47,6 +54,13 @@ export async function syncSubscriptionFromStripe(subscription: Stripe.Subscripti
       threat_intel_enabled: threatIntelEnabled,
       identity_verification_enabled: identityVerificationEnabled,
       ...(tier ? { plan_tier: tier } : {}),
+      // A subscription started during the free trial stays "trialing" in
+      // Stripe until its first charge. Its trial end is the one that now
+      // matters — it's when billing starts — so the app's trial date follows
+      // it rather than the two drifting apart.
+      ...(subscription.status === "trialing" && subscription.trial_end
+        ? { trial_ends_at: new Date(subscription.trial_end * 1000).toISOString() }
+        : {}),
     })
     .eq("id", organizationId);
 }
