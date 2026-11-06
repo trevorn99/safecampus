@@ -13,13 +13,40 @@ import { isTrustedDeviceRequest } from "@/lib/trustedDevice";
 // than a cosmetic one — a second entry point that forgot the MFA step would
 // be a way around MFA, and one that forgot the roster claim would drop a
 // new member onto /onboarding to create a duplicate organization.
+export type SignInMethod = "email_code" | "email_link" | "google";
+
+// For the sign-in history on Analytics (member_sign_ins). Best effort by
+// design: a failure here is logged and otherwise ignored, because nobody
+// should be kept out of the app because a statistic didn't save.
+async function recordSignIn(userId: string, method: SignInMethod, organizationId?: string) {
+  try {
+    const admin = createAdminClient();
+    let query = admin.from("members").select("id, organization_id").eq("user_id", userId);
+    if (organizationId) query = query.eq("organization_id", organizationId);
+    const { data: rows } = await query;
+    if (!rows || rows.length === 0) return;
+    const { error } = await admin
+      .from("member_sign_ins")
+      .insert(rows.map((row) => ({ organization_id: row.organization_id, member_id: row.id, method })));
+    if (error) console.error("sign-in not recorded", error.message);
+  } catch (error) {
+    console.error("sign-in not recorded", error);
+  }
+}
+
 export async function resolveSignedInRedirect(
   supabase: SupabaseClient,
   origin: string,
+  method: SignInMethod,
 ): Promise<string> {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  // Recorded before the MFA step below, which returns early: a sign-in that
+  // still owes a second factor is still a sign-in, and recording after it
+  // would leave every MFA user out of the figures.
+  if (user) await recordSignIn(user.id, method);
 
   // A verified email link or code only ever buys aal1. Anyone enrolled in
   // MFA still owes a factor before they reach anything, unless this device
@@ -53,6 +80,8 @@ export async function resolveSignedInRedirect(
     claimed = await claimUnlinkedMembership(createAdminClient(), user.id, user.email);
     if (claimed) {
       await syncPlanTier(claimed.organization_id);
+      // Unlinked when the sign-in was recorded above, so it wasn't counted.
+      await recordSignIn(user.id, method, claimed.organization_id);
     }
   }
 

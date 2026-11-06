@@ -1,4 +1,5 @@
 import styles from "./charts.module.css";
+import { roundedColumnPath } from "./paths";
 
 export type WeeklyFillRate = { weekStart: string; filled: number; total: number; rate: number };
 
@@ -7,24 +8,7 @@ const CHART_HEIGHT = 160;
 const BASELINE_Y = CHART_HEIGHT - 24;
 const BAR_MAX_HEIGHT = BASELINE_Y - 24;
 const BAR_WIDTH = 24;
-const RADIUS = 4;
 const GAP = 10;
-
-// Top end rounded, bottom end square against the baseline.
-function roundedColumnPath(x: number, baselineY: number, width: number, height: number): string {
-  const r = Math.min(RADIUS, height / 2, width / 2);
-  if (height <= 0) return "";
-  const top = baselineY - height;
-  return [
-    `M ${x} ${baselineY}`,
-    `L ${x} ${top + r}`,
-    `Q ${x} ${top} ${x + r} ${top}`,
-    `L ${x + width - r} ${top}`,
-    `Q ${x + width} ${top} ${x + width} ${top + r}`,
-    `L ${x + width} ${baselineY}`,
-    "Z",
-  ].join(" ");
-}
 
 function weekLabel(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
@@ -35,7 +19,7 @@ export function FillRateChart({ data }: { data: WeeklyFillRate[] }) {
   const startX = Math.max(16, (CHART_WIDTH - totalContentWidth) / 2 + GAP / 2);
 
   return (
-    <figure className={styles.chartFigure}>
+    <figure className={`${styles.chartFigure} ${styles.chartFigureLatest}`}>
       <svg
         viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}
         className={styles.chartSvg}

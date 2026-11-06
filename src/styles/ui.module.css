@@ -1613,3 +1613,34 @@ ol.docBody {
     padding: 0.4rem 0.8rem;
   }
 }
+
+/* Analytics: a section heading between groups of cards, the "of 24" after a
+   stat, a one-line note under a stat, and a right-aligned figure in a list
+   row. */
+.sectionTitle {
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin-top: 0.75rem;
+}
+.statOf {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--muted);
+}
+.statHint {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+.rowFigure {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+  gap: 0.1rem;
+}
+@media (max-width: 720px) {
+  .rowFigure {
+    align-items: flex-start;
+    text-align: left;
+  }
+}
