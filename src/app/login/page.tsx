@@ -50,10 +50,11 @@ function GoogleIcon() {
 // read and typed by a person; nothing that merely fetches URLs can use it.
 //
 // That only holds if the email contains no link that carries the same
-// credential. The Supabase templates in supabase/email-templates/ show the
-// code alone, and the invitation's button opens this page rather than
-// signing anyone in — opening it does nothing a scanner could exploit,
-// which is also why this page never sends a code on load.
+// credential. Codes are mailed by the app (lib/signInCode.ts) and contain
+// only the code, and the invitation carries no code at all: its button
+// opens this page, where the invitee asks for one. Opening that link does
+// nothing a scanner could exploit, which is also why this page never sends
+// a code on load.
 
 // Old links still in inboxes land here via /auth/confirm when they fail.
 // Looked up in a fixed map, never rendered from the URL itself.
@@ -72,7 +73,7 @@ const NOTICES: Record<string, { lead: string; detail: string }> = {
   },
 };
 
-type OtpKind = "email" | "invite";
+const OTP_KINDS = ["email", "invite"] as const;
 
 function friendlyVerifyError(message: string): string {
   return /expired|invalid/i.test(message)
@@ -82,14 +83,14 @@ function friendlyVerifyError(message: string): string {
 
 function LoginForm() {
   const params = useSearchParams();
-  const fromInvite = params.get("invite") === "1";
   const prefilled = (params.get("email") ?? "").trim();
-  // What the invitation's code was minted as. A hint, not a credential:
-  // verification tries the other kind too, so a wrong value costs nothing.
-  const hintedKind: OtpKind = params.get("t") === "invite" ? "invite" : "email";
+  const fromInvite = params.get("invite") === "1" && Boolean(prefilled);
 
   const [email, setEmail] = useState(prefilled);
-  const [step, setStep] = useState<"email" | "code">(fromInvite && prefilled ? "code" : "email");
+  // An invitation lands on its own screen, and nothing is sent until the
+  // invitee presses a button: mail scanners open the invitation's link, and
+  // a page that mailed a code on load would let them trigger one.
+  const [step, setStep] = useState<"email" | "invite" | "code">(fromInvite ? "invite" : "email");
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -99,28 +100,39 @@ function LoginForm() {
   const noticeKey = reason === "link" && params.get("kind") === "invite" ? "invite" : reason;
   const notice = step === "email" && noticeKey ? NOTICES[noticeKey] : null;
 
+  // Codes are minted and mailed by the app (lib/signInCode.ts), not by
+  // Supabase's signInWithOtp: that pipe ran through a separately configured
+  // SMTP and a pasted dashboard template, and failed to deliver when tested.
   async function sendCode() {
     const address = email.trim().toLowerCase();
     setBusy(true);
     setError("");
     setInfo("");
-    const supabase = createClient();
-    const { error: sendError } = await supabase.auth.signInWithOtp({
-      email: address,
-      // Only matters while a project still has the old link template
-      // pasted in; with the code template there is no link to follow.
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
-    });
+
+    let response: Response;
+    let data: { error?: string } = {};
+    try {
+      response = await fetch("/api/auth/send-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: address }),
+      });
+      data = await response.json().catch(() => ({}));
+    } catch {
+      setBusy(false);
+      setError("Something went wrong — please check your connection and try again.");
+      return;
+    }
+
     setBusy(false);
-    if (sendError) {
-      setError(sendError.message);
-      return false;
+    if (!response.ok) {
+      setError(data.error ?? "We couldn't send a code just now. Please try again.");
+      return;
     }
     setEmail(address);
     setCode("");
     setStep("code");
-    setInfo(`We emailed a code to ${address}.`);
-    return true;
+    setInfo(`We emailed a code to ${address}. It can take a minute to arrive — check your junk folder too.`);
   }
 
   async function handleEmailSubmit(event: FormEvent) {
@@ -136,13 +148,12 @@ function LoginForm() {
     setError("");
 
     const supabase = createClient();
-    // "email" covers sign-in and signup codes, which is everything sent
-    // from this page and invitations to existing accounts; "invite" covers
-    // invitations that created the account. Trying both means the page
-    // never has to trust the URL to say which it was.
-    const order: OtpKind[] = hintedKind === "invite" ? ["invite", "email"] : ["email", "invite"];
+    // An existing account's code verifies as "email"; one that created the
+    // account verifies as "invite". The page isn't told which — the send
+    // route must not reveal whether an address has an account — so it
+    // tries both.
     let lastError = "";
-    for (const type of order) {
+    for (const type of OTP_KINDS) {
       const { error: verifyError } = await supabase.auth.verifyOtp({ email: address, token, type });
       if (!verifyError) {
         // The session cookie is set; the server decides where to go next
@@ -175,41 +186,84 @@ function LoginForm() {
     }
   }
 
+  const googleButton = (
+    <button
+      type="button"
+      onClick={handleGoogleSignIn}
+      className={`${styles.button} ${styles.buttonSecondary}`}
+      disabled={busy}
+    >
+      <GoogleIcon />
+      Continue with Google
+    </button>
+  );
+
+  const errorBlock = error && (
+    <p className={styles.errorText} role="alert">
+      {error}
+    </p>
+  );
+
+  if (step === "invite") {
+    return (
+      <>
+        <div>
+          <h1 className={styles.title}>Accept your invitation</h1>
+          <p className={styles.subtitle}>
+            We&apos;ll email a 6-digit sign-in code to <strong>{email}</strong>. Type it on the next screen and
+            you&apos;re in — no password to choose.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          className={`${styles.button} ${styles.buttonPrimary}`}
+          disabled={busy}
+          onClick={() => void sendCode()}
+        >
+          {busy ? "Sending…" : "Email me my code"}
+        </button>
+        {errorBlock}
+
+        <div className={styles.divider}>
+          <span>or</span>
+        </div>
+
+        {/* Supabase attaches a Google sign-in to the existing account when
+            the address matches, so the invitation — already linked to that
+            account — carries over with no code. A different Google address
+            is a different account, hence the wording. */}
+        {googleButton}
+        <p className={styles.hint}>Only if {email} is your Google account.</p>
+
+        <p className={styles.hint}>
+          Not you?{" "}
+          <button
+            type="button"
+            className={styles.linkButton}
+            disabled={busy}
+            onClick={() => {
+              setStep("email");
+              setEmail("");
+              setError("");
+            }}
+          >
+            Sign in with a different email
+          </button>
+        </p>
+      </>
+    );
+  }
+
   if (step === "code") {
     return (
       <>
         <div>
-          <h1 className={styles.title}>{fromInvite ? "Accept your invitation" : "Enter your code"}</h1>
+          <h1 className={styles.title}>Enter your code</h1>
           <p className={styles.subtitle}>
-            {fromInvite && !info
-              ? `Continue with Google, or type the 6-digit code from your invitation email to ${email}. The code works once and expires after a while.`
-              : `Type the 6-digit code we emailed to ${email}. It works once and expires after a while.`}
+            Type the 6-digit code we emailed to {email}. It works once and expires after a while.
           </p>
         </div>
-
-        {fromInvite && (
-          <>
-            {/* Supabase attaches a Google sign-in to the existing account
-                when the address matches, so the invitation — already linked
-                to that account — carries over with no code. A different
-                Google address is a different account, hence the wording. */}
-            <button
-              type="button"
-              onClick={handleGoogleSignIn}
-              className={`${styles.button} ${styles.buttonSecondary}`}
-              disabled={busy}
-            >
-              <GoogleIcon />
-              Continue with Google
-            </button>
-            <p className={styles.hint}>
-              Only if {email} is your Google account — then there&apos;s no code to type.
-            </p>
-            <div className={styles.divider}>
-              <span>or enter your code</span>
-            </div>
-          </>
-        )}
 
         <form onSubmit={handleCodeSubmit} className={styles.form}>
           <div className={styles.field}>
@@ -238,11 +292,7 @@ function LoginForm() {
             {busy ? "Checking…" : "Sign in"}
           </button>
           {info && !error && <p className={styles.hint}>{info}</p>}
-          {error && (
-            <p className={styles.errorText} role="alert">
-              {error}
-            </p>
-          )}
+          {errorBlock}
         </form>
 
         <p className={styles.hint}>
@@ -285,15 +335,7 @@ function LoginForm() {
         </p>
       )}
 
-      <button
-        type="button"
-        onClick={handleGoogleSignIn}
-        className={`${styles.button} ${styles.buttonSecondary}`}
-        disabled={busy}
-      >
-        <GoogleIcon />
-        Continue with Google
-      </button>
+      {googleButton}
 
       <div className={styles.divider}>
         <span>or</span>
@@ -317,11 +359,7 @@ function LoginForm() {
         <button type="submit" className={`${styles.button} ${styles.buttonPrimary}`} disabled={busy}>
           {busy ? "Sending…" : "Email me a code"}
         </button>
-        {error && (
-          <p className={styles.errorText} role="alert">
-            {error}
-          </p>
-        )}
+        {errorBlock}
       </form>
     </>
   );

@@ -206,6 +206,21 @@ export function renderBrandedEmail({
 </table>`;
 }
 
+/**
+ * The code, set large enough to read and copy at a glance. Monospace so 0
+ * and O, 1 and l can't be confused; letter-spaced so it reads as six
+ * characters rather than a number; and selectable text rather than an
+ * image, so it survives images being blocked and can be pasted.
+ */
+export function codeBlockHtml(code: string, label: string): string {
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 20px">
+              <tr><td align="center" style="background:#f4f6f4;border:1px solid #dfe4df;border-radius:10px;padding:18px 12px">
+                <div style="font-size:12px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#5b6670;margin:0 0 8px">${escapeHtml(label)}</div>
+                <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:32px;font-weight:700;letter-spacing:0.3em;color:#1c2430;line-height:1.2">${escapeHtml(code)}</div>
+              </td></tr>
+            </table>`;
+}
+
 export function escapeHtml(text: string): string {
   return text
     .replace(/&/g, "&amp;")
