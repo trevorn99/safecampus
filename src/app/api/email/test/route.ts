@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { sendEmail, unsubscribeUrlFor } from "@/lib/email";
 import { buildReminderEmail, type DueReminder } from "@/lib/shiftReminders";
+import { publicOrigin } from "@/lib/siteUrl";
 
 // Sends one real shift-reminder email, built from the real template, to the
 // signed-in platform admin's own address. Exists because reminders otherwise
@@ -50,7 +51,7 @@ export async function POST(request: Request) {
   const { data: org } = member
     ? await supabase.from("organizations").select("name").eq("id", member.organization_id).maybeSingle()
     : { data: null };
-  const unsubscribe = unsubscribeUrlFor(new URL(request.url).origin, member?.id ?? user.id);
+  const unsubscribe = unsubscribeUrlFor(publicOrigin(new URL(request.url).origin), member?.id ?? user.id);
 
   const start = new Date(Date.now() + 24 * 60 * 60 * 1000);
   const due: DueReminder = {
@@ -77,7 +78,9 @@ export async function POST(request: Request) {
     email: recipient,
   };
 
-  const origin = new URL(request.url).origin;
+  // Links in email point at the canonical public host, not at whatever
+  // host this request arrived on. See lib/siteUrl.ts.
+  const origin = publicOrigin(new URL(request.url).origin);
   const { subject, text, html } = buildReminderEmail(due, origin, unsubscribe.url);
   const result = await sendEmail({
     to: recipient,

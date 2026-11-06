@@ -14,7 +14,9 @@ import { escapeHtml, renderBrandedEmail, sendEmail } from "@/lib/email";
 //
 // Neither path lets Supabase send anything now: generateLink mints the link
 // without mailing it, and it goes out over our own SendGrid with click
-// tracking off, like every other email this app sends.
+// tracking off, like every other email this app sends. The link itself
+// points at /auth/confirm on our own domain rather than at Supabase's verify
+// endpoint — see that route for why.
 
 // Shown when the organization's name can't be read. Deliberately the same
 // in every string below — a message that says "your organization" in the
@@ -64,7 +66,7 @@ export function buildInviteEmail({
       `genuine, contact ${org} directly rather than using this link.`,
       "",
       "SafeCampus — scheduling and coordination for safety teams.",
-      "https://safecampus.net · admin@safecampus.net",
+      "https://www.safecampus.net · admin@safecampus.net",
     ].join("\n"),
     html: renderBrandedEmail({
       origin,
@@ -121,7 +123,9 @@ export async function sendInviteEmail({
     type: kind,
     email,
     options: {
-      redirectTo: `${origin}/auth/callback`,
+      // No redirectTo: it only shapes the action_link that Supabase builds,
+      // and we don't use that link. See below.
+      //
       // Kept on the auth user even though this email no longer reads it:
       // anything Supabase itself mails this person later (a sign-in link
       // from its own template) can still name who invited them, and auth is
@@ -131,7 +135,13 @@ export async function sendInviteEmail({
     },
   });
 
-  if (linkError || !link?.properties?.action_link) {
+  // hashed_token rather than action_link. action_link points at
+  // https://<project-ref>.supabase.co/auth/v1/verify?… — a domain the
+  // recipient has never seen, under a button asking them to click it, in the
+  // one message where looking legitimate is the whole job. The hashed token
+  // is the same credential with the hostname left to us, verified by
+  // /auth/confirm on our own domain.
+  if (linkError || !link?.properties?.hashed_token) {
     return {
       ok: false,
       stage: "link",
@@ -139,9 +149,13 @@ export async function sendInviteEmail({
     };
   }
 
+  const actionLink = `${origin}/auth/confirm?token_hash=${encodeURIComponent(
+    link.properties.hashed_token,
+  )}&type=${kind}`;
+
   const result = await sendEmail({
     to: email,
-    ...buildInviteEmail({ origin, orgName, email, actionLink: link.properties.action_link }),
+    ...buildInviteEmail({ origin, orgName, email, actionLink }),
   });
 
   if (!result.ok) {

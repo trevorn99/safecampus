@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { sendShiftReminders } from "@/lib/shiftReminders";
 import { sendEventPositionReports } from "@/lib/eventPositionReports";
 import { isAuthorizedCronRequest } from "@/lib/cronAuth";
+import { publicOrigin } from "@/lib/siteUrl";
 
 // Triggered daily by Vercel Cron (see vercel.json), same auth pattern as
 // generate-events — walks every organization in one pass, sending both the
@@ -22,7 +23,9 @@ export async function GET(request: Request) {
   // Links in the reminder emails (the event page, the unsubscribe URL) need
   // an absolute origin, and cron requests carry the deployment's own — same
   // trick the invite and billing routes use for their redirect URLs.
-  const origin = new URL(request.url).origin;
+  // Links in email point at the canonical public host, not at whatever
+  // host this request arrived on. See lib/siteUrl.ts.
+  const origin = publicOrigin(new URL(request.url).origin);
   const result = await sendShiftReminders(admin, origin);
 
   // Same run as the reminders, and deliberately so: the report covers the

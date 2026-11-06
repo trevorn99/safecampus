@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendInviteEmail } from "@/lib/inviteEmail";
+import { publicOrigin } from "@/lib/siteUrl";
 
 // Invites someone who's already on the roster — the second half of adding a
 // member without inviting them (/api/team/invite with sendInvite: false).
@@ -41,7 +42,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Add an email address to this member first" }, { status: 400 });
   }
 
-  const origin = new URL(request.url).origin;
+  // Links in email point at the canonical public host, not at whatever
+  // host this request arrived on. See lib/siteUrl.ts.
+  const origin = publicOrigin(new URL(request.url).origin);
   const admin = createAdminClient();
 
   const { data: inviteOrg } = await supabase
