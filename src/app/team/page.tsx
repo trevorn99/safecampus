@@ -123,6 +123,15 @@ export default async function TeamPage() {
 
   // memberId -> teamId -> that member's role_assignments row id(s) for that
   // team, so TeamMembershipManager can toggle membership without a lookup.
+  // memberId -> teams they lead, for the team-lead switches in the Teams panel.
+  const leadTeamsByMember = new Map<string, Set<string>>();
+  for (const row of (roleAssignments ?? []) as RoleAssignment[]) {
+    if (row.scope_type !== "team" || row.role !== "team_lead") continue;
+    const set = leadTeamsByMember.get(row.member_id) ?? new Set<string>();
+    set.add(row.scope_id);
+    leadTeamsByMember.set(row.member_id, set);
+  }
+
   const teamAssignmentsByMember = new Map<string, Map<string, string[]>>();
   for (const row of (roleAssignments ?? []) as RoleAssignment[]) {
     if (row.scope_type !== "team") continue;
@@ -189,6 +198,7 @@ export default async function TeamPage() {
             isSelf={teamMember.id === member.id}
             allTeams={teams ?? []}
             assignmentIdsByTeam={teamAssignmentsByMember.get(teamMember.id) ?? new Map()}
+            leadTeamIds={[...(leadTeamsByMember.get(teamMember.id) ?? [])]}
           />
         )}
 

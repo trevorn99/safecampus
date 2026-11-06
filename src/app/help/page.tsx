@@ -83,7 +83,7 @@ export default async function HelpPage() {
           </p>
           <p className={styles.docBody}>
             Each roster row has the same buttons. <strong>Edit</strong> corrects a name or email;{" "}
-            <strong>Teams</strong> adds or removes them from teams; <strong>Send invite</strong> or{" "}
+            <strong>Teams</strong> adds or removes them from teams, and makes them lead of any team they&apos;re on; <strong>Send invite</strong> or{" "}
             <strong>Resend invite</strong> appears until they&apos;ve accepted. <strong>Cancel
             invite</strong> or <strong>Remove</strong> takes them off the roster — for someone already
             active, that also deletes their certifications, training and background-check records,
@@ -100,7 +100,8 @@ export default async function HelpPage() {
           <p className={styles.docBody}>
             Teams group members for scheduling — e.g. &quot;Medical&quot; or &quot;Parking.&quot; Create one
             from <strong>Teams → New team</strong>, optionally scoped to a specific location. From a team&apos;s
-            page you can rename it, add or remove members (as team lead or member), and delete it — deleting
+            page you can rename it, add or remove members, promote someone with <strong>Make team lead</strong> (or step
+            them back with <strong>Make member</strong>), and delete it — deleting
             a team removes everyone&apos;s assignment to it but doesn&apos;t touch anything else.
           </p>
           <p className={styles.docBody}>
