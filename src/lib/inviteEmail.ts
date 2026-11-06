@@ -70,6 +70,9 @@ export function buildInviteEmail({
       "and type the code. There's no password to choose. The code works once and expires after a while;",
       "if it has, the same page will send you a new one.",
       "",
+      `If ${email} is a Google account, you can choose "Continue with Google" on that page instead`,
+      "and skip the code.",
+      "",
       `This invitation was sent by SafeCampus on behalf of ${org}, to ${email}. If you weren't expecting it`,
       `you can safely ignore this email; no account exists until you accept. If you're unsure whether it's`,
       `genuine, contact ${org} directly, or go to www.safecampus.net yourself rather than using this email.`,
@@ -84,7 +87,8 @@ export function buildInviteEmail({
             <p style="margin:0 0 14px;font-size:15px;line-height:1.55;color:#1c2430">${escapeHtml(org)} has invited you to create a SafeCampus account.</p>
             <p style="margin:0 0 20px;font-size:14px;line-height:1.6;color:#5b6670">SafeCampus is the scheduling tool their safety team uses &mdash; it&rsquo;s where you&rsquo;ll see the shifts you&rsquo;re signed up for, confirm or decline them, and keep your certifications up to date.</p>
             ${codeBlockHtml(code, "Your invitation code")}
-            <p style="margin:0 0 20px;font-size:14px;line-height:1.6;color:#5b6670">Open SafeCampus and type this code to accept. There&rsquo;s no password to choose. The code works once and expires after a while &mdash; if it has, the sign-in page will send you a new one.</p>`,
+            <p style="margin:0 0 14px;font-size:14px;line-height:1.6;color:#5b6670">Open SafeCampus and type this code to accept. There&rsquo;s no password to choose. The code works once and expires after a while &mdash; if it has, the sign-in page will send you a new one.</p>
+            <p style="margin:0 0 20px;font-size:14px;line-height:1.6;color:#5b6670">If ${escapeHtml(email)} is a Google account, you can choose <strong>Continue with Google</strong> on that page instead and skip the code.</p>`,
       cta: { label: "Open SafeCampus to accept", url: signInUrl },
       footerHtml: `This invitation was sent by SafeCampus on behalf of ${escapeHtml(org)}, to ${escapeHtml(email)}.
             If you weren&rsquo;t expecting it you can safely ignore this email &mdash; no account exists until you accept.
