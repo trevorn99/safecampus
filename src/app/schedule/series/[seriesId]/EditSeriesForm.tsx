@@ -131,6 +131,40 @@ export function EditSeriesForm({
       return;
     }
 
+    const nowIso = new Date().toISOString();
+
+    if (!applyToEvents) {
+      // A rename, retype or move is almost always meant for every occurrence,
+      // and leaving it to the checkbox meant a renamed series kept showing
+      // its old name on every event already generated — up to a year of
+      // them. So these carry over on their own, but only to upcoming events
+      // that still have the series' old value: an event someone renamed by
+      // hand ("Easter Sunday Service") is a deliberate exception and stays.
+      // Times are not carried: an event moved by hand is just as deliberate,
+      // and the checkbox covers moving everything.
+      const carry: { field: "title" | "type" | "location_id"; from: string | null; to: string | null }[] = [];
+      if (title !== series.title) carry.push({ field: "title", from: series.title, to: title });
+      if (type !== series.type) carry.push({ field: "type", from: series.type, to: type });
+      if ((locationId || null) !== (series.location_id ?? null)) {
+        carry.push({ field: "location_id", from: series.location_id ?? null, to: locationId || null });
+      }
+
+      for (const change of carry) {
+        let query = supabase
+          .from("events")
+          .update({ [change.field]: change.to })
+          .eq("series_id", series.id)
+          .gte("start_time", nowIso);
+        query = change.from === null ? query.is(change.field, null) : query.eq(change.field, change.from);
+        const { error: carryError } = await query.select("id");
+        if (carryError) {
+          setLoading(false);
+          setError(`The series was saved, but its upcoming events couldn't be updated: ${carryError.message}`);
+          return;
+        }
+      }
+    }
+
     if (applyToEvents) {
       const [, newTime] = firstOccurrence.split("T");
       const [newHour, newMinute] = newTime.split(":").map(Number);
@@ -140,7 +174,7 @@ export function EditSeriesForm({
         .from("events")
         .select("id, start_time")
         .eq("series_id", series.id)
-        .gte("start_time", new Date().toISOString());
+        .gte("start_time", nowIso);
 
       // Previously a sequential loop that ignored every update's error, so
       // an RLS rejection or a bad row failed silently and still reported
@@ -159,15 +193,20 @@ export function EditSeriesForm({
               start_time: start.toISOString(),
               end_time: end.toISOString(),
             })
-            .eq("id", futureEvent.id);
+            .eq("id", futureEvent.id)
+            // Without .select(), an update RLS matched to zero rows comes
+            // back as success and the event silently keeps its old values.
+            .select("id");
         }),
       );
 
-      const failed = results.filter((result) => result.error);
+      const failed = results.filter((result) => result.error || !result.data || result.data.length === 0);
       if (failed.length > 0) {
         setLoading(false);
         setError(
-          `The series was saved, but ${failed.length} of ${results.length} upcoming events couldn't be updated: ${failed[0].error?.message}`,
+          `The series was saved, but ${failed.length} of ${results.length} upcoming events couldn't be updated${
+            failed[0].error ? `: ${failed[0].error.message}` : "."
+          }`,
         );
         return;
       }
@@ -327,7 +366,7 @@ export function EditSeriesForm({
       <p className={styles.hint}>
         {applyToEvents
           ? "Every upcoming event in this series will be updated to the title, type, start and end time, and location above. Past events, and events that already started, are left alone."
-          : "Changes apply to newly generated occurrences. Events already generated for future dates keep their current title, times, and location — edit those individually, or check the box above to update them all at once."}
+          : "A new title, type or location also applies to upcoming events that still have the old one — events you renamed or moved individually keep theirs. Times only change on events already on the calendar if you tick the box above."}
       </p>
 
       <div className={styles.actions}>

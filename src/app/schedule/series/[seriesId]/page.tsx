@@ -9,6 +9,7 @@ import { SeriesHeader } from "./SeriesHeader";
 import { AddSeriesPositionForm } from "./AddSeriesPositionForm";
 import { StandingAssignments, type StandingPosition } from "./StandingAssignments";
 import { CancelledDates } from "./CancelledDates";
+import { SyncEventTitles } from "./SyncEventTitles";
 import styles from "@/styles/ui.module.css";
 
 export default async function SeriesDetailPage({
@@ -52,6 +53,7 @@ export default async function SeriesDetailPage({
     { data: teamRoleAssignments },
     { data: skips },
     timeZone,
+    { count: mismatchedTitles },
   ] = await Promise.all([
     supabase
       .from("events")
@@ -74,6 +76,14 @@ export default async function SeriesDetailPage({
       .eq("series_id", seriesId)
       .order("occurs_at", { ascending: false }),
     resolveTimeZone(supabase, member.organization_id, series.location_id),
+    // Counted separately: the list below shows at most 20 events, and a
+    // series a year out has more upcoming ones than that.
+    supabase
+      .from("events")
+      .select("id", { count: "exact", head: true })
+      .eq("series_id", series.id)
+      .gte("start_time", new Date().toISOString())
+      .neq("title", series.title),
   ]);
 
   // The recurring positions themselves, and who normally fills them. These
@@ -146,6 +156,9 @@ export default async function SeriesDetailPage({
           <div className={styles.cardHeader}>
             <h2 className={styles.cardTitle}>Generated events</h2>
           </div>
+          {(mismatchedTitles ?? 0) > 0 && (
+            <SyncEventTitles seriesId={series.id} title={series.title} count={mismatchedTitles ?? 0} />
+          )}
           {(generatedEvents ?? []).length === 0 && (
             <p className={styles.helperText}>
               No events generated yet — try &quot;Generate upcoming events now&quot; above.
