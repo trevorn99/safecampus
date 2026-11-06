@@ -2,11 +2,8 @@ import { requireMembership } from "@/lib/session";
 import { AppHeader } from "@/components/AppHeader";
 import { Avatar } from "@/components/Avatar";
 import { getAvatarUrlMap } from "@/lib/avatars";
-import { RemoveMemberButton } from "./RemoveMemberButton";
-import { SendInviteButton } from "./SendInviteButton";
-import { EditMemberForm } from "./EditMemberForm";
-import { TeamMembershipManager } from "./TeamMembershipManager";
 import { expiryState, formatDateOnly } from "@/lib/certificationDates";
+import { MemberActions } from "./MemberActions";
 import styles from "@/styles/ui.module.css";
 
 const ROLE_LABEL: Record<string, string> = {
@@ -138,76 +135,58 @@ export default async function TeamPage() {
 
   function renderMemberRow(teamMember: Member) {
     return (
-      <li key={teamMember.id} className={styles.listRow}>
-        <div className={styles.identityRow}>
+      <li key={teamMember.id} className={styles.rosterRow}>
+        <div className={styles.rosterIdentity}>
           <Avatar
             name={teamMember.name}
             url={
               teamMember.profile_picture_url ? (avatarUrls.get(teamMember.profile_picture_url) ?? null) : null
             }
-            size="xl"
+            size="lg"
           />
-          <div>
+          <div className={styles.rosterText}>
             <p className={styles.itemName}>{teamMember.name}</p>
             <p className={styles.itemMeta}>{teamMember.email ?? "No email on file"}</p>
+            <div className={styles.rosterTags}>
+              {(rolesByMember.get(teamMember.id) ?? []).map((row, index) => (
+                <span key={index} className={styles.pill}>
+                  {ROLE_LABEL[row.role] ?? row.role} · {describeScope(row)}
+                </span>
+              ))}
+              {teamMember.status === "pending" && (
+                <span className={styles.pillMuted}>{teamMember.user_id ? "Invite pending" : "Not invited"}</span>
+              )}
+              {isAdmin && org?.identity_verification_enabled && (
+                <span
+                  className={
+                    teamMember.identity_verification_status === "verified"
+                      ? styles.pill
+                      : teamMember.identity_verification_status === "failed"
+                        ? styles.pillDanger
+                        : styles.pillMuted
+                  }
+                >
+                  {VERIFICATION_LABEL[teamMember.identity_verification_status] ?? teamMember.identity_verification_status}
+                </span>
+              )}
+            </div>
           </div>
         </div>
-        <div className={styles.tagRow}>
-          {(rolesByMember.get(teamMember.id) ?? []).map((row, index) => (
-            <span key={index} className={styles.pill}>
-              {ROLE_LABEL[row.role] ?? row.role} · {describeScope(row)}
-            </span>
-          ))}
-          {teamMember.status === "pending" && (
-            <span className={styles.pillMuted}>{teamMember.user_id ? "Invite pending" : "Not invited"}</span>
-          )}
-          {isAdmin && org?.identity_verification_enabled && (
-            <span
-              className={
-                teamMember.identity_verification_status === "verified"
-                  ? styles.pill
-                  : teamMember.identity_verification_status === "failed"
-                    ? styles.pillDanger
-                    : styles.pillMuted
-              }
-            >
-              {VERIFICATION_LABEL[teamMember.identity_verification_status] ?? teamMember.identity_verification_status}
-            </span>
-          )}
-          {isAdmin && (
-            <EditMemberForm
-              memberId={teamMember.id}
-              name={teamMember.name}
-              email={teamMember.email}
-              linked={Boolean(teamMember.user_id)}
-            />
-          )}
-          {isAdmin && teamMember.status === "pending" && (
-            <>
-              {/* Shown whether or not they've been invited: an invitation
-                  that went to spam left an admin watching "Invite pending"
-                  with nothing they could do about it. */}
-              {teamMember.email && (
-                <SendInviteButton
-                  memberId={teamMember.id}
-                  name={teamMember.name}
-                  alreadyInvited={Boolean(teamMember.user_id)}
-                />
-              )}
-            </>
-          )}
-          {/* Every member, not only pending ones: active members used to
-              have no way out of the roster at all. */}
-          {isAdmin && (
-            <RemoveMemberButton
-              memberId={teamMember.id}
-              name={teamMember.name}
-              status={teamMember.status}
-              invited={Boolean(teamMember.user_id)}
-              isSelf={teamMember.id === member.id}
-            />
-          )}
-        </div>
+
+        {isAdmin && (
+          <MemberActions
+            memberId={teamMember.id}
+            name={teamMember.name}
+            email={teamMember.email}
+            status={teamMember.status}
+            linked={Boolean(teamMember.user_id)}
+            isSelf={teamMember.id === member.id}
+            allTeams={teams ?? []}
+            assignmentIdsByTeam={teamAssignmentsByMember.get(teamMember.id) ?? new Map()}
+          />
+        )}
+
+        <div className={styles.rosterPanel}>
         {(() => {
           const memberCerts = certsByMember.get(teamMember.id) ?? [];
           if (memberCerts.length === 0) return null;
@@ -228,14 +207,7 @@ export default async function TeamPage() {
             </ul>
           );
         })()}
-
-        {isAdmin && (
-          <TeamMembershipManager
-            memberId={teamMember.id}
-            allTeams={teams ?? []}
-            assignmentIdsByTeam={teamAssignmentsByMember.get(teamMember.id) ?? new Map()}
-          />
-        )}
+        </div>
       </li>
     );
   }

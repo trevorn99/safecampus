@@ -21,7 +21,6 @@ export function TeamMembershipManager({
   assignmentIdsByTeam: Map<string, string[]>;
 }) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
   const [pendingTeamId, setPendingTeamId] = useState<string | null>(null);
   const [error, setError] = useState("");
 
@@ -31,16 +30,24 @@ export function TeamMembershipManager({
     const supabase = createClient();
     const existingIds = assignmentIdsByTeam.get(teamId) ?? [];
 
-    const { error: opError } =
+    // .select() on both: a change RLS refuses comes back as zero rows, not
+    // an error, and would otherwise look like it worked until the refresh
+    // showed nothing had changed.
+    const { data: changed, error: opError } =
       existingIds.length > 0
-        ? await supabase.from("role_assignments").delete().in("id", existingIds)
+        ? await supabase.from("role_assignments").delete().in("id", existingIds).select("id")
         : await supabase
             .from("role_assignments")
-            .insert({ member_id: memberId, scope_type: "team", scope_id: teamId, role: "member" });
+            .insert({ member_id: memberId, scope_type: "team", scope_id: teamId, role: "member" })
+            .select("id");
 
     setPendingTeamId(null);
     if (opError) {
       setError(opError.message);
+      return;
+    }
+    if (!changed || changed.length === 0) {
+      setError("That change wasn't saved. Refresh the page and try again.");
       return;
     }
     router.refresh();
@@ -48,13 +55,12 @@ export function TeamMembershipManager({
 
   if (allTeams.length === 0) return null;
 
+  // The row owns the Teams button; this is only the panel it opens. Every
+  // team is a separate toggle — someone can belong to as many as apply.
   return (
     <div className={styles.field}>
-      <button type="button" className={styles.linkButton} onClick={() => setOpen((v) => !v)}>
-        {open ? "Hide teams" : "Manage teams"}
-      </button>
-      {open && (
-        <div className={styles.tagRow}>
+      <p className={styles.hint}>Tap a team to add or remove them. Someone can be on any number of teams.</p>
+      <div className={styles.tagRow}>
           {allTeams.map((team) => {
             const isMember = (assignmentIdsByTeam.get(team.id) ?? []).length > 0;
             const busy = pendingTeamId === team.id;
@@ -72,8 +78,7 @@ export function TeamMembershipManager({
               </button>
             );
           })}
-        </div>
-      )}
+      </div>
       {error && (
         <p className={styles.errorText} role="alert">
           {error}

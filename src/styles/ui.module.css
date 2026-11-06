@@ -1257,3 +1257,71 @@
     font-size: 0.75rem;
   }
 }
+
+/* Team roster rows.
+   A fixed two-column grid: who they are on the left, one cluster of
+   same-size actions on the right, and anything opened (edit, teams) or
+   listed (certifications) across the full width underneath. The old row
+   was a single wrapping flex line of tags, text links and full-size
+   buttons, so it reflowed differently for every member. */
+.rosterRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.6rem 1rem;
+  padding: 0.9rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.rosterRow:last-child {
+  border-bottom: none;
+}
+.rosterIdentity {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  min-width: 0;
+}
+.rosterText {
+  min-width: 0;
+}
+.rosterText > p {
+  overflow-wrap: anywhere;
+}
+.rosterTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.45rem;
+}
+.rosterActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: flex-start;
+  gap: 0.4rem;
+}
+.rosterPanel {
+  grid-column: 1 / -1;
+}
+.rosterPanel:empty {
+  display: none;
+}
+.buttonCompact {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.85rem;
+}
+
+@media (max-width: 720px) {
+  .rosterRow {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .rosterActions {
+    justify-content: flex-start;
+  }
+}
+/* A button's own error message, inside the cluster, gets a line of its
+   own rather than squeezing between buttons. */
+.rosterActions > p {
+  flex-basis: 100%;
+  margin: 0;
+}
