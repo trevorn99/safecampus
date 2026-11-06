@@ -7,6 +7,7 @@ const SECTIONS = [
   { id: "roles", label: "Roles & permissions" },
   { id: "members", label: "Members & invitations" },
   { id: "teams", label: "Teams" },
+  { id: "announcements", label: "Announcements" },
   { id: "scheduling", label: "Scheduling" },
   { id: "certifications", label: "Certifications" },
   { id: "locations", label: "Locations & maps" },
@@ -114,6 +115,26 @@ export default async function HelpPage() {
             under <strong>Requirements</strong>. Certification requirements are checked automatically against
             each member&apos;s certifications on file, so it&apos;s easy to see who&apos;s missing what right on
             the team roster; training requirements are tracked as policy for now, without automatic checking.
+          </p>
+        </div>
+
+        <div id="announcements" className={styles.card}>
+          <div className={styles.cardHeader}>
+            <h2 className={styles.cardTitle}>Announcements</h2>
+          </div>
+          <p className={styles.docBody}>
+            Send a message to your people from <strong>Team → Announcements</strong>. Org admins can send to
+            everyone, to selected teams, or to all the team leads. Location managers can send to teams at their
+            location, and team leads to the teams they lead — no one else&apos;s. Members can read announcements but
+            not send them.
+          </p>
+          <p className={styles.docBody}>
+            Before you send, the form shows exactly how many people it will reach. An announcement is emailed to
+            everyone it&apos;s addressed to whatever their reminder settings — so an urgent change reaches people who
+            turned schedule emails off — and appears on their dashboard until they dismiss it. You can also send a
+            short text version to the people who opted in to texts. Replies to the email come straight to you. Only
+            people who have joined SafeCampus receive announcements; anyone with an invitation still outstanding
+            doesn&apos;t.
           </p>
         </div>
 

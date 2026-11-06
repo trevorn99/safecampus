@@ -23,12 +23,18 @@ export async function sendEmail({
   text,
   html,
   unsubscribeUrl,
+  fromName = "SafeCampus",
+  replyTo,
 }: {
   to: string;
   subject: string;
   text: string;
   html: string;
   unsubscribeUrl?: string | null;
+  /** Display name on the From line; the address is always ours. */
+  fromName?: string;
+  /** Where a reply goes — the person who wrote the message, not us. */
+  replyTo?: { email: string; name?: string } | null;
 }): Promise<EmailResult> {
   const apiKey = process.env.SENDGRID_API_KEY;
   const from = process.env.SENDGRID_FROM_EMAIL;
@@ -57,7 +63,8 @@ export async function sendEmail({
     },
     body: JSON.stringify({
       personalizations: [{ to: [{ email: to }] }],
-      from: { email: from, name: "SafeCampus" },
+      from: { email: from, name: fromName },
+      ...(replyTo ? { reply_to: replyTo } : {}),
       subject,
       // v3 requires text/plain before text/html — the API rejects the
       // reversed order outright.

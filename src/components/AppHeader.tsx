@@ -30,6 +30,9 @@ function buildNav(isAdmin: boolean, isPlatformAdmin: boolean): NavEntry[] {
       label: "Team",
       items: [
         { href: "/team", label: "Roster" },
+        // In a group rather than top level: the desktop row is measured to
+        // fit at 1241px+, and one more top-level entry would break that.
+        { href: "/announcements", label: "Announcements" },
         { href: "/certifications", label: "Certifications" },
         ...(isAdmin ? [{ href: "/teams", label: "Manage teams" }] : []),
       ],
