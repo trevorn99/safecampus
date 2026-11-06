@@ -19,20 +19,27 @@
         </tr>
         <tr>
           <td style="padding:28px">
-            <p style="margin:0 0 14px;font-size:17px;font-weight:700;line-height:1.4;color:#1c2430">
+            <p style="margin:0 0 14px;font-size:17px;font-weight:700;line-height:1.55;color:#1c2430">
               You&rsquo;ve been invited to join {{ if .Data.organization_name }}{{ .Data.organization_name }}{{ else }}a safety team{{ end }} on SafeCampus
             </p>
             <p style="margin:0 0 14px;font-size:15px;line-height:1.55;color:#1c2430">
               {{ if .Data.organization_name }}{{ .Data.organization_name }} has{{ else }}They have{{ end }} invited you to create a SafeCampus account.
             </p>
-            <p style="margin:0 0 22px;font-size:14px;line-height:1.6;color:#5b6670">
-              SafeCampus is the scheduling tool their safety team uses &mdash; it&rsquo;s where you&rsquo;ll see the
-              shifts you&rsquo;re signed up for, confirm or decline them, and keep your certifications up to date.
-              This link signs you in; there&rsquo;s no password to choose.
+            <p style="margin:0 0 20px;font-size:14px;line-height:1.55;color:#5b6670">
+              SafeCampus is the scheduling tool their safety team uses &mdash; it&rsquo;s where you&rsquo;ll see the shifts you&rsquo;re signed up for, confirm or decline them, and keep your certifications up to date.
+            </p>
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 20px">
+              <tr><td align="center" style="background:#f4f6f4;border:1px solid #dfe4df;border-radius:10px;padding:18px 12px">
+                <div style="font-size:12px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#5b6670;margin:0 0 8px">Your invitation code</div>
+                <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:32px;font-weight:700;letter-spacing:0.3em;color:#1c2430;line-height:1.2">{{ .Token }}</div>
+              </td></tr>
+            </table>
+            <p style="margin:0 0 20px;font-size:14px;line-height:1.55;color:#5b6670">
+              To accept, open SafeCampus, enter this email address, and type the code. There&rsquo;s no password to choose.
             </p>
             <table role="presentation" cellpadding="0" cellspacing="0" border="0">
               <tr><td style="background:#0f7568;border-radius:8px">
-                <a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&amp;type=invite" style="display:inline-block;padding:11px 20px;font-size:14px;font-weight:600;color:#ffffff;text-decoration:none">Accept your SafeCampus invitation</a>
+                <a href="{{ .SiteURL }}/login?invite=1&amp;t=invite" style="display:inline-block;padding:11px 20px;font-size:14px;font-weight:600;color:#ffffff;text-decoration:none">Open SafeCampus to accept</a>
               </td></tr>
             </table>
           </td>
@@ -42,12 +49,10 @@
             This invitation was sent by SafeCampus on behalf of
             {{ if .Data.organization_name }}{{ .Data.organization_name }}{{ else }}the inviting organization{{ end }},
             to {{ .Email }}. If you weren&rsquo;t expecting it you can safely ignore this email &mdash; no account
-            exists until you accept. If you&rsquo;re unsure whether it&rsquo;s genuine, contact
-            {{ if .Data.organization_name }}{{ .Data.organization_name }}{{ else }}them{{ end }} directly rather
-            than using this link.
+            exists until you accept. Never share this code. SafeCampus will never ask you for it &mdash; not by email, phone or text.
             <div style="margin-top:12px;padding-top:12px;border-top:1px solid #e8ece8;color:#8a9490">
               SafeCampus &mdash; scheduling and coordination for safety teams.
-              <a href="https://www.safecampus.net" style="color:#8a9490;text-decoration:underline">www.safecampus.net</a> ·
+              <a href="https://www.safecampus.net" style="color:#8a9490;text-decoration:underline">www.safecampus.net</a> &middot;
               <a href="mailto:admin@safecampus.net" style="color:#8a9490;text-decoration:underline">admin@safecampus.net</a>
             </div>
           </td>
