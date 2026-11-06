@@ -119,21 +119,44 @@ export async function sendInviteEmail({
   email: string;
   kind: "invite" | "magiclink";
 }): Promise<SendInviteResult> {
-  const { data: link, error: linkError } = await admin.auth.admin.generateLink({
-    type: kind,
-    email,
-    options: {
-      // No redirectTo: it only shapes the action_link that Supabase builds,
-      // and we don't use that link. See below.
-      //
-      // Kept on the auth user even though this email no longer reads it:
-      // anything Supabase itself mails this person later (a sign-in link
-      // from its own template) can still name who invited them, and auth is
-      // per-project rather than per-org, so metadata is the only place it
-      // could come from.
-      data: { organization_name: orgName?.trim() || null },
-    },
-  });
+  const mint = (type: "invite" | "magiclink") =>
+    admin.auth.admin.generateLink({
+      type,
+      email,
+      options: {
+        // No redirectTo: it only shapes the action_link that Supabase
+        // builds, and we don't use that link. See below.
+        //
+        // Kept on the auth user even though this email no longer reads it:
+        // anything Supabase itself mails this person later (a sign-in link
+        // from its own template) can still name who invited them, and auth
+        // is per-project rather than per-org, so metadata is the only place
+        // it could come from.
+        data: { organization_name: orgName?.trim() || null },
+      },
+    });
+
+  let linkKind = kind;
+  let { data: link, error: linkError } = await mint(linkKind);
+
+  // The address already has an account: removed from this organization and
+  // added back (removal keeps the sign-in account, since it can span
+  // organizations), invited by another organization, or signed up on their
+  // own. Supabase refuses to "invite" an existing user, but the invitation
+  // is still the right email to send — it just carries a sign-in link for
+  // the account they already have, and the caller links the member row to
+  // that account's id. The mailbox is still the proof: only whoever reads
+  // this email can use the link.
+  if (
+    linkKind === "invite" &&
+    linkError &&
+    (linkError.code === "email_exists" ||
+      linkError.code === "user_already_exists" ||
+      /already been registered/i.test(linkError.message))
+  ) {
+    linkKind = "magiclink";
+    ({ data: link, error: linkError } = await mint(linkKind));
+  }
 
   // hashed_token rather than action_link. action_link points at
   // https://<project-ref>.supabase.co/auth/v1/verify?… — a domain the
@@ -151,7 +174,7 @@ export async function sendInviteEmail({
 
   const actionLink = `${origin}/auth/confirm?token_hash=${encodeURIComponent(
     link.properties.hashed_token,
-  )}&type=${kind}`;
+  )}&type=${linkKind}`;
 
   const result = await sendEmail({
     to: email,
