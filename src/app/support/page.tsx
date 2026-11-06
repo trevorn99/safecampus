@@ -1,7 +1,6 @@
 import { requireMembership } from "@/lib/session";
 import { AppHeader } from "@/components/AppHeader";
 import { SupportRequestForm } from "./SupportRequestForm";
-import { InstallInstructions } from "@/components/InstallInstructions";
 import styles from "@/styles/ui.module.css";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -31,7 +30,6 @@ export default async function SupportPage() {
 
         <SupportRequestForm memberId={member.id} organizationId={member.organization_id} />
 
-        <InstallInstructions />
 
         {(tickets ?? []).length > 0 && (
           <div className={styles.card}>

@@ -1,7 +1,7 @@
 import styles from "@/styles/ui.module.css";
 
-// How to add SafeCampus to a phone's home screen. Shown on both Support and
-// Help, from this one component so the two can't drift apart.
+// How to add SafeCampus to a phone's home screen, for the Help page's
+// "Install on your phone" section.
 //
 // The iPhone sign-in note is not optional detail: a home-screen web app on
 // iOS keeps its own cookies, separate from Safari's, so someone signed in
